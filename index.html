@@ -35,6 +35,14 @@
             --ink-dim: rgba(255, 255, 255, 0.58);
             --ink-faint: rgba(255, 255, 255, 0.36);
             --dock-r: 22px;
+            /* Radius scale — every rounded corner in the app should pick one
+               of these instead of a one-off pixel value, so corners read as
+               a system rather than accumulated small inconsistencies. */
+            --r-s: 12px;   /* buttons, chips, small list rows */
+            --r-m: 16px;   /* inputs, medium rows, small cards */
+            --r-l: 20px;   /* cards, sheets, dialogs */
+            --r-xl: 26px;  /* drawer, full sheets sliding from an edge */
+            --r-pill: 999px; /* pills and circles */
         }
         * { box-sizing: border-box; }
         body, html {
@@ -72,8 +80,8 @@
             word-wrap: break-word;
             will-change: transform, opacity;
         }
-        .bubble-text.fade-in { opacity: 0; filter: blur(3px); transition: opacity 0.55s ease, filter 0.55s ease; }
-        .bubble-text.fade-in.shown { opacity: 1; filter: blur(0); }
+        .bubble-text.fade-in { opacity: 0; transition: opacity 0.45s ease; }
+        .bubble-text.fade-in.shown { opacity: 1; }
 
         .shock-ring {
             position: absolute; border-radius: 50%;
@@ -277,7 +285,7 @@
         #edit-input {
             width: 100%; box-sizing: border-box;
             min-height: 96px; max-height: 34vh; resize: none;
-            padding: 12px 14px; border-radius: 16px;
+            padding: 12px 14px; border-radius: var(--r-m);
             border: 1px solid rgba(255, 255, 255, 0.16);
             background: rgba(28, 32, 44, 0.62);
             backdrop-filter: blur(28px) saturate(1.4); -webkit-backdrop-filter: blur(28px) saturate(1.4);
@@ -372,45 +380,90 @@
            ============================================================ */
         #applock-screen {
             position: fixed; inset: 0; z-index: 999999;
-            background: #000000;
+            background: radial-gradient(ellipse at 50% 32%, #1c1330 0%, #0b0818 55%, #030308 100%);
             align-items: center; justify-content: center; flex-direction: column;
             color: var(--ink, #e8ecf5);
         }
         #applock-inner {
             display: flex; flex-direction: column; align-items: center; gap: 22px;
             padding: 24px; width: 100%; max-width: 420px; box-sizing: border-box;
+            opacity: 0; transform: scale(0.96);
         }
-        #applock-icon { font-size: 44px; opacity: 0.85; }
+        @keyframes lockScreenIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        #applock-inner.entering { animation: lockScreenIn 0.38s cubic-bezier(.16, 1, .3, 1) forwards; }
+        @keyframes lockScreenOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(1.05); }
+        }
+        #applock-screen.unlocking #applock-inner { animation: lockScreenOut 0.26s ease-in forwards; }
+        #applock-icon {
+            width: 52px; height: 52px; color: rgba(255, 255, 255, 0.92);
+            filter: drop-shadow(0 0 14px rgba(140, 160, 255, 0.35));
+            animation: lockGlow 3.2s ease-in-out infinite;
+        }
+        @keyframes lockGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(140, 160, 255, 0.25)); }
+            50% { filter: drop-shadow(0 0 20px rgba(160, 180, 255, 0.45)); }
+        }
         #applock-title { font-size: 22px; font-weight: 700; }
         #applock-sub { font-size: 15px; opacity: 0.7; text-align: center; }
         #applock-dots { display: flex; gap: 18px; margin: 10px 0; }
+        #applock-dots.shake { animation: lockShake 0.46s cubic-bezier(.36, .07, .19, .97); }
+        @keyframes lockShake {
+            10%, 90% { transform: translateX(-1px); }
+            20%, 80% { transform: translateX(2px); }
+            30%, 50%, 70% { transform: translateX(-7px); }
+            40%, 60% { transform: translateX(7px); }
+        }
         .applock-dot {
             width: 16px; height: 16px; border-radius: 50%;
             border: 1.5px solid rgba(255, 255, 255, 0.4); background: transparent;
             transition: background 0.15s, border-color 0.15s;
         }
-        .applock-dot.filled { background: #fff; border-color: #fff; }
-        .applock-dot.error { border-color: #ff5a5a; }
+        .applock-dot.filled { background: #fff; border-color: #fff; animation: dotPop 0.3s cubic-bezier(.34, 1.56, .64, 1); }
+        @keyframes dotPop {
+            0% { transform: scale(1); }
+            45% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+        .applock-dot.error { border-color: #ff5a5a; background: #ff5a5a; animation: none; }
         #applock-keypad {
             display: grid; grid-template-columns: repeat(3, min(22vw, 84px));
             gap: min(6vw, 26px);
         }
         .applock-key {
             width: min(22vw, 84px); height: min(22vw, 84px); border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08); border: none; color: #fff;
-            font-size: min(7vw, 30px); font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.12); color: #fff;
+            font-size: min(7vw, 30px); font-weight: 400;
+            background: radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.05) 62%, rgba(255, 255, 255, 0.02) 100%);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28), inset 0 -8px 14px rgba(0, 0, 0, 0.3), 0 3px 8px rgba(0, 0, 0, 0.35);
+            transition: transform 0.1s cubic-bezier(.34, 1.56, .64, 1), background 0.12s;
         }
-        .applock-key:active { background: rgba(255, 255, 255, 0.18); }
+        .applock-key:active {
+            transform: scale(0.90);
+            background: radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1) 62%, rgba(255, 255, 255, 0.04) 100%);
+        }
         #applock-faceid-btn {
-            margin-top: 6px; padding: 12px 24px; border-radius: 999px;
-            background: rgba(255, 255, 255, 0.1); color: #fff; border: none; font-size: 15px;
+            margin-top: 6px; padding: 11px 22px; border-radius: 999px;
+            background: rgba(255, 255, 255, 0.09); color: #fff; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 15px;
+            display: flex; align-items: center; gap: 9px;
+            transition: transform 0.1s ease, background 0.12s;
         }
+        #applock-faceid-btn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.16); }
+        #applock-faceid-btn svg { width: 19px; height: 19px; flex-shrink: 0; }
+        #applock-faceid-btn.scanning svg { animation: faceScanPulse 1s ease-in-out infinite; }
+        @keyframes faceScanPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
         #applock-error { color: #ff8a8a; font-size: 13px; min-height: 18px; }
         #applock-cancel-btn {
             position: absolute; top: calc(env(safe-area-inset-top, 0px) + 20px); right: 24px;
-            background: none; border: none; color: rgba(255, 255, 255, 0.75);
-            font-size: 17px; padding: 6px 4px;
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 999px;
+            color: rgba(255, 255, 255, 0.85); font-size: 15px; padding: 8px 16px;
+            transition: transform 0.1s ease, background 0.12s;
         }
+        #applock-cancel-btn:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.14); }
         #drawer-settings {
             padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -438,16 +491,19 @@
         }
         #drawer {
             position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-            border-radius: 26px 26px 0 0;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
             height: 72dvh;
             transform: translateY(105%);
             visibility: hidden;
             transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.24, 1), visibility 0s 0.32s;
             display: flex; flex-direction: column;
             padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-            /* Liquid glass: deep frost, saturation lift, luminous top edge. */
+            /* Liquid glass: same treatment as .glass (blur/saturate) so the
+               drawer reads as the same material as the dock, cards, and
+               everything else — just with its own gradient since it's a
+               full sheet rising from an edge, not a floating card. */
             background: linear-gradient(to bottom, rgba(30, 36, 54, 0.42), rgba(12, 15, 26, 0.55));
-            backdrop-filter: blur(34px) saturate(1.5); -webkit-backdrop-filter: blur(34px) saturate(1.5);
+            backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
             border-top: 1px solid rgba(255, 255, 255, 0.16);
             box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
@@ -678,7 +734,7 @@
         }
         #import-sheet.open { display: flex; }
         #import-card { will-change: transform; }
-        #import-card { width: min(92vw, 420px); border-radius: 20px; padding: 18px; }
+        #import-card { width: min(92vw, 420px); border-radius: var(--r-l); padding: 18px; }
         #import-title { color: var(--ink); font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 18px; }
         #import-sub { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; line-height: 1.45; margin: 6px 0 12px; }
         #import-input {
@@ -713,7 +769,7 @@
             transform: translate(-50%, 16px); z-index: 60;
             width: min(94vw, 430px); max-height: 46vh; overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 15px 16px 12px; border-radius: 20px;
+            padding: 15px 16px 12px; border-radius: var(--r-l);
             opacity: 0; pointer-events: none;
             transition: opacity 0.26s ease, transform 0.26s ease;
         }
@@ -721,12 +777,12 @@
         #recall-q { color: var(--ink-dim); font-size: 12.5px; font-weight: 700; margin-bottom: 10px; font-style: italic; }
         #recall-a { color: var(--ink); font-size: 14.5px; font-weight: 600; line-height: 1.55; white-space: pre-wrap; }
         #recall-save {
-            margin-top: 10px; width: 100%; padding: 10px 0; border-radius: 12px;
+            margin-top: 10px; width: 100%; padding: 10px 0; border-radius: var(--r-s);
             border: 1px solid rgba(169,200,232,0.35); background: rgba(169,200,232,0.14);
             color: var(--ink); font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 13px;
         }
         #recall-close {
-            margin-top: 14px; width: 100%; padding: 10px 0; border-radius: 12px;
+            margin-top: 14px; width: 100%; padding: 10px 0; border-radius: var(--r-s);
             border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.07);
             color: var(--ink); font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 13.5px;
         }
@@ -745,7 +801,7 @@
         #ms-text { color: var(--ink); font-size: 13.5px; font-weight: 600; line-height: 1.4; margin-bottom: 10px; }
         #ms-btns { display: flex; gap: 8px; }
         #ms-btns button {
-            flex: 1; padding: 10px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12);
+            flex: 1; padding: 10px 0; border-radius: var(--r-s); border: 1px solid rgba(255,255,255,0.12);
             font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 13px;
             background: rgba(255, 255, 255, 0.07); color: var(--ink);
         }
@@ -804,12 +860,10 @@
             z-index: 14;
             opacity: 0; pointer-events: none;
             transform-origin: 50% 100%;
-            filter: blur(6px);
-            transition: opacity 0.34s cubic-bezier(0.22, 0.9, 0.3, 1),
-                        transform 0.34s cubic-bezier(0.22, 0.9, 0.3, 1),
-                        filter 0.34s ease;
+            transition: opacity 0.28s cubic-bezier(0.22, 0.9, 0.3, 1),
+                        transform 0.28s cubic-bezier(0.22, 0.9, 0.3, 1);
         }
-        #detail-card.open { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); filter: blur(0); }
+        #detail-card.open { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
         #detail-card.editing { opacity: 0; pointer-events: none; transition: opacity 0.16s ease; }
         #detail-urgency {
             display: inline-flex; align-items: center; gap: 6px;
@@ -832,7 +886,7 @@
         #detail-meta { color: var(--ink-faint); font-size: 10.5px; font-weight: 600; margin-top: 4px; }
         #detail-actions { display: flex; gap: 8px; margin-top: 8px; }
         .detail-btn {
-            flex: 1; padding: 10px 0; border-radius: 12px;
+            flex: 1; padding: 10px 0; border-radius: var(--r-s);
             font-family: 'Quicksand', sans-serif; font-size: 13px; font-weight: 700;
             cursor: pointer; border: 1px solid var(--glass-border);
             transition: transform 0.12s ease, background 0.2s ease;
@@ -864,7 +918,7 @@
         }
         .untangle-reply { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
         .untangle-reply input {
-            flex: 1; min-width: 0; box-sizing: border-box; padding: 9px 12px; border-radius: 12px;
+            flex: 1; min-width: 0; box-sizing: border-box; padding: 9px 12px; border-radius: var(--r-s);
             border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06);
             color: var(--ink); font-family: 'Quicksand', sans-serif; font-weight: 600;
             font-size: 14px; outline: none;
@@ -881,14 +935,14 @@
         .untangle-send svg { width: 14px; height: 14px; stroke: #10141c; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
         #move-picker {
             position: fixed; inset: 0; z-index: 60;
-            background: rgba(6, 9, 18, 0.6); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3);
+            background: rgba(6, 9, 18, 0.6); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
             display: none; flex-direction: column; padding: 20px 16px;
         }
         #move-picker.open { display: flex; }
         #move-picker h3 { color: var(--ink); font-size: 15px; font-weight: 700; margin: 6px 4px 12px; }
         #move-picker .mp-scroll { overflow-y: auto; flex: 1; }
         .mp-item {
-            padding: 12px 14px; border-radius: 12px; color: var(--ink);
+            padding: 12px 14px; border-radius: var(--r-s); color: var(--ink);
             font-size: 13.5px; font-weight: 600; cursor: pointer;
             border: 1px solid rgba(255,255,255,0.06); margin-bottom: 6px;
             background: rgba(255,255,255,0.03);
@@ -901,7 +955,7 @@
         #detail-edit {
             display: none;
             width: 100%; min-height: 72px; resize: none;
-            border-radius: 12px; border: 1px solid var(--glass-border);
+            border-radius: var(--r-s); border: 1px solid var(--glass-border);
             background: rgba(255, 255, 255, 0.06);
             color: var(--ink); font-family: 'Quicksand', sans-serif;
             font-weight: 600; font-size: 14px; line-height: 1.5;
@@ -936,12 +990,15 @@
     <div id="applock-screen" class="ui-block" style="display:none;">
         <button id="applock-cancel-btn" style="display:none;">Cancel</button>
         <div id="applock-inner">
-            <div id="applock-icon">🔒</div>
+            <svg id="applock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
             <div id="applock-title">Mindorb Locked</div>
             <div id="applock-sub">Enter your PIN</div>
             <div id="applock-dots"></div>
             <div id="applock-keypad"></div>
-            <button id="applock-faceid-btn" style="display:none;">Use Face ID</button>
+            <button id="applock-faceid-btn" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M20 8V6a2 2 0 0 0-2-2h-2M4 16v2a2 2 0 0 0 2 2h2M20 16v2a2 2 0 0 1-2 2h-2M9 10v2M15 10v2M8 15c1.2 1 2.6 1.5 4 1.5s2.8-.5 4-1.5"/></svg>
+                <span>Use Face ID</span>
+            </button>
             <div id="applock-error"></div>
         </div>
     </div>
@@ -1873,7 +1930,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21l';
+        const BUILD_TAG = '2026-07-21p';
 
         // ============================================================
         // APP LOCK — PIN + optional Face ID/Touch ID gate on launch and
@@ -1947,6 +2004,7 @@
             }
         }
         function appLockKeyPress(k) {
+            buzz([8]); // light tactile tick, same as a real keypad
             if (k === '⌫') {
                 appLockPendingDigits = appLockPendingDigits.slice(0, -1);
                 appLockRenderDots(appLockPendingDigits.length, false);
@@ -1958,6 +2016,12 @@
             if (appLockPendingDigits.length === APPLOCK_DIGITS) setTimeout(appLockSubmit, 120);
         }
 
+        function appLockShakeError() {
+            const dots = $al('applock-dots');
+            dots.classList.remove('shake'); void dots.offsetWidth; // restart animation if triggered twice quickly
+            dots.classList.add('shake');
+            buzz([35, 45, 35, 45, 60]); // distinct "wrong" pattern, not the light per-key tick
+        }
         async function appLockSubmit() {
             const digits = appLockPendingDigits;
             if (appLockMode === 'unlock') {
@@ -1968,7 +2032,7 @@
                 else {
                     $al('applock-error').textContent = 'Incorrect PIN';
                     appLockRenderDots(APPLOCK_DIGITS, true);
-                    try { if (typeof buzz === 'function') buzz([30, 40, 30]); } catch (e) {}
+                    appLockShakeError();
                     setTimeout(() => { appLockPendingDigits = ''; appLockRenderDots(0, false); }, 420);
                 }
             } else if (appLockMode === 'setup-new') {
@@ -1989,6 +2053,7 @@
                 } else {
                     $al('applock-error').textContent = "PINs didn't match — try again";
                     appLockRenderDots(APPLOCK_DIGITS, true);
+                    appLockShakeError();
                     setTimeout(() => {
                         appLockPendingDigits = ''; appLockFirstNewPin = '';
                         appLockMode = 'setup-new';
@@ -2011,20 +2076,34 @@
                 } else {
                     $al('applock-error').textContent = 'Incorrect current PIN';
                     appLockRenderDots(APPLOCK_DIGITS, true);
+                    appLockShakeError();
                     setTimeout(() => { appLockPendingDigits = ''; appLockRenderDots(0, false); }, 420);
                 }
             }
         }
 
+        function appLockPlayEntrance() {
+            const inner = $al('applock-inner');
+            inner.classList.remove('entering'); void inner.offsetWidth; // restart if re-triggered quickly
+            inner.classList.add('entering');
+        }
+        function appLockPlayExitThenHide(after) {
+            const screen = $al('applock-screen');
+            screen.classList.add('unlocking');
+            setTimeout(() => {
+                screen.style.display = 'none';
+                screen.classList.remove('unlocking');
+                if (after) after();
+            }, 260);
+        }
         function appLockDoUnlock() {
             appLockUnlocked = true;
-            $al('applock-screen').style.display = 'none';
             $al('applock-error').textContent = '';
+            appLockPlayExitThenHide();
         }
         function appLockCloseSetup() {
-            $al('applock-screen').style.display = 'none';
             appLockUnlocked = true;
-            renderAppLockSettingsRow();
+            appLockPlayExitThenHide(renderAppLockSettingsRow);
         }
         function appLockShowUnlockScreen() {
             appLockMode = 'unlock';
@@ -2035,6 +2114,7 @@
             appLockBuildKeypad();
             appLockRenderDots(0, false);
             $al('applock-screen').style.display = 'flex';
+            appLockPlayEntrance();
             $al('applock-cancel-btn').style.display = 'none'; // never let this be bypassed while genuinely locked
             const faceBtn = $al('applock-faceid-btn');
             if (appLockHasWebAuthn()) {
@@ -2056,6 +2136,7 @@
             $al('applock-faceid-btn').style.display = 'none';
             $al('applock-cancel-btn').style.display = 'block';
             $al('applock-screen').style.display = 'flex';
+            appLockPlayEntrance();
         }
         function appLockShowChangeScreen() {
             appLockMode = 'change-old';
@@ -2068,6 +2149,7 @@
             $al('applock-faceid-btn').style.display = 'none';
             $al('applock-cancel-btn').style.display = 'block';
             $al('applock-screen').style.display = 'flex';
+            appLockPlayEntrance();
         }
         // Only reachable from setup/change (the button is hidden during a
         // real unlock) — safe to just walk away. Fresh setup never saved
@@ -2075,9 +2157,8 @@
         // and changing the PIN hasn't touched the old hash/salt yet, so
         // "cancel" is identical in both cases: close and leave state as it was.
         function appLockCancelSetup() {
-            $al('applock-screen').style.display = 'none';
             appLockPendingDigits = ''; appLockFirstNewPin = '';
-            renderAppLockSettingsRow();
+            appLockPlayExitThenHide(renderAppLockSettingsRow);
         }
 
         async function appLockEnrollWebAuthn() {
@@ -2105,6 +2186,8 @@
         async function appLockTryWebAuthn() {
             const idB64 = localStorage.getItem(APPLOCK_WEBAUTHN_KEY);
             if (!idB64) return;
+            const faceBtn = $al('applock-faceid-btn');
+            faceBtn.classList.add('scanning');
             try {
                 const challenge = new Uint8Array(32); crypto.getRandomValues(challenge);
                 const assertion = await navigator.credentials.get({
@@ -2115,7 +2198,8 @@
                     }
                 });
                 if (assertion) appLockDoUnlock();
-            } catch (e) { /* cancelled or failed — stay on the PIN screen */ }
+            } catch (e) { /* cancelled or failed — stay on the PIN screen */
+            } finally { faceBtn.classList.remove('scanning'); }
         }
 
         // Re-lock after real backgrounding, not brief app switches/notifications.
@@ -4286,9 +4370,31 @@
                         const ownText = (s.full && s.full.trim()) ? s.full.trim() : (s.label || thought.full);
                         const nt = makeThought(s.label || ownText, ownText);
                         nt.short = s.short || nt.short;
+                        nt.routed = true; // this bubble was JUST classified via the split — never re-offer it to retryUnrouted()
                         const p = s.parentId ? findThoughtById(s.parentId) : null;
                         homes.push(p ? p.summary : (s.label || 'a new bubble'));
-                        setTimeout(() => fileThought(nt, s.parentId || null), i * 180);
+                        // This split's own portion may ALSO independently
+                        // enumerate parallel items (e.g. one split is
+                        // "Grocery Shopping" and its own text lists milk,
+                        // carrots, salmon) — break that split down into its
+                        // own children instead of leaving it as one flat
+                        // bubble, same rule as top-level children below.
+                        const splitChildren = Array.isArray(s.children) ? s.children : [];
+                        setTimeout(() => {
+                            fileThought(nt, s.parentId || null);
+                            saveState();
+                            if (splitChildren.length >= 2) {
+                                splitChildren.forEach((c, j) => {
+                                    setTimeout(() => {
+                                        const ct = makeThought(c.label || c.full, c.full || c.label);
+                                        if (c.short) ct.short = c.short;
+                                        ct.routed = true;
+                                        fileThought(ct, nt.id);
+                                        saveState();
+                                    }, 250 + j * 180);
+                                });
+                            }
+                        }, i * 180);
                     });
                     saveState();
                     // Tell the user where everything went, in one clean line.
