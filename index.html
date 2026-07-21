@@ -377,32 +377,40 @@
             color: var(--ink, #e8ecf5);
         }
         #applock-inner {
-            display: flex; flex-direction: column; align-items: center; gap: 18px;
-            padding: 24px; width: 100%; max-width: 340px; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center; gap: 22px;
+            padding: 24px; width: 100%; max-width: 420px; box-sizing: border-box;
         }
-        #applock-icon { font-size: 40px; opacity: 0.85; }
-        #applock-title { font-size: 20px; font-weight: 700; }
-        #applock-sub { font-size: 14px; opacity: 0.7; text-align: center; }
-        #applock-dots { display: flex; gap: 14px; margin: 8px 0; }
+        #applock-icon { font-size: 44px; opacity: 0.85; }
+        #applock-title { font-size: 22px; font-weight: 700; }
+        #applock-sub { font-size: 15px; opacity: 0.7; text-align: center; }
+        #applock-dots { display: flex; gap: 18px; margin: 10px 0; }
         .applock-dot {
-            width: 14px; height: 14px; border-radius: 50%;
+            width: 16px; height: 16px; border-radius: 50%;
             border: 1.5px solid rgba(255, 255, 255, 0.4); background: transparent;
             transition: background 0.15s, border-color 0.15s;
         }
         .applock-dot.filled { background: #fff; border-color: #fff; }
         .applock-dot.error { border-color: #ff5a5a; }
-        #applock-keypad { display: grid; grid-template-columns: repeat(3, 64px); gap: 14px; }
+        #applock-keypad {
+            display: grid; grid-template-columns: repeat(3, min(22vw, 84px));
+            gap: min(6vw, 26px);
+        }
         .applock-key {
-            width: 64px; height: 64px; border-radius: 50%;
+            width: min(22vw, 84px); height: min(22vw, 84px); border-radius: 50%;
             background: rgba(255, 255, 255, 0.08); border: none; color: #fff;
-            font-size: 22px; font-weight: 600;
+            font-size: min(7vw, 30px); font-weight: 500;
         }
         .applock-key:active { background: rgba(255, 255, 255, 0.18); }
         #applock-faceid-btn {
-            margin-top: 4px; padding: 10px 20px; border-radius: 999px;
-            background: rgba(255, 255, 255, 0.1); color: #fff; border: none; font-size: 14px;
+            margin-top: 6px; padding: 12px 24px; border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1); color: #fff; border: none; font-size: 15px;
         }
         #applock-error { color: #ff8a8a; font-size: 13px; min-height: 18px; }
+        #applock-cancel-btn {
+            position: absolute; top: calc(env(safe-area-inset-top, 0px) + 20px); right: 24px;
+            background: none; border: none; color: rgba(255, 255, 255, 0.75);
+            font-size: 17px; padding: 6px 4px;
+        }
         #drawer-settings {
             padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -926,6 +934,7 @@
 </head>
 <body>
     <div id="applock-screen" class="ui-block" style="display:none;">
+        <button id="applock-cancel-btn" style="display:none;">Cancel</button>
         <div id="applock-inner">
             <div id="applock-icon">🔒</div>
             <div id="applock-title">Mindorb Locked</div>
@@ -1864,7 +1873,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21j';
+        const BUILD_TAG = '2026-07-21l';
 
         // ============================================================
         // APP LOCK — PIN + optional Face ID/Touch ID gate on launch and
@@ -2026,6 +2035,7 @@
             appLockBuildKeypad();
             appLockRenderDots(0, false);
             $al('applock-screen').style.display = 'flex';
+            $al('applock-cancel-btn').style.display = 'none'; // never let this be bypassed while genuinely locked
             const faceBtn = $al('applock-faceid-btn');
             if (appLockHasWebAuthn()) {
                 faceBtn.style.display = 'block';
@@ -2044,6 +2054,7 @@
             appLockBuildKeypad();
             appLockRenderDots(0, false);
             $al('applock-faceid-btn').style.display = 'none';
+            $al('applock-cancel-btn').style.display = 'block';
             $al('applock-screen').style.display = 'flex';
         }
         function appLockShowChangeScreen() {
@@ -2055,7 +2066,18 @@
             appLockBuildKeypad();
             appLockRenderDots(0, false);
             $al('applock-faceid-btn').style.display = 'none';
+            $al('applock-cancel-btn').style.display = 'block';
             $al('applock-screen').style.display = 'flex';
+        }
+        // Only reachable from setup/change (the button is hidden during a
+        // real unlock) — safe to just walk away. Fresh setup never saved
+        // anything (the enabled flag only gets set on successful confirm),
+        // and changing the PIN hasn't touched the old hash/salt yet, so
+        // "cancel" is identical in both cases: close and leave state as it was.
+        function appLockCancelSetup() {
+            $al('applock-screen').style.display = 'none';
+            appLockPendingDigits = ''; appLockFirstNewPin = '';
+            renderAppLockSettingsRow();
         }
 
         async function appLockEnrollWebAuthn() {
@@ -2132,6 +2154,8 @@
             if (changeBtn) changeBtn.addEventListener('click', appLockShowChangeScreen);
             const faceSetupBtn = $al('applock-faceid-setup-btn');
             if (faceSetupBtn) faceSetupBtn.addEventListener('click', appLockEnrollWebAuthn);
+            const cancelBtn = $al('applock-cancel-btn');
+            if (cancelBtn) cancelBtn.addEventListener('click', appLockCancelSetup);
             renderAppLockSettingsRow();
         });
 
@@ -4592,6 +4616,7 @@
             let monVol = 0;
             const recent = [];
             let audioStuckSince = 0;
+            let everSawAnySignal = false;
             silenceMonitor = setInterval(() => {
                 if (!isListening) { clearInterval(silenceMonitor); return; }
                 const now = performance.now();
@@ -4626,6 +4651,22 @@
                     }
                 } else {
                     audioStuckSince = 0;
+                }
+                // A THIRD, sneakier failure mode: the track still says
+                // 'live' and the context still says 'running', but no
+                // actual audio is being delivered at all — a "zombie"
+                // stream (seen after the app sits open a while, then a
+                // bubble is tapped to talk). A real mic in a real room
+                // always registers SOME tiny self-noise/room-tone reading;
+                // a perfect, sustained flatline means the pipeline itself
+                // is dead, not that the room is quiet. Catch this in ~2.5s
+                // instead of silently riding out the full 12s timeout (or
+                // requiring backgrounding the app to force a fresh session).
+                if (rawVolume > 0.001) everSawAnySignal = true;
+                if (!everSawAnySignal && now - t0 > 2500) {
+                    hardResetAudio();
+                    showVoiceStatus('Mic connection dropped — tap to try again', { error: true, autoHideMs: 2600 });
+                    return;
                 }
                 // Real speech sits well above ambient noise/mic self-noise —
                 // the old bar (floor+0.03, min 0.042) was low enough that
@@ -5286,7 +5327,13 @@
             const mb = $('mic-btn'); if (mb) mb.classList.add('live');
             showVoiceStatus('Listening…');
             try {
-                micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+                // Reuse the existing stream if it's still alive — a fresh
+                // getUserMedia() call every single time (rather than only
+                // when actually needed) is likely part of why iOS keeps
+                // re-prompting for permission, and it's wasted work besides.
+                if (!micStream || !micStream.getTracks().some(t => t.readyState === 'live')) {
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+                }
                 try {
                     // Long idle / backgrounding can leave the context in any
                     // dead state ('closed', 'interrupted', unresumable). Try
