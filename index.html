@@ -562,6 +562,40 @@
             transition: transform 0.1s ease;
         }
         #howto-open-btn:active { transform: scale(0.98); }
+        #btn-bulk-select {
+            background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-pill);
+            color: var(--ink-dim); font-size: 13px; font-weight: 600; padding: 8px 14px; margin-right: 8px;
+            transition: transform 0.1s ease, background 0.12s, color 0.12s;
+        }
+        #btn-bulk-select:active { transform: scale(0.94); }
+        #btn-bulk-select.active { background: rgba(169, 200, 232, 0.22); color: var(--ink); border-color: rgba(169, 200, 232, 0.4); }
+        .drawer-item.select-mode { padding-left: 10px; }
+        .item-check {
+            width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; margin-right: 10px;
+            border: 1.5px solid rgba(255, 255, 255, 0.35); background: transparent;
+            display: none; align-items: center; justify-content: center;
+            transition: background 0.12s, border-color 0.12s, transform 0.12s;
+        }
+        .drawer-item.select-mode .item-check { display: flex; }
+        .drawer-item.select-mode .urgency-dot { display: none; }
+        .item-check.checked { background: var(--accent); border-color: var(--accent); transform: scale(1.05); }
+        .item-check svg { width: 13px; height: 13px; stroke: #10141f; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+        .item-check.checked svg { opacity: 1; }
+        .drawer-item.select-mode .item-chevron { display: none; }
+        #bulk-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        #bulk-count { color: var(--ink-dim); font-size: 13px; font-weight: 600; }
+        #bulk-actions { display: flex; gap: 8px; }
+        #bulk-actions button {
+            padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.07); color: var(--ink); font-size: 13px; font-weight: 600;
+            transition: transform 0.1s ease, opacity 0.15s ease;
+        }
+        #bulk-actions button:active { transform: scale(0.94); }
+        #bulk-release { background: rgba(235, 240, 248, 0.94); color: #10141f; }
+        #bulk-release:disabled { opacity: 0.4; }
         #drawer-settings {
             padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1180,6 +1214,7 @@
                 <div id="drawer-title">All Thoughts</div>
                 <div id="drawer-sub"></div>
             </div>
+            <button id="btn-bulk-select" title="Select multiple">Select</button>
             <button id="btn-import" title="Import old notes">
                 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
             </button>
@@ -1193,6 +1228,14 @@
             <button id="drawer-search-cancel">Cancel</button>
         </div>
         <div id="drawer-list"></div>
+        <div id="bulk-bar" style="display:none;">
+            <span id="bulk-count">0 selected</span>
+            <div id="bulk-actions">
+                <button id="bulk-select-all">Select All</button>
+                <button id="bulk-cancel">Cancel</button>
+                <button id="bulk-release" disabled>Release</button>
+            </div>
+        </div>
         <div id="drawer-settings">
             <div id="howto-open-row">
                 <button id="howto-open-btn">How to Use Mindorb</button>
@@ -2135,7 +2178,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21u';
+        const BUILD_TAG = '2026-07-21v';
 
         // ============================================================
         // ONBOARDING — guided first run. Four beats:
@@ -2153,7 +2196,7 @@
             { title: 'Say what\u2019s on your mind', body: 'Tap the big bubble (or the mic) and just talk — a task, an idea, anything. Watch it become a bubble.', pos: 'top', btn: null, interactive: true, pulse: true },
             { title: 'Tap your bubble', body: 'Every bubble is a little world. Tap the one you just made to go inside it.', pos: 'top', btn: null, interactive: true },
             { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release \u2014 it leaves your galaxy for good.', pos: 'top', btn: 'Next', interactive: false },
-            { title: 'One more thing', body: 'Already have notes somewhere? Paste any wall of text \u2014 an old notes app, a brain dump, anything \u2014 with the + button in All Thoughts, and it untangles into bubbles automatically.', body2: 'There\u2019s more to find as you go: untangling a messy thought, searching your whole galaxy, even asking it questions out loud. You\u2019ll bump into all of it naturally \u2014 or check How to Use anytime in settings.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
+            { title: 'Your galaxy awaits', body: 'One more thing \u2014 got notes somewhere else? The + in All Thoughts turns any wall of text into organized bubbles, instantly.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
         ];
         function onboardEligible() {
             try {
@@ -2200,19 +2243,29 @@
         }
         function onboardAdvance() {
             const next = onboardStep + 1;
-            if (next >= ONBOARD_STEPS.length) { onboardFinish(); return; }
+            if (next >= ONBOARD_STEPS.length) { onboardFinish(true); return; }
             // Brief dip between cards so it reads as a new beat, not a swap.
             const card = document.getElementById('onboard-card');
             card.classList.remove('show');
             setTimeout(() => onboardShowStep(next), 340);
         }
-        function onboardFinish() {
+        function onboardFinish(viaExplore) {
             onboardStep = -1;
             try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
             const card = document.getElementById('onboard-card');
             if (card) card.classList.remove('show');
             const pulse = document.getElementById('onboard-pulse');
             if (pulse) pulse.classList.remove('on');
+            // Only on the real finale (not an early Skip): a deliberate dive
+            // into the galaxy, reusing the same dip-closer-then-settle motion
+            // the app already uses whenever a bubble opens — this is the
+            // biggest "opening" of all, so it gets the fullest version of it.
+            if (viaExplore && typeof flyCamera === 'function' && typeof baseCameraZ === 'number' && !voyageActive) {
+                buzz([12]);
+                cameraZ = baseCameraZ;
+                flyCamera(baseCameraZ * 0.5, 380);
+                setTimeout(() => flyCamera(baseCameraZ, 780), 380);
+            }
         }
         // Event hooks — called from addThought / openThought below. Each
         // only advances the flow when it's sitting on the matching beat.
@@ -2898,11 +2951,15 @@
             }
         }
 
-        let pendingUndo = null;
+        let pendingUndo = null; // always an array of {thought, parentThought, index}, or null
         let undoTimer = null;
-        function offerUndo(thought, parentThought, index) {
-            pendingUndo = { thought, parentThought, index };
+        function offerUndo(entries) {
+            // Back-compat: a single (thought, parentThought, index) call still works.
+            if (arguments.length === 3) entries = [{ thought: arguments[0], parentThought: arguments[1], index: arguments[2] }];
+            pendingUndo = entries;
             clearTimeout(undoTimer);
+            const n = entries.length;
+            $('undo-text').textContent = n > 1 ? (n + ' thoughts released') : 'Thought released';
             $('undo-toast').classList.add('visible');
             undoTimer = setTimeout(() => {
                 $('undo-toast').classList.remove('visible');
@@ -2910,40 +2967,56 @@
             }, 6000);
         }
         $('undo-btn').addEventListener('click', () => {
-            if (!pendingUndo) return;
-            const { thought, parentThought, index } = pendingUndo;
+            if (!pendingUndo || !pendingUndo.length) return;
+            const entries = pendingUndo;
             pendingUndo = null;
             clearTimeout(undoTimer);
             $('undo-toast').classList.remove('visible');
-
-            const pool = parentThought ? (parentThought.children = parentThought.children || []) : thoughts;
-            pool.splice(Math.min(index, pool.length), 0, thought);
-            releasedCount = Math.max(0, releasedCount - 1);
+            // Restore ascending by original index within each parent group so
+            // earlier re-insertions don't shift where later ones belong.
+            const groups = new Map();
+            for (const e of entries) {
+                const key = e.parentThought ? e.parentThought.id : '__root__';
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(e);
+            }
+            for (const group of groups.values()) {
+                group.sort((a, b) => a.index - b.index);
+                for (const { thought, parentThought, index } of group) {
+                    const pool = parentThought ? (parentThought.children = parentThought.children || []) : thoughts;
+                    pool.splice(Math.min(index, pool.length), 0, thought);
+                    releasedCount -= (function cnt(x) {
+                        let n = 1;
+                        for (const k of ((x && x.children) || [])) n += cnt(k);
+                        return n;
+                    })(thought);
+                }
+            }
+            releasedCount = Math.max(0, releasedCount);
             saveState();
             updateDrawerUI();
-
-            // If the level this thought lives on is currently visible,
+            // If the level any restored thought lives on is currently visible,
             // float it back in — after any in-flight morph settles, so it
             // never spawns into a scene that's mid-transition.
-            const respawn = () => {
-                if (transitioning) { setTimeout(respawn, 200); return; }
-                const visibleParent = openThoughtObj ? openThoughtObj.thought : null;
-                if ((parentThought || null) === (visibleParent || null)) {
-                    // Give the slot back: if a refill bubble took it, that one
-                    // steps aside — never an unrelated bubble.
-                    const fills = objects.filter(o => o.autoFill && o.role === 'thought' && !o.removed && !o.popState
-                        && (o.parentThought || null) === (parentThought || null));
-                    if (fills.length >= 1) {
-                        const f = fills[fills.length - 1];
-                        f.anim = { from: { x: f.x, y: f.y, r: f.r }, to: { x: f.x, y: f.y, r: 0 },
-                            start: performance.now(), dur: 240, ease: easeInOutCubic,
-                            onComplete: () => { f.removed = true; if (f.el) f.el.remove(); } };
-                        if (f.el) { f.el.style.transition = 'opacity 0.22s ease'; f.el.style.opacity = '0'; }
+            for (const { thought, parentThought } of entries) {
+                const respawn = () => {
+                    if (transitioning) { setTimeout(respawn, 200); return; }
+                    const visibleParent = openThoughtObj ? openThoughtObj.thought : null;
+                    if ((parentThought || null) === (visibleParent || null)) {
+                        const fills = objects.filter(o => o.autoFill && o.role === 'thought' && !o.removed && !o.popState
+                            && (o.parentThought || null) === (parentThought || null));
+                        if (fills.length >= 1) {
+                            const f = fills[fills.length - 1];
+                            f.anim = { from: { x: f.x, y: f.y, r: f.r }, to: { x: f.x, y: f.y, r: 0 },
+                                start: performance.now(), dur: 240, ease: easeInOutCubic,
+                                onComplete: () => { f.removed = true; if (f.el) f.el.remove(); } };
+                            if (f.el) { f.el.style.transition = 'opacity 0.22s ease'; f.el.style.opacity = '0'; }
+                        }
+                        spawnThoughtObj(thought, false, parentThought || null);
                     }
-                    spawnThoughtObj(thought, false, parentThought || null);
-                }
-            };
-            respawn();
+                };
+                respawn();
+            }
         });
 
         function releaseThought(obj) {
