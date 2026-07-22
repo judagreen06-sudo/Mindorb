@@ -464,6 +464,58 @@
             transition: transform 0.1s ease, background 0.12s;
         }
         #applock-cancel-btn:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.14); }
+        /* ============================================================
+           ONBOARDING — a lightweight guided first-run. One coach card
+           at a time, each waiting for the user to actually DO the
+           thing (speak, tap, open) rather than read about it. Only
+           ever seen by a brand-new user; skippable at any moment.
+           ============================================================ */
+        #onboard-card {
+            position: fixed; left: 50%; z-index: 900;
+            transform: translateX(-50%) translateY(10px) scale(0.97);
+            width: min(88vw, 360px);
+            border-radius: var(--r-l); padding: 18px 18px 14px;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.32s cubic-bezier(0.22, 0.9, 0.3, 1),
+                        transform 0.32s cubic-bezier(0.22, 0.9, 0.3, 1);
+        }
+        #onboard-card.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
+        #onboard-card.top { top: calc(env(safe-area-inset-top, 0px) + 64px); bottom: auto; }
+        #onboard-card.bottom { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); top: auto; }
+        #onboard-title {
+            color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif;
+            font-weight: 800; font-size: 17px; margin-bottom: 6px;
+        }
+        #onboard-body { color: var(--ink-dim); font-size: 13.5px; font-weight: 600; line-height: 1.5; }
+        #onboard-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+        #onboard-skip {
+            background: none; border: none; color: var(--ink-faint);
+            font-size: 12.5px; font-weight: 600; padding: 8px 4px;
+        }
+        #onboard-next {
+            padding: 9px 20px; border-radius: var(--r-pill); border: none;
+            background: rgba(235, 240, 248, 0.94); color: #10141f;
+            font-size: 13.5px; font-weight: 700;
+            transition: transform 0.1s ease;
+        }
+        #onboard-next:active { transform: scale(0.95); }
+        #onboard-dots { display: flex; gap: 6px; }
+        .onboard-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.22); transition: background 0.2s; }
+        .onboard-dot.on { background: var(--accent); }
+        /* A soft pulse ring drawing the eye to the center bubble during
+           the "speak" step — transform/opacity only, GPU-cheap. */
+        #onboard-pulse {
+            position: fixed; left: 50%; top: 50%; z-index: 8;
+            width: 120px; height: 120px; border-radius: 50%;
+            border: 2px solid rgba(169, 200, 232, 0.55);
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0; pointer-events: none;
+        }
+        #onboard-pulse.on { animation: onboardPulse 2.2s ease-out infinite; }
+        @keyframes onboardPulse {
+            0% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+        }
         #drawer-settings {
             padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1027,6 +1079,16 @@
     </div>
 
     <div id="hint">Speak to the bubble · your thoughts file themselves</div>
+    <div id="onboard-pulse"></div>
+    <div id="onboard-card" class="glass ui-block">
+        <div id="onboard-title"></div>
+        <div id="onboard-body"></div>
+        <div id="onboard-actions">
+            <button id="onboard-skip">Skip</button>
+            <div id="onboard-dots"></div>
+            <button id="onboard-next">Next</button>
+        </div>
+    </div>
 
     <!-- Breadcrumb trail: where you are in the galaxy. Tap any crumb to fly there. -->
     <div id="trail" class="glass ui-block"><span class="trail-inner" id="trail-inner"></span></div>
@@ -1930,7 +1992,91 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21p';
+        const BUILD_TAG = '2026-07-21q';
+
+        // ============================================================
+        // ONBOARDING — guided first run. Four beats:
+        //   0 welcome (tap Next)
+        //   1 "say what's on your mind"  -> advances when a thought is captured
+        //   2 "tap your bubble to open"  -> advances when a bubble is opened
+        //   3 "release when done"        -> tap Done
+        // Interactive beats have no Next button — doing the thing IS next.
+        // Only ever shown to a brand-new user; Skip ends it permanently.
+        // ============================================================
+        const ONBOARD_KEY = 'mindorb-onboard-done';
+        let onboardStep = -1; // -1 = inactive
+        const ONBOARD_STEPS = [
+            { title: 'Welcome to Mindorb', body: 'This is your mind as a galaxy. Everything you say becomes a bubble — and the bubbles organize themselves.', pos: 'bottom', btn: 'Next', interactive: false },
+            { title: 'Say what\u2019s on your mind', body: 'Tap the big bubble (or the mic) and just talk — a task, an idea, anything. Watch it become a bubble.', pos: 'top', btn: null, interactive: true, pulse: true },
+            { title: 'Tap your bubble', body: 'Every bubble is a little world. Tap the one you just made to go inside it.', pos: 'top', btn: null, interactive: true },
+            { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release — it leaves your galaxy for good. That\u2019s the whole loop. Enjoy.', pos: 'bottom', btn: 'Done', interactive: false },
+        ];
+        function onboardEligible() {
+            try {
+                if (localStorage.getItem(ONBOARD_KEY)) return false;
+                if (localStorage.getItem('thoughts-v2-seen')) return false; // existing user
+            } catch (e) { return false; }
+            return true;
+        }
+        function onboardShowStep(i) {
+            onboardStep = i;
+            const s = ONBOARD_STEPS[i];
+            const card = document.getElementById('onboard-card');
+            if (!card || !s) return;
+            // The old one-line hint is redundant while guided onboarding runs.
+            const h = document.getElementById('hint');
+            if (h) h.classList.add('hidden');
+            document.getElementById('onboard-title').textContent = s.title;
+            document.getElementById('onboard-body').textContent = s.body;
+            card.classList.remove('top', 'bottom');
+            card.classList.add(s.pos);
+            const nextBtn = document.getElementById('onboard-next');
+            nextBtn.style.display = s.btn ? 'block' : 'none';
+            if (s.btn) nextBtn.textContent = s.btn;
+            const dots = document.getElementById('onboard-dots');
+            dots.innerHTML = '';
+            for (let d = 0; d < ONBOARD_STEPS.length; d++) {
+                const el = document.createElement('div');
+                el.className = 'onboard-dot' + (d === i ? ' on' : '');
+                dots.appendChild(el);
+            }
+            const pulse = document.getElementById('onboard-pulse');
+            if (pulse) pulse.classList.toggle('on', !!s.pulse);
+            card.classList.add('show');
+        }
+        function onboardAdvance() {
+            const next = onboardStep + 1;
+            if (next >= ONBOARD_STEPS.length) { onboardFinish(); return; }
+            // Brief dip between cards so it reads as a new beat, not a swap.
+            const card = document.getElementById('onboard-card');
+            card.classList.remove('show');
+            setTimeout(() => onboardShowStep(next), 340);
+        }
+        function onboardFinish() {
+            onboardStep = -1;
+            try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
+            const card = document.getElementById('onboard-card');
+            if (card) card.classList.remove('show');
+            const pulse = document.getElementById('onboard-pulse');
+            if (pulse) pulse.classList.remove('on');
+        }
+        // Event hooks — called from addThought / openThought below. Each
+        // only advances the flow when it's sitting on the matching beat.
+        function onboardNotify(event) {
+            if (onboardStep === 1 && event === 'thought-captured') onboardAdvance();
+            else if (onboardStep === 2 && event === 'thought-opened') onboardAdvance();
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const nextBtn = document.getElementById('onboard-next');
+            if (nextBtn) nextBtn.addEventListener('click', onboardAdvance);
+            const skipBtn = document.getElementById('onboard-skip');
+            if (skipBtn) skipBtn.addEventListener('click', onboardFinish);
+            if (onboardEligible()) {
+                // Let the launch warp land first — the galaxy arriving IS the
+                // first impression; the card follows it.
+                setTimeout(() => { if (onboardEligible()) onboardShowStep(0); }, 1700);
+            }
+        });
 
         // ============================================================
         // APP LOCK — PIN + optional Face ID/Touch ID gate on launch and
@@ -2670,6 +2816,7 @@
 
             transitioning = true;
             hintEl.classList.add('hidden');
+            try { onboardNotify('thought-opened'); } catch (e) {}
 
             // Flight IN: dip the camera closer (rush toward the bubble) then
             // let it ease back to rest as the new layer forms around you.
@@ -4584,6 +4731,7 @@
             updateDrawerUI();
             hintEl.classList.add('hidden');
             try { localStorage.setItem('thoughts-v2-seen', '1'); } catch(e) {}
+            try { onboardNotify('thought-captured'); } catch (e) {}
         }
 
         /* =========================================================
