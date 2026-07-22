@@ -516,6 +516,50 @@
             0% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
             100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
         }
+        /* ============================================================
+           HOW TO USE — a quiet reference page under settings. Every
+           section: a small vector illustration in the app's own visual
+           language + a few plain sentences. No screenshots (they bloat
+           the single-file build and go stale); vectors always match.
+           ============================================================ */
+        #howto-page {
+            position: fixed; inset: 0; z-index: 62;
+            background: rgba(6, 9, 18, 0.72); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
+            display: none; flex-direction: column;
+            padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 0;
+        }
+        #howto-page.open { display: flex; }
+        #howto-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 4px 20px 12px;
+        }
+        #howto-head h2 { color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif; font-weight: 800; font-size: 22px; margin: 0; }
+        #howto-close {
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-pill);
+            color: rgba(255, 255, 255, 0.85); font-size: 14px; font-weight: 600; padding: 8px 16px;
+            transition: transform 0.1s ease;
+        }
+        #howto-close:active { transform: scale(0.94); }
+        #howto-scroll { overflow-y: auto; flex: 1; padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 30px); -webkit-overflow-scrolling: touch; }
+        .howto-section {
+            border-radius: var(--r-l); padding: 16px;
+            background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.09);
+            margin-bottom: 12px;
+        }
+        .howto-section svg { width: 100%; height: 84px; display: block; margin-bottom: 10px; }
+        .howto-section h3 { color: var(--ink); font-size: 15.5px; font-weight: 700; margin: 0 0 6px; }
+        .howto-section p { color: var(--ink-dim); font-size: 13.5px; font-weight: 500; line-height: 1.55; margin: 0; }
+        .howto-section p + p { margin-top: 6px; }
+        #howto-open-row {
+            padding: 12px 20px 4px;
+        }
+        #howto-open-btn {
+            width: 100%; padding: 12px 0; border-radius: var(--r-s);
+            background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--ink); font-size: 14px; font-weight: 600;
+            transition: transform 0.1s ease;
+        }
+        #howto-open-btn:active { transform: scale(0.98); }
         #drawer-settings {
             padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1147,6 +1191,9 @@
         </div>
         <div id="drawer-list"></div>
         <div id="drawer-settings">
+            <div id="howto-open-row">
+                <button id="howto-open-btn">How to Use Mindorb</button>
+            </div>
             <div id="drawer-settings-row">
                 <span>App Lock</span>
                 <label class="applock-toggle">
@@ -1157,6 +1204,98 @@
             <div id="drawer-settings-sub" style="display:none;">
                 <button id="applock-change-btn">Change PIN</button>
                 <button id="applock-faceid-setup-btn">Set Up Face ID</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="howto-page" class="ui-block">
+        <div id="howto-head">
+            <h2>How to Use</h2>
+            <button id="howto-close">Done</button>
+        </div>
+        <div id="howto-scroll">
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <circle cx="150" cy="42" r="30" fill="none" stroke="#A9C8E8" stroke-width="1.6" opacity="0.9"/>
+                    <circle cx="150" cy="42" r="30" fill="rgba(169,200,232,0.06)"/>
+                    <circle cx="160" cy="32" r="3.5" fill="#fff" opacity="0.9"/>
+                    <path d="M60 42 q 10 -14 20 0 q 10 14 20 0 q 10 -14 20 0" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M240 42 q -10 -14 -20 0 q -10 14 -20 0" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <h3>Speak your mind</h3>
+                <p>Tap the big bubble (or the mic in the dock) and just talk — a task, an idea, a worry, anything. Stop talking and it captures itself.</p>
+                <p>Say several things in one breath and they become separate bubbles automatically.</p>
+            </div>
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <circle cx="110" cy="42" r="26" fill="none" stroke="#9DC4A8" stroke-width="1.5" opacity="0.9"/>
+                    <circle cx="185" cy="28" r="13" fill="none" stroke="#E8C182" stroke-width="1.3" opacity="0.85"/>
+                    <circle cx="200" cy="60" r="10" fill="none" stroke="#E89A8A" stroke-width="1.3" opacity="0.85"/>
+                    <path d="M138 38 q 18 -10 34 -8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="3 4"/>
+                    <path d="M136 50 q 26 10 54 8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="3 4"/>
+                </svg>
+                <h3>It organizes itself</h3>
+                <p>Every thought files itself into the right bubble — related things cluster together, new topics start new bubbles. You never sort anything by hand.</p>
+                <p>Disagree with where something landed? Open it and use Move.</p>
+            </div>
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <circle cx="150" cy="42" r="34" fill="none" stroke="#A9C8E8" stroke-width="1.6" opacity="0.9"/>
+                    <circle cx="138" cy="36" r="9" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
+                    <circle cx="166" cy="50" r="7" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.2"/>
+                    <circle cx="160" cy="28" r="5" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.1"/>
+                </svg>
+                <h3>Every bubble is a world</h3>
+                <p>Tap any bubble to dive inside it. Speak in there to add thoughts inside that topic. Bubbles inside bubbles, as deep as your mind goes.</p>
+                <p>The trail at the top shows where you are — tap it or the home button to fly back out.</p>
+            </div>
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <rect x="30" y="30" width="56" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                    <rect x="96" y="30" width="50" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                    <rect x="156" y="30" width="42" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                    <rect x="208" y="30" width="62" height="24" rx="12" fill="rgba(235,240,248,0.9)"/>
+                    <text x="58" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Untangle</text>
+                    <text x="121" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Move</text>
+                    <text x="177" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Edit</text>
+                    <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Release</text>
+                </svg>
+                <h3>The four actions</h3>
+                <p><b>Untangle</b> splits a long messy thought into separate bubbles. <b>Move</b> refiles it anywhere. <b>Edit</b> rewords it. <b>Release</b> lets it go — done, gone from your galaxy for good.</p>
+                <p>Releasing is the point: this isn't a list that grows forever. Finish things and watch them leave.</p>
+            </div>
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <rect x="60" y="22" width="180" height="18" rx="9" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+                    <circle cx="72" cy="31" r="4" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.4"/>
+                    <line x1="75" y1="34" x2="79" y2="38" stroke="rgba(255,255,255,0.5)" stroke-width="1.4" stroke-linecap="round"/>
+                    <rect x="60" y="48" width="180" height="10" rx="5" fill="rgba(255,255,255,0.05)"/>
+                    <rect x="60" y="62" width="140" height="10" rx="5" fill="rgba(255,255,255,0.05)"/>
+                </svg>
+                <h3>Find anything</h3>
+                <p>The list button in the dock opens All Thoughts — your whole galaxy as a scrollable tree, with search at the top. Tap any row to fly straight to that bubble.</p>
+            </div>
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <circle cx="150" cy="40" r="24" fill="none" stroke="#A9C8E8" stroke-width="1.5" opacity="0.9"/>
+                    <text x="150" y="45" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="14" font-family="sans-serif">?</text>
+                    <path d="M108 62 q 42 18 84 0" fill="none" stroke="rgba(169,200,232,0.5)" stroke-width="1.4" stroke-dasharray="4 4"/>
+                </svg>
+                <h3>Ask your galaxy</h3>
+                <p>Instead of adding a thought, ask a question out loud — "what did I say about the trip?", "what should I focus on?" — and it answers from everything you've captured.</p>
+            </div>
+            <div class="howto-section">
+                <svg viewBox="0 0 300 84">
+                    <rect x="70" y="20" width="70" height="44" rx="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+                    <line x1="80" y1="32" x2="130" y2="32" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="80" y1="42" x2="120" y2="42" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="80" y1="52" x2="126" y2="52" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M150 42 h 40" stroke="rgba(169,200,232,0.6)" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M184 36 l 8 6 l -8 6" fill="none" stroke="rgba(169,200,232,0.6)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="222" cy="42" r="16" fill="none" stroke="#9DC4A8" stroke-width="1.5" opacity="0.9"/>
+                </svg>
+                <h3>Bring your old notes</h3>
+                <p>Paste a brain dump, a notes-app export, or any wall of text via the + button in All Thoughts — it gets untangled into organized bubbles automatically.</p>
             </div>
         </div>
     </div>
@@ -1992,7 +2131,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21r';
+        const BUILD_TAG = '2026-07-21s';
 
         // ============================================================
         // ONBOARDING — guided first run. Four beats:
@@ -2077,6 +2216,29 @@
                 setTimeout(() => { if (onboardEligible()) onboardShowStep(0); }, 1700);
             }
         });
+
+        // ============================================================
+        // CONTEXTUAL HINTS — the second layer of onboarding. One-line,
+        // one-time tips that appear at the exact moment a feature first
+        // becomes relevant, then never again. This is how everything
+        // beyond the core loop gets discovered without ever being
+        // front-loaded into the guided intro.
+        // ============================================================
+        const HINTS_KEY = 'mindorb-hints-seen';
+        function hintsSeen() {
+            try { return JSON.parse(localStorage.getItem(HINTS_KEY) || '{}'); } catch (e) { return {}; }
+        }
+        function showContextualHint(id, text) {
+            // Never stack on top of guided onboarding, and only once ever.
+            if (onboardStep !== -1) return;
+            const seen = hintsSeen();
+            if (seen[id]) return;
+            seen[id] = 1;
+            try { localStorage.setItem(HINTS_KEY, JSON.stringify(seen)); } catch (e) {}
+            // Reuse the voice status pill — it's already the app's canonical
+            // "one line of guidance" surface, positioned and styled right.
+            try { showVoiceStatus('\u2728 ' + text, { autoHideMs: 4200 }); } catch (e) {}
+        }
 
         // ============================================================
         // APP LOCK — PIN + optional Face ID/Touch ID gate on launch and
@@ -2386,6 +2548,10 @@
             if (faceSetupBtn) faceSetupBtn.addEventListener('click', appLockEnrollWebAuthn);
             const cancelBtn = $al('applock-cancel-btn');
             if (cancelBtn) cancelBtn.addEventListener('click', appLockCancelSetup);
+            const howtoOpen = document.getElementById('howto-open-btn');
+            if (howtoOpen) howtoOpen.addEventListener('click', () => document.getElementById('howto-page').classList.add('open'));
+            const howtoClose = document.getElementById('howto-close');
+            if (howtoClose) howtoClose.addEventListener('click', () => document.getElementById('howto-page').classList.remove('open'));
             renderAppLockSettingsRow();
         });
 
@@ -2817,6 +2983,11 @@
             transitioning = true;
             hintEl.classList.add('hidden');
             try { onboardNotify('thought-opened'); } catch (e) {}
+            try {
+                if ((obj.thought.children || []).length >= 3) {
+                    showContextualHint('sounding-board', 'Try asking your galaxy a question out loud \u2014 it knows everything in here.');
+                }
+            } catch (e) {}
 
             // Flight IN: dip the camera closer (rush toward the bubble) then
             // let it ease back to rest as the new layer forms around you.
@@ -3085,6 +3256,11 @@
             detailUrgencyText.style.color = c;
             detailCard.classList.add('open');
             detailCardOpen = true;
+            try {
+                if ((thought.full || '').length > 120 && !(thought.children && thought.children.length)) {
+                    showContextualHint('untangle', 'Long, messy thought? Untangle breaks it into separate bubbles.');
+                }
+            } catch (e) {}
             $('undo-toast').classList.add('raised');
             $('dock').classList.add('raised');
             requestAnimationFrame(() => {
@@ -4096,7 +4272,13 @@
         resetIdle();
 
         let drawerOpen = false;
-        function openDrawer() { updateDrawerUI(); drawerEl.classList.add('open'); drawerScrim.classList.add('open'); drawerOpen = true; document.body.classList.add('drawer-open'); }
+        function openDrawer() {
+            updateDrawerUI(); drawerEl.classList.add('open'); drawerScrim.classList.add('open'); drawerOpen = true; document.body.classList.add('drawer-open');
+            try {
+                let n = 0; (function c(list) { for (const t of (list || [])) { n++; c(t.children); } })(thoughts);
+                if (n >= 12) showContextualHint('search', 'Galaxy getting big? Search finds any thought instantly.');
+            } catch (e) {}
+        }
         function closeDrawer() {
             setTimeout(syncFloaters, 260);
             drawerEl.style.transform = '';
