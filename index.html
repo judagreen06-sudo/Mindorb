@@ -551,7 +551,9 @@
         .howto-section p { color: var(--ink-dim); font-size: 13.5px; font-weight: 500; line-height: 1.55; margin: 0; }
         .howto-section p + p { margin-top: 6px; }
         #howto-open-row {
-            padding: 12px 20px 4px;
+            padding: 12px 20px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 14px;
         }
         #howto-open-btn {
             width: 100%; padding: 12px 0; border-radius: var(--r-s);
@@ -561,7 +563,7 @@
         }
         #howto-open-btn:active { transform: scale(0.98); }
         #drawer-settings {
-            padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
+            padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
         #drawer-settings-row {
@@ -1032,10 +1034,11 @@
         #move-picker {
             position: fixed; inset: 0; z-index: 60;
             background: rgba(6, 9, 18, 0.6); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
-            display: none; flex-direction: column; padding: 20px 16px;
+            display: none; flex-direction: column; padding: calc(env(safe-area-inset-top, 0px) + 20px) 16px 20px;
         }
         #move-picker.open { display: flex; }
-        #move-picker h3 { color: var(--ink); font-size: 15px; font-weight: 700; margin: 6px 4px 12px; }
+        #move-picker h3 { color: var(--ink); font-size: 15px; font-weight: 700; margin: 6px 4px 4px; }
+        #mp-hint { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; margin: 0 4px 12px; line-height: 1.4; }
         #move-picker .mp-scroll { overflow-y: auto; flex: 1; }
         .mp-item {
             padding: 12px 14px; border-radius: var(--r-s); color: var(--ink);
@@ -1331,6 +1334,7 @@
 
     <div id="move-picker">
         <h3>Move this thought to…</h3>
+        <div id="mp-hint" style="display:none;"></div>
         <div class="mp-scroll" id="mp-list"></div>
         <button id="mp-cancel">Cancel</button>
     </div>
@@ -2131,7 +2135,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21s';
+        const BUILD_TAG = '2026-07-21t';
 
         // ============================================================
         // ONBOARDING — guided first run. Four beats:
@@ -3570,9 +3574,18 @@
             out.appendChild(wrap);
         }
         $('btn-move').addEventListener('click', () => {
-            showVoiceStatus('Tap the bubble where this thought should go', { autoHideMs: 5000 });
             if (!openThoughtObj) return;
             const moving = openThoughtObj.thought;
+            const mpHint = $('mp-hint');
+            const seen = hintsSeen();
+            if (!seen.move && onboardStep === -1) {
+                mpHint.textContent = 'Tap any bubble below, even one deep inside another topic.';
+                mpHint.style.display = 'block';
+                seen.move = 1;
+                try { localStorage.setItem(HINTS_KEY, JSON.stringify(seen)); } catch (e) {}
+            } else {
+                mpHint.style.display = 'none';
+            }
             const list = $('mp-list');
             list.innerHTML = '';
             // Top-level option.
@@ -6428,7 +6441,10 @@
             if (pressState) pressCancel(); // a second touch never orphans a charge
             sfx(); // unlock audio inside the user gesture
             const hit = findHit(clientX, clientY);
-            if (!hit) return;
+            if (!hit) {
+                if (detailCardOpen) hideDetailCard();
+                return;
+            }
             if (hit.kind === 'thought' && hit.obj.urgentGhost) {
                 pressState = { obj: hit.obj, startX: clientX, startY: clientY, done: false, timer: null };
                 return;
