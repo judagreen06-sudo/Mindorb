@@ -517,6 +517,36 @@
             100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
         }
         /* ============================================================
+           ORB PORTAL — the Explore finale. #orb-core's position/size are
+           set inline by JS to exactly match the button it grows from;
+           everything animated on it afterward is transform + opacity
+           only (no filter/blur animation — expensive, and the lesson
+           from the earlier bubble-open jank fix applies here too).
+           ============================================================ */
+        #orb-portal {
+            position: fixed; inset: 0; z-index: 950;
+            pointer-events: none; display: none;
+        }
+        #orb-portal.active { display: block; }
+        #orb-core {
+            position: absolute;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.35) 8%, transparent 22%),
+                radial-gradient(circle at 50% 50%, rgba(169,200,232,0.35) 0%, rgba(157,196,168,0.22) 40%, rgba(232,193,130,0.18) 70%, rgba(232,154,138,0.14) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.35) inset,
+                0 0 40px rgba(169,200,232,0.5),
+                0 0 90px rgba(169,200,232,0.25);
+            transform-origin: center center;
+            will-change: transform, opacity;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            /* Handled in JS (a plain quick fade, no scale/particles) — this
+               is just a safety net if the element is ever left visible. */
+            #orb-core { transition: none !important; animation: none !important; }
+        }
+        /* ============================================================
            HOW TO USE — a quiet reference page under settings. Every
            section: a small vector illustration in the app's own visual
            language + a few plain sentences. No screenshots (they bloat
@@ -1169,6 +1199,14 @@
             <div id="onboard-dots"></div>
             <button id="onboard-next">Next</button>
         </div>
+    </div>
+
+    <!-- The Explore finale: a single glass orb that spawns exactly over the
+         button, scales up past the viewport with spring overshoot, then
+         fades its own fill in its second half to "reveal" the galaxy
+         already in motion underneath — the illusion of flying through it. -->
+    <div id="orb-portal" class="ui-block">
+        <div id="orb-core"></div>
     </div>
 
     <!-- Breadcrumb trail: where you are in the galaxy. Tap any crumb to fly there. -->
@@ -2178,7 +2216,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21v';
+        const BUILD_TAG = '2026-07-21w';
 
         // ============================================================
         // ONBOARDING — guided first run. Four beats:
@@ -2253,19 +2291,82 @@
             onboardStep = -1;
             try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
             const card = document.getElementById('onboard-card');
-            if (card) card.classList.remove('show');
             const pulse = document.getElementById('onboard-pulse');
             if (pulse) pulse.classList.remove('on');
-            // Only on the real finale (not an early Skip): a deliberate dive
-            // into the galaxy, reusing the same dip-closer-then-settle motion
-            // the app already uses whenever a bubble opens — this is the
-            // biggest "opening" of all, so it gets the fullest version of it.
+            const reduced = (function () {
+                try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+            })();
+            // Only on the real finale (not an early Skip), and only once the
+            // orb sequence exists to run it: the signature "fly into your
+            // galaxy" moment. Reduced motion gets a plain, quick fade instead
+            // — no scale, no particles, no camera zoom.
+            if (viaExplore && !reduced && typeof playExploreOrbTransition === 'function') {
+                playExploreOrbTransition(document.getElementById('onboard-next'));
+                if (card) { card.style.transition = 'opacity 0.18s ease'; card.style.opacity = '0'; setTimeout(() => card.classList.remove('show'), 180); }
+                return;
+            }
+            if (card) { card.classList.remove('show'); card.style.opacity = ''; card.style.transition = ''; }
             if (viaExplore && typeof flyCamera === 'function' && typeof baseCameraZ === 'number' && !voyageActive) {
                 buzz([12]);
                 cameraZ = baseCameraZ;
-                flyCamera(baseCameraZ * 0.5, 380);
-                setTimeout(() => flyCamera(baseCameraZ, 780), 380);
+                if (reduced) {
+                    // Still land in the galaxy, just without the big showy dive.
+                    flyCamera(baseCameraZ, 220);
+                } else {
+                    flyCamera(baseCameraZ * 0.5, 380);
+                    setTimeout(() => flyCamera(baseCameraZ, 780), 380);
+                }
             }
+        }
+        // The Explore finale: the button becomes a liquid-glass orb that
+        // scales past the viewport with a spring overshoot (fully opaque),
+        // then in its second half fades its own fill to transparent while
+        // the galaxy — already mid-dive via flyCamera, started partway
+        // through — is revealed underneath. At that scale the orb's edge
+        // is far off-screen, so the fade alone reads as "flying through
+        // it" with no masking/clip-path needed. transform+opacity only.
+        function playExploreOrbTransition(buttonEl) {
+            const portal = document.getElementById('orb-portal');
+            const core = document.getElementById('orb-core');
+            if (!portal || !core || !buttonEl) return;
+            const rect = buttonEl.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            const size = Math.max(rect.width, rect.height) || 44; // sane fallback — never divide by zero below
+            core.style.left = (cx - size / 2) + 'px';
+            core.style.top = (cy - size / 2) + 'px';
+            core.style.width = size + 'px';
+            core.style.height = size + 'px';
+            portal.classList.add('active');
+            buzz([10, 20, 40]);
+            try { if (typeof spawnRuptureFX === 'function') spawnRuptureFX(cx, cy, size / 2); } catch (e) {}
+            const diag = Math.sqrt(window.innerWidth ** 2 + window.innerHeight ** 2);
+            const maxScale = Math.max(2, (diag * 2.4) / size);
+            const DUR = 780;
+            let anim = null;
+            try {
+                anim = core.animate([
+                    { transform: 'scale(1)', opacity: 1, offset: 0 },
+                    { transform: 'scale(1.14)', opacity: 1, offset: 0.14 }, // spring overshoot — it's a button becoming a bubble, not a dead zoom
+                    { transform: `scale(${(maxScale * 0.5).toFixed(2)})`, opacity: 1, offset: 0.46 },
+                    { transform: `scale(${maxScale.toFixed(2)})`, opacity: 0, offset: 1 },
+                ], { duration: DUR, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+            } catch (e) {}
+            // The galaxy dive starts partway through the orb's growth, so by
+            // the time the orb finishes fading it's revealing motion already
+            // under way — not a static scene snapping into view.
+            setTimeout(() => {
+                if (typeof flyCamera === 'function' && typeof baseCameraZ === 'number' && !voyageActive) {
+                    cameraZ = baseCameraZ;
+                    flyCamera(baseCameraZ * 0.42, DUR * 0.62);
+                    setTimeout(() => flyCamera(baseCameraZ, 820), DUR * 0.62);
+                }
+            }, DUR * 0.42);
+            const cleanup = () => {
+                portal.classList.remove('active');
+                try { core.getAnimations().forEach(a => a.cancel()); } catch (e) {}
+            };
+            if (anim && anim.finished) anim.finished.then(cleanup).catch(cleanup);
+            else setTimeout(cleanup, DUR + 60);
         }
         // Event hooks — called from addThought / openThought below. Each
         // only advances the flow when it's sitting on the matching beat.
@@ -4101,11 +4202,17 @@
         const dragState = { timer: 0, active: null, over: null, moved: false };
         // One shared row builder for every mode (full tree, search, urgent) —
         // a single visual language instead of three near-duplicate paths.
+        let bulkSelectMode = false;
+        let bulkSelected = new Set();
         function makeDrawerRow(th, opts) {
             opts = opts || {};
             const item = document.createElement('div');
-            item.className = 'drawer-item';
+            item.className = 'drawer-item' + (bulkSelectMode ? ' select-mode' : '');
             if (opts.depth) item.style.paddingLeft = (14 + opts.depth * 16) + 'px';
+            const check = document.createElement('span');
+            check.className = 'item-check' + (bulkSelected.has(th.id) ? ' checked' : '');
+            check.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
+            item.appendChild(check);
             const dot = document.createElement('span');
             dot.className = 'urgency-dot';
             const c = urgencyColorCss(th.urgency);
@@ -4135,6 +4242,12 @@
             item.dataset.tid = th.id;
             item.addEventListener('click', () => {
                 if (dragState.moved) return; // a drag just ended, not a tap
+                if (bulkSelectMode) {
+                    if (bulkSelected.has(th.id)) bulkSelected.delete(th.id); else bulkSelected.add(th.id);
+                    updateBulkBar();
+                    check.classList.toggle('checked', bulkSelected.has(th.id));
+                    return;
+                }
                 closeDrawer();
                 setTimeout(() => jumpToThought(th.id), 260);
             });
@@ -4207,6 +4320,7 @@
             // own subtree.
             function attachDragToMove(item, th) {
                 item.addEventListener('touchstart', (e) => {
+                    if (bulkSelectMode) return;
                     dragState.timer = setTimeout(() => {
                         dragState.active = th;
                         dragState.moved = false;
@@ -4972,6 +5086,72 @@
             }
             return strip(thoughts);
         }
+        // Same removal, but also reports where it came from (parent + its
+        // original index there) so bulk release can offer a real undo.
+        function removeFromTreeWithContext(id) {
+            function strip(list, parentThought) {
+                const i = list.findIndex(t => t.id === id);
+                if (i > -1) { const [t] = list.splice(i, 1); return { thought: t, parentThought, index: i }; }
+                for (const t of list) {
+                    if (t.children && t.children.length) {
+                        const f = strip(t.children, t);
+                        if (f) return f;
+                    }
+                }
+                return null;
+            }
+            return strip(thoughts, null);
+        }
+        function updateBulkBar() {
+            const n = bulkSelected.size;
+            $('bulk-count').textContent = n + (n === 1 ? ' selected' : ' selected');
+            $('bulk-release').disabled = n === 0;
+        }
+        function setBulkSelectMode(on) {
+            bulkSelectMode = on;
+            bulkSelected = new Set();
+            $('btn-bulk-select').classList.toggle('active', on);
+            $('bulk-bar').style.display = on ? 'flex' : 'none';
+            if (on) updateBulkBar();
+            updateDrawerUI();
+        }
+        $('btn-bulk-select').addEventListener('click', () => setBulkSelectMode(!bulkSelectMode));
+        $('bulk-cancel').addEventListener('click', () => setBulkSelectMode(false));
+        $('bulk-select-all').addEventListener('click', () => {
+            // Selects everything currently listed in the drawer (respects an
+            // active search/urgent filter — "all" means all of what you can see).
+            document.querySelectorAll('#drawer-list .drawer-item[data-tid]').forEach(el => bulkSelected.add(el.dataset.tid));
+            document.querySelectorAll('#drawer-list .item-check').forEach(el => el.classList.add('checked'));
+            updateBulkBar();
+        });
+        $('bulk-release').addEventListener('click', () => {
+            if (!bulkSelected.size) return;
+            const ids = Array.from(bulkSelected);
+            const entries = [];
+            let releasedFamilyCount = 0;
+            for (const id of ids) {
+                const found = removeFromTreeWithContext(id);
+                if (!found) continue; // e.g. a child whose parent was also selected and removed first
+                entries.push(found);
+                releasedFamilyCount += (function cnt(x) {
+                    let n = 1;
+                    for (const k of ((x && x.children) || [])) n += cnt(k);
+                    return n;
+                })(found.thought);
+            }
+            if (!entries.length) return;
+            releasedCount += releasedFamilyCount;
+            saveState();
+            setBulkSelectMode(false);
+            updateDrawerUI();
+            syncFloaters();
+            const retiered = new Set();
+            for (const e of entries) {
+                const key = e.parentThought ? e.parentThought.id : '__root__';
+                if (!retiered.has(key)) { retiered.add(key); retier(e.parentThought || null); }
+            }
+            offerUndo(entries);
+        });
 
         // v2 capture: you speak to the MAIN bubble. The thought appears at the
         // root immediately (heuristic label), then the router files it into
