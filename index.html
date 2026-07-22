@@ -2135,7 +2135,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21t';
+        const BUILD_TAG = '2026-07-21u';
 
         // ============================================================
         // ONBOARDING — guided first run. Four beats:
@@ -2152,7 +2152,8 @@
             { title: 'Welcome to Mindorb', body: 'This is your mind as a galaxy. Everything you say becomes a bubble — and the bubbles organize themselves.', pos: 'bottom', btn: 'Next', interactive: false },
             { title: 'Say what\u2019s on your mind', body: 'Tap the big bubble (or the mic) and just talk — a task, an idea, anything. Watch it become a bubble.', pos: 'top', btn: null, interactive: true, pulse: true },
             { title: 'Tap your bubble', body: 'Every bubble is a little world. Tap the one you just made to go inside it.', pos: 'top', btn: null, interactive: true },
-            { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release — it leaves your galaxy for good. That\u2019s the whole loop. Enjoy.', pos: 'top', btn: 'Done', interactive: false },
+            { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release \u2014 it leaves your galaxy for good.', pos: 'top', btn: 'Next', interactive: false },
+            { title: 'One more thing', body: 'Already have notes somewhere? Paste any wall of text \u2014 an old notes app, a brain dump, anything \u2014 with the + button in All Thoughts, and it untangles into bubbles automatically.', body2: 'There\u2019s more to find as you go: untangling a messy thought, searching your whole galaxy, even asking it questions out loud. You\u2019ll bump into all of it naturally \u2014 or check How to Use anytime in settings.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
         ];
         function onboardEligible() {
             try {
@@ -2170,7 +2171,17 @@
             const h = document.getElementById('hint');
             if (h) h.classList.add('hidden');
             document.getElementById('onboard-title').textContent = s.title;
-            document.getElementById('onboard-body').textContent = s.body;
+            const bodyEl = document.getElementById('onboard-body');
+            bodyEl.innerHTML = '';
+            const p1 = document.createElement('div');
+            p1.textContent = s.body;
+            bodyEl.appendChild(p1);
+            if (s.body2) {
+                const p2 = document.createElement('div');
+                p2.textContent = s.body2;
+                p2.style.marginTop = '8px';
+                bodyEl.appendChild(p2);
+            }
             card.classList.remove('top', 'bottom');
             card.classList.add(s.pos);
             const nextBtn = document.getElementById('onboard-next');
