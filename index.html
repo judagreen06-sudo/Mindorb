@@ -644,7 +644,7 @@
         #bulk-release { background: rgba(235, 240, 248, 0.94); color: #10141f; }
         #bulk-release:disabled { opacity: 0.4; }
         #drawer-settings {
-            padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
+            padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 4px);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
         #drawer-settings-row {
@@ -691,6 +691,15 @@
         #auth-close svg { width: 15px; height: 15px; }
         #auth-title { color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif; font-weight: 800; font-size: 20px; margin: 0 0 4px; }
         #auth-sub { color: var(--ink-dim); font-size: 13px; font-weight: 500; margin: 0 0 18px; line-height: 1.4; }
+        #auth-google-btn {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 12px 0; border-radius: var(--r-s); border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.92); color: #1f1f1f; font-size: 14px; font-weight: 700;
+            transition: transform 0.1s ease;
+        }
+        #auth-google-btn:active { transform: scale(0.98); }
+        #auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--ink-faint); font-size: 12px; font-weight: 600; }
+        #auth-divider::before, #auth-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1); }
         #auth-email, #auth-password {
             width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: var(--r-s);
             border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05);
@@ -731,7 +740,7 @@
         #drawer {
             position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
             border-radius: var(--r-xl) var(--r-xl) 0 0;
-            height: 72dvh;
+            max-height: 72dvh;
             transform: translateY(105%);
             visibility: hidden;
             transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.24, 1), visibility 0s 0.32s;
@@ -978,10 +987,17 @@
         #import-card {
             will-change: transform;
             transform: translateY(26px) scale(0.95);
-            transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
         }
         #import-sheet.open #import-card { transform: translateY(0) scale(1); }
-        .motion-reduced #import-sheet, .motion-reduced #import-card { transition-duration: 0.12s !important; }
+        /* Transition only during the brief opening moment (JS adds/removes
+           this class) — syncKeyboard() sets this same transform property
+           directly and repeatedly to track the keyboard in real time, and a
+           permanent transition here would fight every one of those updates
+           with a slow easing curve, leaving the card stuck offset from
+           where the keyboard actually is. */
+        #import-card.entering { transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1); }
+        .motion-reduced #import-sheet { transition-duration: 0.12s !important; }
+        .motion-reduced #import-card.entering { transition-duration: 0.12s !important; }
         #import-card { width: min(92vw, 420px); border-radius: var(--r-l); padding: 18px; }
         #import-title { color: var(--ink); font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 18px; }
         #import-sub { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; line-height: 1.45; margin: 6px 0 12px; }
@@ -1172,19 +1188,24 @@
         }
         #untangle-out.show { display: block; max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .untangle-msg { margin-bottom: 8px; }
-        /* A custom "thinking" indicator — three dots pulsing in sequence,
-           replacing plain "Thinking…" text wherever the app is waiting on
-           the AI. Transform+opacity only. */
-        .thinking-row { display: flex; align-items: center; gap: 7px; color: var(--ink-dim); font-size: 13px; font-weight: 600; }
-        .loading-dots { display: inline-flex; gap: 4px; }
-        .loading-dots .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: 0.35; animation: loadingDotPulse 1.1s ease-in-out infinite; }
-        .loading-dots .dot:nth-child(2) { animation-delay: 0.15s; }
-        .loading-dots .dot:nth-child(3) { animation-delay: 0.3s; }
-        @keyframes loadingDotPulse {
-            0%, 100% { opacity: 0.3; transform: scale(0.75); }
-            50% { opacity: 1; transform: scale(1.15); }
+        /* A small version of the app's own bubble, used as the loading
+           indicator wherever something is waiting on the network — the
+           same glass/rainbow-gradient material as the real bubbles, just
+           tiny, with a gentle breathing pulse. transform+opacity only. */
+        .thinking-row { display: flex; align-items: center; gap: 8px; color: var(--ink-dim); font-size: 13px; font-weight: 600; }
+        .mini-bubble-spin {
+            width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: inline-block;
+            background:
+                radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.35) 10%, transparent 26%),
+                radial-gradient(circle at 50% 50%, rgba(169,200,232,0.55) 0%, rgba(157,196,168,0.4) 45%, rgba(232,193,130,0.32) 75%, rgba(232,154,138,0.28) 100%);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.32) inset, 0 0 8px rgba(169,200,232,0.4);
+            animation: miniBubblePulse 1.3s ease-in-out infinite;
         }
-        .motion-reduced .loading-dots .dot { animation: none; opacity: 0.7; }
+        @keyframes miniBubblePulse {
+            0%, 100% { transform: scale(0.8); opacity: 0.7; }
+            50% { transform: scale(1); opacity: 1; }
+        }
+        .motion-reduced .mini-bubble-spin { animation: none; opacity: 0.9; }
         .untangle-msg.mine { color: var(--ink-dim); font-style: italic; }
         .ref-link {
             color: #8FC0F0; font-weight: 800; cursor: pointer;
@@ -1566,6 +1587,11 @@
             </button>
             <h2 id="auth-title">Sign In</h2>
             <p id="auth-sub">Sync your galaxy across devices.</p>
+            <button id="auth-google-btn">
+                <svg viewBox="0 0 18 18" width="18" height="18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+                <span>Continue with Google</span>
+            </button>
+            <div id="auth-divider"><span>or</span></div>
             <input id="auth-email" type="email" placeholder="Email" autocomplete="email" autocapitalize="off" spellcheck="false">
             <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password">
             <div id="auth-error"></div>
@@ -2373,7 +2399,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21y';
+        const BUILD_TAG = '2026-07-22b';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -2463,6 +2489,10 @@
             renderAuthMode();
             const el = document.getElementById('auth-error');
             if (el) { el.classList.remove('show'); el.textContent = ''; }
+            const gBtn = document.getElementById('auth-google-btn');
+            if (gBtn) gBtn.disabled = false;
+            try { if (bulkSelectMode) setBulkSelectMode(false); } catch (e) {}
+            try { if (typeof drawerOpen !== 'undefined' && drawerOpen) closeDrawer(); } catch (e) {}
             document.getElementById('auth-sheet').classList.add('open');
         }
         function closeAuthSheet() {
@@ -2520,6 +2550,23 @@
                 authMagicLink = !authMagicLink;
                 renderAuthMode();
             });
+            const googleBtn = document.getElementById('auth-google-btn');
+            if (googleBtn) googleBtn.addEventListener('click', async () => {
+                if (!sb) { showAuthError('Cloud sync isn\u2019t available right now.'); return; }
+                googleBtn.disabled = true;
+                try {
+                    const { error } = await sb.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: { redirectTo: window.location.origin + window.location.pathname },
+                    });
+                    // On success the browser navigates away to Google immediately;
+                    // this only runs if the request itself failed to start.
+                    if (error) { showAuthError(error.message || 'Couldn\u2019t start Google sign-in.'); googleBtn.disabled = false; }
+                } catch (e) {
+                    showAuthError('Couldn\u2019t reach the server. Check your connection.');
+                    googleBtn.disabled = false;
+                }
+            });
             const primaryBtn = document.getElementById('auth-primary-btn');
             if (primaryBtn) primaryBtn.addEventListener('click', async () => {
                 const email = document.getElementById('auth-email').value.trim();
@@ -2529,7 +2576,9 @@
                 if (!email) { showAuthError('Enter your email.'); return; }
                 if (!authMagicLink && password.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
                 if (!sb) { showAuthError('Cloud sync isn\u2019t available right now.'); return; }
+                const originalLabel = primaryBtn.textContent;
                 primaryBtn.disabled = true;
+                primaryBtn.innerHTML = '<span class="mini-bubble-spin" style="vertical-align:-4px;margin-right:7px;"></span>' + originalLabel;
                 try {
                     let result;
                     if (authMagicLink) {
@@ -2547,6 +2596,7 @@
                     showAuthError('Couldn\u2019t reach the server. Check your connection.');
                 }
                 primaryBtn.disabled = false;
+                primaryBtn.textContent = originalLabel;
             });
             if (sb) {
                 sb.auth.onAuthStateChange((_event, session) => {
@@ -3918,10 +3968,11 @@
         }
         // Renders AI text where [[id]] marks a referenced bubble: those become
         // tappable links that fly you there.
-        // A small label + three sequenced pulsing dots — used everywhere the
-        // app is waiting on the AI, instead of plain "Thinking…" text.
+        // A small label + a tiny version of the app's own bubble, pulsing —
+        // used everywhere the app is waiting on the AI, instead of plain
+        // "Thinking…" text or a generic spinner.
         function thinkingRowHTML(label) {
-            return '<span>' + label + '</span><span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>';
+            return '<span class="mini-bubble-spin"></span><span>' + label + '</span>';
         }
         function renderWithRefs(container, text) {
             container.innerHTML = '';
@@ -4187,7 +4238,7 @@
             for (const x of document.querySelectorAll('.iw')) x.classList.toggle('sel', x.dataset.days === '0');
             closeDrawer();   // the index fully closes — import owns the screen alone
             setUIFocus(true);
-            $('import-sheet').classList.add('open'); playGlassSweep($('import-card'));
+            openImportSheet();
             setTimeout(() => {
                 try { $('import-input').focus(); } catch (e) {}
                 let n = 0; const iv = setInterval(() => { pinScroll(); syncKeyboard(); if (++n > 30) clearInterval(iv); }, 16);
@@ -4417,7 +4468,7 @@
                 const items = Array.isArray(data.items) ? data.items : [];
                 if (!items.length) {
                     await growth.fail();
-                    $('import-sheet').classList.add('open'); playGlassSweep($('import-card'));
+                    openImportSheet();
                     status.textContent = "Couldn't find distinct thoughts in that.";
                     $('import-go').disabled = false;
                     return;
@@ -4433,7 +4484,7 @@
                 const msg = (e && e.name === 'AbortError') ? 'took too long — try a shorter paste, or split it up'
                     : (e && e.message) ? e.message : 'unknown error';
                 await growth.fail();
-                $('import-sheet').classList.add('open'); playGlassSweep($('import-card'));
+                openImportSheet();
                 status.textContent = 'Import failed — ' + msg;
                 $('import-go').disabled = false;
             }
@@ -4631,6 +4682,18 @@
                 el.classList.add('sweep-play');
                 setTimeout(() => el.classList.remove('glass-sweep', 'sweep-play'), 900);
             });
+        }
+        // Opens the import sheet consistently: the entrance transform
+        // transition is scoped to a brief .entering window (removed after
+        // it finishes) so syncKeyboard's real-time keyboard-tracking
+        // transform updates, which start the moment the textarea is
+        // focused, are never fighting a lingering CSS transition.
+        function openImportSheet() {
+            const sheet = $('import-sheet'), card = $('import-card');
+            sheet.classList.add('open');
+            playGlassSweep(card);
+            card.classList.add('entering');
+            setTimeout(() => card.classList.remove('entering'), 400);
         }
         function makeEmptyState(kind, label) {
             const wrap = document.createElement('div');
