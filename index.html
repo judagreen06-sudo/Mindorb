@@ -480,7 +480,7 @@
                         transform 0.32s cubic-bezier(0.22, 0.9, 0.3, 1);
         }
         #onboard-card.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
-        #onboard-card.top { top: calc(env(safe-area-inset-top, 0px) + 64px); bottom: auto; }
+        #onboard-card.top { top: calc(env(safe-area-inset-top, 0px) + 118px); bottom: auto; }
         #onboard-card.bottom { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); top: auto; }
         #onboard-title {
             color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif;
@@ -1992,7 +1992,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-21q';
+        const BUILD_TAG = '2026-07-21r';
 
         // ============================================================
         // ONBOARDING — guided first run. Four beats:
@@ -2009,7 +2009,7 @@
             { title: 'Welcome to Mindorb', body: 'This is your mind as a galaxy. Everything you say becomes a bubble — and the bubbles organize themselves.', pos: 'bottom', btn: 'Next', interactive: false },
             { title: 'Say what\u2019s on your mind', body: 'Tap the big bubble (or the mic) and just talk — a task, an idea, anything. Watch it become a bubble.', pos: 'top', btn: null, interactive: true, pulse: true },
             { title: 'Tap your bubble', body: 'Every bubble is a little world. Tap the one you just made to go inside it.', pos: 'top', btn: null, interactive: true },
-            { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release — it leaves your galaxy for good. That\u2019s the whole loop. Enjoy.', pos: 'bottom', btn: 'Done', interactive: false },
+            { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release — it leaves your galaxy for good. That\u2019s the whole loop. Enjoy.', pos: 'top', btn: 'Done', interactive: false },
         ];
         function onboardEligible() {
             try {
