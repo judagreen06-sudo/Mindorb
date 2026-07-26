@@ -635,12 +635,6 @@
             padding: 4px 20px 12px;
         }
         #howto-head h2 { color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif; font-weight: 800; font-size: 22px; margin: 0; }
-        #howto-close {
-            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-pill);
-            color: rgba(255, 255, 255, 0.85); font-size: 14px; font-weight: 600; padding: 8px 16px;
-            transition: transform 0.1s ease;
-        }
-        #howto-close:active { transform: scale(0.94); }
         #howto-scroll { overflow-y: auto; flex: 1; padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 30px); -webkit-overflow-scrolling: touch; }
         .howto-section {
             border-radius: var(--r-l); padding: 16px;
@@ -671,7 +665,6 @@
             padding: 4px 20px 12px;
         }
         #archive-head h2 { color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif; font-weight: 800; font-size: 22px; margin: 0; }
-        #archive-head-btns { display: flex; gap: 8px; }
         #archive-select-btn {
             background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-pill);
             color: var(--ink-dim); font-size: 13px; font-weight: 600; padding: 8px 14px;
@@ -679,12 +672,6 @@
         }
         #archive-select-btn:active { transform: scale(0.94); }
         #archive-select-btn.active { background: rgba(169, 200, 232, 0.22); color: var(--ink); border-color: rgba(169, 200, 232, 0.4); }
-        #archive-close {
-            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-pill);
-            color: rgba(255, 255, 255, 0.85); font-size: 14px; font-weight: 600; padding: 8px 16px;
-            transition: transform 0.1s ease;
-        }
-        #archive-close:active { transform: scale(0.94); }
         #archive-search-row { padding: 0 20px 12px; }
         #archive-search {
             width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: var(--r-s);
@@ -755,16 +742,16 @@
             padding: 4px 14px 14px;
         }
         #settings-head h2 { color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif; font-weight: 800; font-size: 19px; margin: 0; }
-        #settings-head-spacer { width: 38px; }
-        #settings-close {
+        .page-head-spacer { width: 38px; }
+        .page-back-btn, #settings-close {
             width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
             background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1);
             color: rgba(255, 255, 255, 0.9);
             display: flex; align-items: center; justify-content: center;
             transition: transform 0.1s ease, background 0.12s;
         }
-        #settings-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-        #settings-close:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.14); }
+        .page-back-btn svg, #settings-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+        .page-back-btn:active, #settings-close:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.14); }
         #settings-scroll { overflow-y: auto; flex: 1; padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 30px); -webkit-overflow-scrolling: touch; }
         .settings-section {
             margin-bottom: 22px;
@@ -1642,8 +1629,11 @@
 
     <div id="howto-page" class="ui-block">
         <div id="howto-head">
+            <button class="page-back-btn" id="howto-close" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
             <h2>How to Use</h2>
-            <button id="howto-close">Done</button>
+            <span class="page-head-spacer"></span>
         </div>
         <div id="howto-scroll">
             <div class="howto-section">
@@ -1734,11 +1724,11 @@
 
     <div id="archive-page" class="ui-block">
         <div id="archive-head">
+            <button class="page-back-btn" id="archive-close" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
             <h2>Old Bubbles</h2>
-            <div id="archive-head-btns">
-                <button id="archive-select-btn">Select</button>
-                <button id="archive-close">Done</button>
-            </div>
+            <button id="archive-select-btn">Select</button>
         </div>
         <div id="archive-search-row">
             <input id="archive-search" type="text" placeholder="Search released thoughts" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -1761,7 +1751,7 @@
                 <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
             </button>
             <h2>Settings</h2>
-            <span id="settings-head-spacer"></span>
+            <span class="page-head-spacer"></span>
         </div>
         <div id="settings-scroll">
             <div class="settings-section">
@@ -2706,7 +2696,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-22m';
+        const BUILD_TAG = '2026-07-22n';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
