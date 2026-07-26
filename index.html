@@ -398,7 +398,7 @@
            ============================================================ */
         #applock-screen {
             position: fixed; inset: 0; z-index: 999999;
-            background: radial-gradient(ellipse at 50% 26%, #241a3d 0%, #140f28 45%, #060510 100%);
+            background: radial-gradient(ellipse at 50% 26%, #0d1420 0%, #070a14 45%, #010102 100%);
             align-items: center; justify-content: center; flex-direction: column;
             color: var(--ink, #e8ecf5);
             overflow: hidden;
@@ -418,9 +418,9 @@
             padding: 34px 26px 28px; width: min(88vw, 380px); box-sizing: border-box;
             opacity: 0; transform: scale(0.96);
             border-radius: var(--r-l);
-            background: rgba(22, 18, 36, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
             backdrop-filter: blur(24px) saturate(1.4);
             -webkit-backdrop-filter: blur(24px) saturate(1.4);
             position: relative;
@@ -437,13 +437,35 @@
         #applock-screen.unlocking #applock-inner { animation: lockScreenOut 0.26s ease-in forwards; }
         #applock-icon {
             width: 52px; height: 52px; color: rgba(255, 255, 255, 0.92);
-            filter: drop-shadow(0 0 14px rgba(140, 160, 255, 0.35));
-            animation: lockGlow 3.2s ease-in-out infinite;
+            animation: lockGlow 3.2s ease-in-out infinite, lockFloat 4.4s ease-in-out infinite;
         }
         @keyframes lockGlow {
-            0%, 100% { filter: drop-shadow(0 0 10px rgba(140, 160, 255, 0.25)); }
-            50% { filter: drop-shadow(0 0 20px rgba(160, 180, 255, 0.45)); }
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(169, 200, 232, 0.28)); }
+            50% { filter: drop-shadow(0 0 20px rgba(169, 200, 232, 0.48)); }
         }
+        @keyframes lockFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .motion-reduced #applock-icon { animation: none; filter: drop-shadow(0 0 12px rgba(169, 200, 232, 0.35)); }
+        #applock-shackle { transform-origin: 16px 11px; transition: none; }
+        #applock-icon.unlocked #applock-shackle {
+            animation: shackleSwing 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @keyframes shackleSwing {
+            0% { transform: rotate(0deg) translateX(0); }
+            100% { transform: rotate(-38deg) translateX(-1.5px); }
+        }
+        #applock-icon.unlocked {
+            animation: unlockGlowPop 0.5s ease-out forwards;
+        }
+        @keyframes unlockGlowPop {
+            0% { filter: drop-shadow(0 0 14px rgba(169, 200, 232, 0.4)); }
+            40% { filter: drop-shadow(0 0 26px rgba(157, 196, 168, 0.7)); }
+            100% { filter: drop-shadow(0 0 14px rgba(157, 196, 168, 0.4)); }
+        }
+        .motion-reduced #applock-icon.unlocked, .motion-reduced #applock-icon.unlocked #applock-shackle { animation: none; }
+        .motion-reduced #applock-shackle { transform: none; }
         #applock-title { font-size: 22px; font-weight: 700; }
         #applock-sub { font-size: 15px; opacity: 0.7; text-align: center; }
         #applock-dots { display: flex; gap: 18px; margin: 10px 0; }
@@ -472,15 +494,25 @@
         }
         .applock-key {
             width: min(22vw, 84px); height: min(22vw, 84px); border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.12); color: #fff;
-            font-size: min(7vw, 30px); font-weight: 400;
-            background: radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.05) 62%, rgba(255, 255, 255, 0.02) 100%);
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28), inset 0 -8px 14px rgba(0, 0, 0, 0.3), 0 3px 8px rgba(0, 0, 0, 0.35);
-            transition: transform 0.1s cubic-bezier(.34, 1.56, .64, 1), background 0.12s;
+            border: 1px solid rgba(255, 255, 255, 0.18); color: #fff;
+            font-size: min(7vw, 28px); font-weight: 600;
+            background:
+                radial-gradient(circle at 30% 26%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.16) 11%, transparent 26%),
+                radial-gradient(circle at 50% 50%, rgba(169,200,232,0.3) 0%, rgba(157,196,168,0.22) 45%, rgba(232,193,130,0.18) 75%, rgba(232,154,138,0.15) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.14) inset,
+                0 0 16px rgba(169,200,232,0.28),
+                inset 0 -8px 14px rgba(0, 0, 0, 0.25),
+                0 3px 10px rgba(0, 0, 0, 0.35);
+            transition: transform 0.1s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.15s;
         }
         .applock-key:active {
             transform: scale(0.90);
-            background: radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1) 62%, rgba(255, 255, 255, 0.04) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.24) inset,
+                0 0 22px rgba(169,200,232,0.42),
+                inset 0 -6px 10px rgba(0, 0, 0, 0.2),
+                0 2px 6px rgba(0, 0, 0, 0.3);
         }
         #applock-faceid-btn {
             margin-top: 6px; padding: 11px 22px; border-radius: 999px;
@@ -1213,8 +1245,8 @@
             color: var(--ink); font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 13.5px;
         }
         #move-suggest {
-            position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
-            transform: translate(-50%, 14px); z-index: 45;
+            position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px);
+            transform: translate(-50%, -14px); z-index: 999998;
             width: min(86vw, 360px); padding: 14px 16px; border-radius: 18px;
             background: rgba(16, 20, 33, 0.55);
             backdrop-filter: blur(26px) saturate(1.4); -webkit-backdrop-filter: blur(26px) saturate(1.4);
@@ -1482,7 +1514,7 @@
         <div class="applock-star" style="width:1.5px;height:1.5px;top:92%;left:60%;animation-delay:2.4s;"></div>
         <button id="applock-cancel-btn" style="display:none;">Cancel</button>
         <div id="applock-inner">
-            <svg id="applock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <svg id="applock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.2"/><path id="applock-shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
             <div id="applock-title">Mindorb Locked</div>
             <div id="applock-sub">Enter your PIN</div>
             <div id="applock-dots"></div>
@@ -1802,7 +1834,7 @@
                     <span id="settings-version-value" class="settings-row-value"></span>
                 </div>
             </div>
-            <div class="settings-section">
+            <div class="settings-section" style="display:none;">
                 <div class="settings-section-title">Danger Zone</div>
                 <button id="delete-account-btn" class="settings-row settings-row-nav settings-row-danger">
                     <span class="settings-row-icon">
@@ -2674,7 +2706,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-22l';
+        const BUILD_TAG = '2026-07-22m';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -2828,15 +2860,19 @@
             const status = document.getElementById('account-status');
             const btn = document.getElementById('btn-account-action');
             if (!status || !btn) return;
+            const deleteBtn = document.getElementById('delete-account-btn');
+            const dangerSection = deleteBtn ? deleteBtn.closest('.settings-section') : null;
             if (currentUser) {
                 status.textContent = currentUsername ? ('@' + currentUsername) : (currentUser.email || 'Signed in');
                 btn.textContent = 'Sign Out';
                 btn.classList.add('danger');
+                if (dangerSection) dangerSection.style.display = '';
             } else {
                 currentUsername = null;
                 status.textContent = 'Not signed in';
                 btn.textContent = 'Sign In';
                 btn.classList.remove('danger');
+                if (dangerSection) dangerSection.style.display = 'none';
             }
         }
         async function fetchUsername() {
@@ -2914,6 +2950,7 @@
             const settingsPage = document.getElementById('settings-page');
             if (settingsPage) settingsPage.classList.remove('open');
             document.getElementById('auth-sheet').classList.add('open');
+            playGlassSweep(document.getElementById('auth-card'));
         }
         function closeAuthSheet() {
             document.getElementById('auth-sheet').classList.remove('open');
@@ -2960,8 +2997,13 @@
             const btn = document.getElementById('btn-account-action');
             if (btn) btn.addEventListener('click', () => {
                 if (currentUser) {
-                    showMoveSuggest('Sign out of ' + currentUser.email + '?', () => { if (sb) sb.auth.signOut(); },
-                        { cancelLabel: 'Cancel', confirmLabel: 'Sign Out', danger: true });
+                    const email = currentUser.email;
+                    const settingsPage = document.getElementById('settings-page');
+                    if (settingsPage) settingsPage.classList.remove('open');
+                    setTimeout(() => {
+                        showMoveSuggest('Sign out of ' + email + '?', () => { if (sb) sb.auth.signOut(); },
+                            { cancelLabel: 'Cancel', confirmLabel: 'Sign Out', danger: true });
+                    }, 120);
                 }
                 else openAuthSheet();
             });
@@ -3443,7 +3485,9 @@
         function appLockDoUnlock() {
             appLockUnlocked = true;
             $al('applock-error').textContent = '';
-            appLockPlayExitThenHide();
+            const icon = $al('applock-icon');
+            if (icon) icon.classList.add('unlocked');
+            setTimeout(() => { appLockPlayExitThenHide(); }, 420);
         }
         function appLockCloseSetup() {
             appLockUnlocked = true;
@@ -3455,6 +3499,8 @@
             $al('applock-title').textContent = 'Mindorb Locked';
             $al('applock-sub').textContent = 'Enter your PIN';
             $al('applock-error').textContent = '';
+            const icon = $al('applock-icon');
+            if (icon) icon.classList.remove('unlocked');
             appLockBuildKeypad();
             appLockRenderDots(0, false);
             $al('applock-screen').style.display = 'flex';
@@ -3588,6 +3634,7 @@
             if (howtoOpen) howtoOpen.addEventListener('click', () => {
                 document.getElementById('settings-page').classList.remove('open');
                 document.getElementById('howto-page').classList.add('open');
+                playGlassSweep(document.getElementById('howto-page'));
             });
             const howtoClose = document.getElementById('howto-close');
             if (howtoClose) howtoClose.addEventListener('click', () => document.getElementById('howto-page').classList.remove('open'));
@@ -3600,6 +3647,7 @@
                 document.getElementById('archive-bulk-bar').style.display = 'none';
                 renderArchiveList('');
                 document.getElementById('archive-page').classList.add('open');
+                playGlassSweep(document.getElementById('archive-page'));
             });
             const archiveClose = document.getElementById('archive-close');
             if (archiveClose) archiveClose.addEventListener('click', () => document.getElementById('archive-page').classList.remove('open'));
@@ -3614,6 +3662,7 @@
                     if (!reduced) el.style.setProperty('--stagger', (i * 0.05) + 's');
                 });
                 document.getElementById('settings-page').classList.add('open');
+                playGlassSweep(document.getElementById('settings-page'));
             });
             const settingsClose = document.getElementById('settings-close');
             if (settingsClose) settingsClose.addEventListener('click', () => document.getElementById('settings-page').classList.remove('open'));
@@ -4845,6 +4894,7 @@
             }
             addOptions(thoughts, 0);
             $('move-picker').classList.add('open');
+            playGlassSweep($('move-picker'));
         });
         $('mp-cancel').addEventListener('click', () => $('move-picker').classList.remove('open'));
         function doMove(thought, newParentId) {
