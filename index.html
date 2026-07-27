@@ -325,6 +325,46 @@
         /* (home/back dock buttons removed — navigation is in the trail) */
 
         /* ============ BREADCRUMB TRAIL ============ */
+        /* A quiet count of what is actually due. The galaxy already floats
+           these to the front, but nothing ever SAID anything, so a deadline
+           could pass while you were looking at the screen. Appears only when
+           something is genuinely due, once per day, and gets out of the way
+           on its own. */
+        #due-nudge {
+            position: fixed; left: 0; right: 0; margin-left: auto; margin-right: auto;
+            width: fit-content; max-width: min(88vw, 420px);
+            top: calc(env(safe-area-inset-top, 0px) + 16px);
+            z-index: 12;
+            display: flex; align-items: center; gap: 9px;
+            padding: 9px 13px 9px 15px; border-radius: 999px;
+            cursor: pointer; border: 1px solid rgba(232, 154, 138, 0.30);
+            background: rgba(38, 20, 22, 0.55);
+            color: var(--ink);
+            font-family: 'Quicksand', sans-serif; font-size: 13px; font-weight: 700;
+            opacity: 0; pointer-events: none;
+            transform: translateY(-8px);
+            transition: opacity 0.45s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #due-nudge.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        #due-nudge svg {
+            width: 15px; height: 15px; flex-shrink: 0; opacity: 0.5;
+            fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        #due-nudge-dot {
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+            background: rgb(232, 154, 138);
+            animation: dueNudgePulse 2.4s ease-in-out infinite;
+        }
+        @keyframes dueNudgePulse {
+            0%, 100% { opacity: 0.55; transform: scale(1); }
+            50%      { opacity: 1;    transform: scale(1.25); }
+        }
+        .motion-reduced #due-nudge-dot { animation: none; }
+        .motion-reduced #due-nudge { transition: opacity 0.15s ease; }
+        #due-nudge:active { transform: translateY(0) scale(0.97); }
+        body.launching #due-nudge, body.onboarding #due-nudge,
+        body.dived #due-nudge, body.drawer-open #due-nudge,
+        body.typing-open #due-nudge { opacity: 0 !important; pointer-events: none !important; }
         #trail {
             /* Centred with auto margins inside an explicit left/right box
                rather than left:50% + translateX(-50%). The transform approach
@@ -2148,6 +2188,11 @@
     </div>
 
     <div id="hint">Speak to the bubble · your thoughts file themselves</div>
+    <button id="due-nudge" class="glass ui-block">
+        <span id="due-nudge-dot"></span>
+        <span id="due-nudge-text"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
     <div id="onboard-pulse"></div>
     <div id="onboard-card" class="glass ui-block">
         <div id="onboard-illustration"></div>
@@ -3604,6 +3649,19 @@
             // Binary flag model: calm thoughts are neutral, flagged ones warm.
             return u >= 0.6 ? 'rgb(232, 154, 138)' : 'rgba(255, 255, 255, 0.30)';
         }
+        // Urgency is stored once at capture, which means a thought captured
+        // when its deadline was a week away still reports the urgency it had
+        // THEN. It could sit there labelled "Calm" on the day it was due.
+        // For anything with a real deadline, work it out from the clock every
+        // time it is shown. Undated thoughts keep their stored value, since
+        // that came from the wording and does not go stale.
+        function liveUrgency(t) {
+            if (!t) return 0;
+            if (typeof t.dueAt === 'number' && isFinite(t.dueAt)) {
+                return scoreUrgency(t.full || t.summary || '', t.dueAt);
+            }
+            return typeof t.urgency === 'number' ? t.urgency : 0.12;
+        }
         function urgencyLabel(u) {
             return u >= 0.6 ? 'Needs attention' : 'Calm';
         }
@@ -3672,7 +3730,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23v';
+        const BUILD_TAG = '2026-07-23y';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4258,14 +4316,15 @@
             const sheet = $('popgame-sheet');
             if (!sheet) return;
             sheet.classList.add('open');
-            pgBubbles = []; pgBits = []; pgFloaters = []; pgSeeded = false; pgLast = 0;
-            pgScore = 0; pgCombo = 0; pgPopped = 0; pgMissed = 0; pgLastPop = 0;
-            pgSyncHud();
             let best = 0;
             try { best = parseInt(localStorage.getItem(PG_BEST_KEY) || '0', 10) || 0; } catch (e) {}
             const bestEl = $('pg-best');
             if (bestEl) bestEl.textContent = best ? ('Best ' + best) : '';
-            if (!pgRaf) pgRaf = requestAnimationFrame(pgFrame);
+            // Opening starts a FRESH run. This routes through the same reset
+            // as Play again rather than repeating it: the two had drifted, and
+            // opening after losing left you stuck on the game-over screen with
+            // no lives and no way to play.
+            pgRestart();
         }
         function closePopGame() {
             const sheet = $('popgame-sheet');
@@ -6464,7 +6523,8 @@
                     hands.setAttribute('stroke-linecap', 'round');
                     svg.appendChild(circle); svg.appendChild(hands);
                     dueEl.appendChild(svg);
-                    dueEl.appendChild(document.createTextNode(whenLabel(thought.dueAt)));
+                    const repeatBit = thought.repeat ? ('  \u00b7  ' + repeatLabel(thought.repeat)) : '';
+                    dueEl.appendChild(document.createTextNode(whenLabel(thought.dueAt) + repeatBit));
                     const hoursOut = (thought.dueAt - Date.now()) / 3600000;
                     if (hoursOut <= 0) dueEl.classList.add('overdue');
                     else if (hoursOut <= 24) dueEl.classList.add('due-soon');
@@ -6472,8 +6532,8 @@
                 }
             }
             const showUrg = true;
-            detailUrgencyText.textContent = showUrg ? urgencyLabel(thought.urgency) : 'Held';
-            const c = showUrg ? urgencyColorCss(thought.urgency) : 'rgba(157,196,168,0.9)';
+            detailUrgencyText.textContent = showUrg ? urgencyLabel(liveUrgency(thought)) : 'Held';
+            const c = showUrg ? urgencyColorCss(liveUrgency(thought)) : 'rgba(157,196,168,0.9)';
             detailUrgencyDot.style.color = c;
             detailUrgencyDot.style.background = c;
             detailUrgencyText.style.color = c;
@@ -6519,6 +6579,33 @@
         function finishThought(completed) {
             if (detailCard.classList.contains('editing')) { exitEditMode(true); return; }
             if (!openThoughtObj) return;
+            const th = openThoughtObj.thought;
+            // A repeating thought is never really finished. Letting go of it
+            // rolls it to its next occurrence instead of filing it away, so
+            // the bins keep going out without you re-saying it every week.
+            // Delete still deletes: that is how you actually stop one.
+            if (completed && th && th.repeat) {
+                const base = (typeof th.dueAt === 'number' && isFinite(th.dueAt)) ? th.dueAt : Date.now();
+                const next = nextOccurrence(th.repeat, Math.max(base, Date.now() - 1));
+                if (next) {
+                    const d = new Date(next);
+                    if (th.dueHadTime && typeof th.dueAt === 'number' && isFinite(th.dueAt)) {
+                        const prev = new Date(th.dueAt);
+                        d.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+                    } else {
+                        d.setHours(DEFAULT_HOUR, 0, 0, 0);
+                    }
+                    th.dueAt = d.getTime();
+                    th.urgency = scoreUrgency(th.full || th.summary || '', th.dueAt);
+                    saveState();
+                    updateDrawerUI();
+                    closeThought(true);
+                    buzz([10, 24, 10]);
+                    try { playPop(60); } catch (e) {}
+                    showVoiceStatus('Done. Back ' + whenLabel(th.dueAt).toLowerCase(), { autoHideMs: 2400 });
+                    return;
+                }
+            }
             // Send the card off in the direction that matches the choice.
             detailCard.classList.remove('exit-letgo', 'exit-delete');
             void detailCard.offsetWidth;
@@ -6569,6 +6656,7 @@
                     // Days until the deadline (negative = already overdue).
                     // Only present when there IS one, so undated thoughts
                     // cost nothing in the prompt.
+                    if (t.repeat) row.rep = repeatLabel(t.repeat);
                     if (t.dueAt) {
                         // CALENDAR days, not elapsed hours. Something due at 9am
                         // tomorrow is 12 hours away, which rounds to zero and
@@ -6628,6 +6716,7 @@
                     d: (t.full && t.full !== t.s) ? String(t.full).slice(0, 180) : ''
                 };
                 if (typeof t.du === 'number') o.du = t.du;
+                if (t.rep) o.rep = t.rep;
                 return o;
             };
             if (all.length <= FULL_LIMIT || !query) {
@@ -7436,7 +7525,7 @@
             item.appendChild(check);
             const dot = document.createElement('span');
             dot.className = 'urgency-dot';
-            const c = urgencyColorCss(th.urgency);
+            const c = urgencyColorCss(liveUrgency(th));
             dot.style.color = c; dot.style.background = c;
             const main = document.createElement('div');
             main.className = 'item-main';
@@ -7453,7 +7542,7 @@
                 const meta = document.createElement('div');
                 meta.className = 'item-meta';
                 const kidCount = (th.children || []).length;
-                const dueBit = th.dueAt ? ' · ' + whenLabel(th.dueAt) : '';
+                const dueBit = th.dueAt ? (' · ' + whenLabel(th.dueAt) + (th.repeat ? ' ↻' : '')) : '';
                 meta.textContent = timeAgo(th.createdAt) + dueBit + (kidCount > 0 ? ' · ' + kidCount + ' inside' : '');
                 if (th.dueAt) {
                     const hrs = (th.dueAt - Date.now()) / 3600000;
@@ -7829,7 +7918,7 @@
                 const urgent = [];
                 (function walkU(list, path) {
                     for (const t of list) {
-                        if ((t.urgency || 0) >= 0.55) urgent.push({ t: t, path: path });
+                        if (liveUrgency(t) >= 0.55) urgent.push({ t: t, path: path });
                         walkU(t.children || [], path ? path + ' › ' + t.summary : t.summary);
                     }
                 })(thoughts, '');
@@ -7947,6 +8036,63 @@
         // directly. If max_t ever changes in the shader source, update this.
         const RAYMARCH_MAX_T = 4.5;
 
+        // ===== WHAT'S DUE =====
+        // The galaxy floats due bubbles to the front, but nothing ever SAID
+        // anything, so a deadline could quietly pass while you were looking
+        // at the screen. This is the smallest honest fix: a count, once a
+        // day, that leaves on its own.
+        const DUE_NUDGE_KEY = 'mindorb-due-nudge-day';
+        let dueNudgeTimer = null;
+        function countDue() {
+            const now = Date.now();
+            let overdue = 0, today = 0;
+            const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
+            (function walk(list) {
+                for (const t of (list || [])) {
+                    if (t && typeof t.dueAt === 'number' && isFinite(t.dueAt)) {
+                        if (t.dueAt < now) overdue++;
+                        else if (t.dueAt <= endOfDay.getTime()) today++;
+                    }
+                    walk(t && t.children);
+                }
+            })(thoughts);
+            return { overdue, today };
+        }
+        function maybeShowDueNudge() {
+            const el = $('due-nudge');
+            if (!el) return;
+            // Never during the tour, and never while you're busy doing
+            // something else.
+            if (onboardStep !== -1 || document.body.classList.contains('launching')) return;
+            const { overdue, today } = countDue();
+            if (!overdue && !today) return;
+            // Once a day is a reminder. Every launch is nagging.
+            const dayKey = new Date().toDateString();
+            try {
+                if (localStorage.getItem(DUE_NUDGE_KEY) === dayKey) return;
+                localStorage.setItem(DUE_NUDGE_KEY, dayKey);
+            } catch (e) {}
+            const parts = [];
+            if (overdue) parts.push(overdue + ' overdue');
+            if (today) parts.push(today + ' due today');
+            $('due-nudge-text').textContent = parts.join(' \u00b7 ');
+            el.classList.add('show');
+            // Leaves on its own. Something you have to dismiss is a chore.
+            clearTimeout(dueNudgeTimer);
+            dueNudgeTimer = setTimeout(() => el.classList.remove('show'), 8000);
+        }
+        function openDueList() {
+            const el = $('due-nudge');
+            if (el) el.classList.remove('show');
+            clearTimeout(dueNudgeTimer);
+            // Straight into All Thoughts, which already orders by what matters
+            // now, so the due items are sitting at the top.
+            try {
+                const search = $('drawer-search');
+                if (search) search.value = '';
+                openDrawer();
+            } catch (e) {}
+        }
         async function flyHome() {
             if (navStack.length === 0) return;
             const levels = navStack.length;
@@ -8015,6 +8161,10 @@
             });
             trail.classList.add('visible');
         }
+        const dueNudgeEl = $('due-nudge');
+        if (dueNudgeEl) dueNudgeEl.addEventListener('click', openDueList);
+        // Only once the app has actually settled, never during launch.
+        setTimeout(() => { try { maybeShowDueNudge(); } catch (e) {} }, 2600);
         // Typing used to be reachable ONLY by double-tapping the mic, which
         // nobody discovers on their own. The gesture still works; this simply
         // makes the option visible.
@@ -8654,11 +8804,98 @@
         }
 
         function bumpCreated() { createdCount = Math.max(createdCount + 1, countAll(thoughts) + 1); }
+        /* =========================================================
+           REPEATS. Some things never actually finish: the bins go out
+           every Tuesday whether or not you dealt with them last week.
+           Until now those had to be re-said every single time, which is
+           the one job a brain-dump app should not hand back to you.
+           ========================================================= */
+        const REPEAT_UNITS = { day: 'day', days: 'day', week: 'week', weeks: 'week',
+                               month: 'month', months: 'month', year: 'year', years: 'year',
+                               morning: 'day', night: 'day', evening: 'day' };
+        // Returns { every: 'day'|'week'|'month'|'year', n, weekday|null } or null.
+        function parseRepeat(text) {
+            if (!text) return null;
+            const t = String(text).toLowerCase();
+            // "every Tuesday" / "each Monday"
+            const wd = t.match(/\b(?:every|each)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+            if (wd) return { every: 'week', n: 1, weekday: WEEKDAYS.indexOf(wd[1]) };
+            // "every weekday" / "on weekdays"
+            if (/\bevery\s+weekday\b|\bon\s+weekdays\b/.test(t)) return { every: 'weekday', n: 1, weekday: null };
+            // "every other week", "every 3 days", "every two weeks"
+            const WORDN = { a: 1, an: 1, one: 1, other: 2, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7 };
+            const m = t.match(/\b(?:every|each)\s+(\d+|other|a|an|one|two|three|four|five|six|seven)?\s*(day|days|week|weeks|month|months|year|years|morning|night|evening)\b/);
+            if (m) {
+                const nRaw = m[1];
+                const n = !nRaw ? 1 : (/^\d+$/.test(nRaw) ? parseInt(nRaw, 10) : (WORDN[nRaw] || 1));
+                const unit = REPEAT_UNITS[m[2]];
+                if (unit) return { every: unit, n: Math.max(1, Math.min(n, 52)), weekday: null };
+            }
+            // Plain adverbs.
+            if (/\bdaily\b/.test(t)) return { every: 'day', n: 1, weekday: null };
+            if (/\bweekly\b/.test(t)) return { every: 'week', n: 1, weekday: null };
+            if (/\b(fortnightly|biweekly)\b/.test(t)) return { every: 'week', n: 2, weekday: null };
+            if (/\bmonthly\b/.test(t)) return { every: 'month', n: 1, weekday: null };
+            if (/\b(yearly|annually)\b/.test(t)) return { every: 'year', n: 1, weekday: null };
+            return null;
+        }
+        // The next time this comes round, strictly after `from`.
+        function nextOccurrence(rep, from) {
+            if (!rep) return null;
+            const d = new Date(from || Date.now());
+            const guardMonth = d.getDate();
+            if (rep.every === 'weekday') {
+                do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+                return d.getTime();
+            }
+            if (rep.every === 'week' && typeof rep.weekday === 'number' && rep.weekday >= 0) {
+                // Step whole weeks, then land on the named day.
+                d.setDate(d.getDate() + 7 * (rep.n || 1));
+                const shift = (rep.weekday - d.getDay() + 7) % 7;
+                d.setDate(d.getDate() + shift);
+                return d.getTime();
+            }
+            if (rep.every === 'day') { d.setDate(d.getDate() + (rep.n || 1)); return d.getTime(); }
+            if (rep.every === 'week') { d.setDate(d.getDate() + 7 * (rep.n || 1)); return d.getTime(); }
+            if (rep.every === 'month') {
+                d.setMonth(d.getMonth() + (rep.n || 1));
+                // Jan 31 + 1 month would roll into March. Clamp to the last
+                // real day of the target month instead.
+                if (d.getDate() < guardMonth) d.setDate(0);
+                return d.getTime();
+            }
+            if (rep.every === 'year') { d.setFullYear(d.getFullYear() + (rep.n || 1)); return d.getTime(); }
+            return null;
+        }
+        function repeatLabel(rep) {
+            if (!rep) return '';
+            const n = rep.n || 1;
+            if (rep.every === 'weekday') return 'Every weekday';
+            if (rep.every === 'week' && typeof rep.weekday === 'number' && rep.weekday >= 0) {
+                const day = WEEKDAYS[rep.weekday];
+                const name = day ? day.charAt(0).toUpperCase() + day.slice(1) : 'week';
+                return n === 1 ? ('Every ' + name) : ('Every ' + n + ' weeks on ' + name);
+            }
+            const unit = rep.every + (n > 1 ? 's' : '');
+            return n === 1 ? ('Every ' + rep.every) : ('Every ' + n + ' ' + unit);
+        }
         function makeThought(label, full) {
             bumpCreated();
             const text = full || label;
             const when = parseWhen(text);
-            const dueAt = when ? when.at.getTime() : null;
+            const repeat = parseRepeat(text);
+            let dueAt = when ? when.at.getTime() : null;
+            // "every Tuesday" states a rhythm but no first date, so work out
+            // the next one. Otherwise a repeating thought would have nothing
+            // to be due, which is the whole point of it.
+            if (!dueAt && repeat) {
+                const first = nextOccurrence(repeat, Date.now() - 1);
+                if (first) {
+                    const d = new Date(first);
+                    d.setHours(DEFAULT_HOUR, 0, 0, 0);
+                    dueAt = d.getTime();
+                }
+            }
             // A blank summary renders as an invisible, unidentifiable bubble.
             // Empty or whitespace-only input can arrive from a mis-heard
             // recording, an OCR miss, or an AI split with an empty label, so
@@ -8675,6 +8912,7 @@
                 full: text,
                 dueAt,                       // real deadline, or null
                 dueHadTime: when ? !!when.hadTime : false,
+                repeat,                      // recurrence rule, or null
                 doneAt: null,                // set when COMPLETED (vs discarded)
                 urgency: scoreUrgency(text, dueAt),
                 importance: guessImportance(text),
