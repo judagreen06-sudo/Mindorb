@@ -2931,7 +2931,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23b';
+        const BUILD_TAG = '2026-07-23c';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -3855,25 +3855,82 @@
         function fitTextToCircle(el, phrase, screenRadiusPx) {
             const usableRadius = screenRadiusPx * 0.78;
             el.textContent = phrase;
-            el.style.maxWidth = `${usableRadius * 2 * 0.96}px`;
             el.style.width = 'max-content';
             const savedTransform = el.style.transform;
             el.style.transform = 'none';
-            const fits = (size) => {
-                el.style.fontSize = `${size}px`;
+            // Measure the REAL glyph extent, not the element box. A word that
+            // can't wrap overflows a max-width-clamped box, and
+            // getBoundingClientRect reports only that clamped box — so text
+            // hanging visibly outside the bubble used to measure as "fits".
+            // scrollWidth/scrollHeight include the overflow, which is what
+            // the eye actually sees.
+            const extent = () => {
                 const rect = el.getBoundingClientRect();
-                const hw = rect.width / 2, hh = rect.height / 2;
-                return hw * hw + hh * hh <= usableRadius * usableRadius;
+                return {
+                    w: Math.max(el.scrollWidth, rect.width),
+                    h: Math.max(el.scrollHeight, rect.height)
+                };
             };
-            let lo = 6, hi = screenRadiusPx * 1.5;
-            if (!fits(lo)) {
-                el.style.fontSize = '6px';
-            } else {
+            const fitsAt = (size) => {
+                el.style.fontSize = `${size}px`;
+                const { w, h } = extent();
+                return (w / 2) * (w / 2) + (h / 2) * (h / 2) <= usableRadius * usableRadius;
+            };
+            const MIN_PX = 6;
+            // Best font size achievable at a given wrap width, or 0.
+            const bestAtWidth = (ratio) => {
+                el.style.maxWidth = `${usableRadius * 2 * ratio}px`;
+                if (!fitsAt(MIN_PX)) return 0;
+                let lo = MIN_PX, hi = screenRadiusPx * 1.5;
                 for (let i = 0; i < 11; i++) {
                     const mid = (lo + hi) / 2;
-                    if (fits(mid)) lo = mid; else hi = mid;
+                    if (fitsAt(mid)) lo = mid; else hi = mid;
                 }
-                el.style.fontSize = `${lo.toFixed(2)}px`;
+                return lo;
+            };
+            // A circle rewards a squarish block, and one fixed width can leave
+            // a label a pixel too wide to wrap — overflowing instead of
+            // breaking onto a second line where it would fit far larger.
+            // Try a few widths and keep whichever yields the biggest text.
+            const search = () => {
+                let bestSize = 0, bestRatio = 0.96;
+                for (const ratio of [0.96, 0.80, 0.66, 0.52]) {
+                    const size = bestAtWidth(ratio);
+                    if (size > bestSize) { bestSize = size; bestRatio = ratio; }
+                }
+                if (!bestSize) return false;
+                el.style.maxWidth = `${usableRadius * 2 * bestRatio}px`;
+                el.style.fontSize = `${bestSize.toFixed(2)}px`;
+                return true;
+            };
+            // Whole words first — breaking mid-word is ugly and was
+            // deliberately disabled. Only if a single word genuinely cannot
+            // fit even at the floor do we allow it to break, because a
+            // broken word inside the bubble beats an intact one hanging out.
+            el.style.overflowWrap = '';
+            el.style.wordBreak = '';
+            if (!search()) {
+                el.style.overflowWrap = 'anywhere';
+                el.style.wordBreak = 'break-word';
+                if (!search()) {
+                    // Even at the smallest legible size the label is too big
+                    // for this bubble. Trim it down until it genuinely fits:
+                    // an ellipsis is honest, text hanging outside the bubble
+                    // never is. The bubble wins, always.
+                    el.style.maxWidth = `${usableRadius * 2 * 0.96}px`;
+                    el.style.fontSize = `${MIN_PX}px`;
+                    const measureFits = () => {
+                        const { w, h } = extent();
+                        return (w / 2) * (w / 2) + (h / 2) * (h / 2) <= usableRadius * usableRadius;
+                    };
+                    let lo = 0, hi = phrase.length;
+                    while (lo < hi) {
+                        const mid = Math.ceil((lo + hi) / 2);
+                        el.textContent = phrase.slice(0, mid).trimEnd() + '\u2026';
+                        if (measureFits()) lo = mid; else hi = mid - 1;
+                    }
+                    el.textContent = lo > 0 ? phrase.slice(0, lo).trimEnd() + '\u2026' : '\u2026';
+                }
             }
             el.style.transform = savedTransform;
             // Remember the exact pixel radius this label was sized against.
@@ -6530,17 +6587,7 @@
                         setTimeout(() => {
                             fileThought(nt, s.parentId || null);
                             saveState();
-                            if (splitChildren.length >= 2) {
-                                splitChildren.forEach((c, j) => {
-                                    setTimeout(() => {
-                                        const ct = makeThought(c.label || c.full, c.full || c.label);
-                                        if (c.short) ct.short = c.short;
-                                        ct.routed = true;
-                                        fileThought(ct, nt.id);
-                                        saveState();
-                                    }, 250 + j * 180);
-                                });
-                            }
+                            applyChildFamily(nt, splitChildren, 0);
                         }, i * 180);
                     });
                     saveState();
@@ -6563,15 +6610,7 @@
                 // ("a Model Y and a Model 3") — the worker gates the rest.
                 const longEnough = (thought.full || '').split(/\s+/).length >= 6;
                 if (longEnough && Array.isArray(data.children) && data.children.length >= 2) {
-                    data.children.forEach((c, i) => {
-                        setTimeout(() => {
-                            const ct = makeThought(c.label || c.full, c.full || c.label);
-                            if (c.short) ct.short = c.short;
-                            ct.routed = true;
-                            fileThought(ct, thought.id);
-                            saveState();
-                        }, 350 + i * 200);
-                    });
+                    applyChildFamily(thought, data.children, 0);
                     showVoiceStatus(thought.summary + ' · ' + data.children.length + ' parts inside', { autoHideMs: 2600 });
                 } else if (parentThought) showVoiceStatus('Filed under ' + parentThought.summary, { autoHideMs: 1600 });
             } catch (e) {
@@ -6638,6 +6677,31 @@
         // Place a thought under a parent id (or root if null), updating both
         // the data tree and — if that location is currently visible — the
         // floating bubbles.
+        // Applies an AI-proposed family recursively. Previously only ONE
+        // level was applied and any `children` on a child was silently
+        // dropped — which is why a long brain-dump became a parent plus a
+        // few bubbles that were themselves whole paragraphs. Now a part that
+        // has its own parts becomes its own little family, so the leaves end
+        // up genuinely atomic instead of stopping one level short.
+        const MAX_FAMILY_DEPTH = 3;   // parent -> child -> grandchild -> great-grandchild
+        function applyChildFamily(parentThought, kids, depth) {
+            if (!parentThought || !Array.isArray(kids) || kids.length < 2) return;
+            if ((depth || 0) >= MAX_FAMILY_DEPTH) return;
+            kids.slice(0, 8).forEach((c, i) => {
+                if (!c) return;
+                setTimeout(() => {
+                    // The parent must still exist — the user may have released
+                    // it while the staggered reveal was still running.
+                    if (!findThoughtById(parentThought.id)) return;
+                    const ct = makeThought(c.label || c.full, c.full || c.label);
+                    if (c.short) ct.short = c.short;
+                    ct.routed = true;
+                    fileThought(ct, parentThought.id);
+                    saveState();
+                    applyChildFamily(ct, c.children, (depth || 0) + 1);
+                }, 250 + i * 180);
+            });
+        }
         function fileThought(thought, parentId) {
             // Safety: if we're re-filing the bubble the user is currently
             // INSIDE (or an ancestor of their current view), moving it would
