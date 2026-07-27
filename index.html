@@ -112,7 +112,21 @@
             transform: translateX(-50%);
         }
         #launch-dots .dot { width: 6px; height: 6px; }
-        body.launching #dock, body.launching #trail, body.launching #hint, body.launching #voice-status { opacity: 0 !important; pointer-events: none !important; }
+        /* Everything that isn't the launch screen stays down until the app is
+           ready. The breadcrumb, drawer handle and undo toast were missing
+           from this list, so they painted at full opacity for a frame or two
+           before the launch sequence took over — the split-second flash. */
+        body.launching #dock, body.launching #trail, body.launching #hint,
+        body.launching #voice-status, body.launching #breadcrumb,
+        body.launching #drawer-handle, body.launching #undo-toast {
+            opacity: 0 !important; pointer-events: none !important;
+        }
+        /* Coming out of launch they fade rather than snap on. */
+        body:not(.launching) #breadcrumb, body:not(.launching) #drawer-handle {
+            transition: opacity 0.5s ease 0.15s;
+        }
+        .motion-reduced body:not(.launching) #breadcrumb,
+        .motion-reduced body:not(.launching) #drawer-handle { transition: none; }
         body.launching #launch-title, body.launching #launch-title-shimmer { font-size: 28px; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100svh; overflow: hidden;
@@ -120,7 +134,10 @@
             -webkit-user-select: none; user-select: none;
             font-family: 'Quicksand', -apple-system, sans-serif;
         }
-        canvas { display: block; width: 100vw; height: 100svh; position: fixed; top: 0; left: 0; z-index: 1; cursor: pointer; }
+        /* Scoped to the galaxy renderer only. As a bare `canvas` rule it also
+           captured the pop-game canvas, pinning it fixed at full-viewport size
+           and letting it cover that panel's own header and hint. */
+        #glcanvas { display: block; width: 100vw; height: 100svh; position: fixed; top: 0; left: 0; z-index: 1; cursor: pointer; }
 
         #fx-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100svh;
@@ -309,15 +326,22 @@
 
         /* ============ BREADCRUMB TRAIL ============ */
         #trail {
-            position: fixed; left: 50%; z-index: 11;
+            /* Centred with auto margins inside an explicit left/right box
+               rather than left:50% + translateX(-50%). The transform approach
+               means ANY other transform on this element silently destroys the
+               centring — which is exactly how it ended up sitting well right
+               of centre on device. This way the transform is free for
+               animation and the centring cannot be disturbed. */
+            position: fixed; left: 0; right: 0; margin-left: auto; margin-right: auto;
+            width: fit-content; z-index: 11;
             top: calc(env(safe-area-inset-top, 0px) + 16px);
-            transform: translateX(-50%) translateY(-8px);
+            transform: translateY(-8px);
             max-width: min(86vw, 440px);
             padding: 8px 16px; border-radius: 999px;
             opacity: 0; pointer-events: none;
             transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.32,0.72,0.24,1);
         }
-        #trail.visible { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+        #trail.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
         /* When the breadcrumb trail is showing, the voice pill drops beneath it. */
         body.dived #voice-status { top: calc(env(safe-area-inset-top, 0px) + 62px); }
         .trail-inner {
@@ -953,7 +977,10 @@
             padding: 4px 20px 10px;
             flex-shrink: 0; gap: 12px;
         }
-        #drawer-titles { min-width: 0; padding-top: 2px; }
+        /* flex:1 so the title absorbs the free space. Without it,
+           space-between shares the gap out BETWEEN the three children and
+           leaves an odd hole between the title and the Select button. */
+        #drawer-titles { flex: 1; min-width: 0; padding-top: 2px; }
         #drawer-title {
             color: var(--ink); font-family: 'Baloo 2', sans-serif;
             font-size: 26px; font-weight: 800; letter-spacing: -0.01em;
@@ -1066,6 +1093,9 @@
             position: fixed; inset: 0; z-index: 200;
             pointer-events: none; display: none;
             perspective: 1000px;
+            /* The app's own sky, so this moment belongs to the same world as
+               everything else instead of being a flat black card. */
+            background: radial-gradient(ellipse at 50% 35%, #101a2e 0%, #080c17 55%, #04060c 100%);
         }
         #import-celebrate.on { display: block; pointer-events: auto; }
         /* ROUND iris close: a transparent circle with an enormous box-shadow
@@ -1077,7 +1107,10 @@
             position: fixed; top: 50%; left: 50%;
             width: 300vmax; height: 300vmax; border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 0 9999px #000000;
+            /* Matches the darkest stop of the background above, so the iris
+               closing is a shape sweeping across the same sky, not a black
+               rectangle appearing over it. */
+            box-shadow: 0 0 0 9999px #04060c;
             transition: width 0.5s cubic-bezier(0.7,0,0.3,1), height 0.5s cubic-bezier(0.7,0,0.3,1);
             z-index: 0;
         }
@@ -1179,7 +1212,7 @@
         #import-card { width: min(92vw, 420px); border-radius: var(--r-l); padding: 18px; }
         #import-title { color: var(--ink); font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 18px; }
         #import-sub { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; line-height: 1.45; margin: 6px 0 12px; }
-        #import-photo-btn {
+        #import-photo-btn, #import-upload-btn {
             width: 100%; box-sizing: border-box;
             display: flex; align-items: center; justify-content: center; gap: 9px;
             padding: 13px 14px; border-radius: 14px; cursor: pointer;
@@ -1190,9 +1223,14 @@
             font-size: 14px; font-weight: 700;
             transition: transform 0.12s ease, background 0.18s ease;
         }
-        #import-photo-btn:active { transform: scale(0.98); background: linear-gradient(180deg, rgba(169,200,232,0.24), rgba(169,200,232,0.12)); }
-        #import-photo-btn:disabled { opacity: 0.55; }
-        #import-photo-btn svg {
+        #import-photo-btn:active, #import-upload-btn:active { transform: scale(0.98); background: linear-gradient(180deg, rgba(169,200,232,0.24), rgba(169,200,232,0.12)); }
+        #import-photo-btn:disabled, #import-upload-btn:disabled { opacity: 0.55; }
+        #import-upload-btn {
+            margin-top: 8px;
+            background: rgba(255,255,255,0.055);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        #import-photo-btn svg, #import-upload-btn svg {
             width: 19px; height: 19px; flex-shrink: 0; fill: none; stroke: currentColor;
             stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
         }
@@ -1585,6 +1623,43 @@
         }
         .untangle-send:active { transform: scale(0.92); }
         .untangle-send svg { width: 14px; height: 14px; stroke: #10141c; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+        /* A checklist you can actually tick, and steps you can follow. An
+           answer that is really a list should look like one — reading a
+           shopping list as a paragraph is the wrong shape for the job. */
+        .ra-list { margin: 12px 0 2px; display: flex; flex-direction: column; gap: 2px; }
+        .ra-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 9px 10px; border-radius: 12px; cursor: pointer;
+            transition: background .16s ease, opacity .2s ease;
+        }
+        .ra-item:active { background: rgba(255,255,255,.06); }
+        .ra-box {
+            flex: 0 0 19px; width: 19px; height: 19px; margin-top: 1px; border-radius: 6px;
+            border: 1.6px solid rgba(255,255,255,.3);
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: background .16s ease, border-color .16s ease;
+        }
+        .ra-box svg { width: 12px; height: 12px; opacity: 0; transform: scale(.6);
+            transition: opacity .16s ease, transform .2s cubic-bezier(.34,1.56,.64,1);
+            fill: none; stroke: #0e1219; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+        .ra-item.done .ra-box { background: rgb(157,196,168); border-color: rgb(157,196,168); }
+        .ra-item.done .ra-box svg { opacity: 1; transform: scale(1); }
+        .ra-item.done .ra-text { opacity: .45; text-decoration: line-through; }
+        .ra-num {
+            flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%;
+            background: rgba(169,200,232,.16); color: #cfe0f5;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 11.5px; font-weight: 800; margin-top: 1px;
+        }
+        .ra-text { flex: 1; font-size: 14.5px; font-weight: 600; line-height: 1.45; color: var(--ink); }
+        .ra-save {
+            margin-top: 12px; width: 100%; padding: 12px 0; border-radius: var(--r-pill);
+            background: rgba(169,200,232,.16); border: 1px solid rgba(169,200,232,.3);
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 13.5px; font-weight: 700;
+            cursor: pointer; transition: transform .12s ease;
+        }
+        .ra-save:active { transform: scale(.98); }
+        .ra-save:disabled { opacity: .5; }
         /* TUTORIAL FOCUS. While the guided intro runs, everything the current
            step doesn't actually need disappears, so a first-time user is
            looking at exactly one thing. A step opts an element back in with
@@ -1596,7 +1671,9 @@
         body.onboarding #trail,
         body.onboarding #hint,
         body.onboarding #undo-toast,
-        body.onboarding #drawer-handle {
+        body.onboarding #drawer-handle,
+        body.onboarding #detail-card,
+        body.onboarding #move-picker {
             opacity: 0 !important;
             pointer-events: none !important;
             transition: opacity 0.45s ease, filter 0.45s ease;
@@ -1636,7 +1713,7 @@
         /* THE ARRIVAL. Someone sent you a thought — that should feel like
            receiving something, not like opening a dialog. The bubble is the
            hero: full size, lit, breathing, on its own patch of sky. */
-        #popgame-sheet {
+        #share-arrival {
             position: fixed; inset: 0; z-index: 999500;
             background: radial-gradient(ellipse at 50% 32%, #101a2e 0%, #080c17 55%, #04060c 100%);
             display: flex; align-items: center; justify-content: center;
@@ -1724,7 +1801,7 @@
         #sa-dismiss:active, #sa-add:active, #sa-signin:active { transform: scale(.97); }
         #sa-add:disabled { opacity: .5; }
         #popgame-sheet {
-            position: fixed; inset: 0; z-index: 999000;
+            position: fixed; inset: 0; z-index: 999600; isolation: isolate;
             background: radial-gradient(ellipse at 50% 35%, #0d1424 0%, #070a13 55%, #04060c 100%);
             display: flex; flex-direction: column;
             padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 calc(env(safe-area-inset-bottom, 0px) + 10px);
@@ -1733,18 +1810,158 @@
         }
         #popgame-sheet.open { opacity: 1; pointer-events: auto; }
         #pg-head {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 14px 8px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 10px;
+            padding: 4px 14px 10px; flex-shrink: 0; width: 100%;
         }
+        #pg-close {
+            flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+            color: var(--ink); cursor: pointer; padding: 0;
+        }
+        #pg-close svg { width: 20px; height: 20px; }
+        #pg-close:active { transform: scale(.94); background: rgba(255,255,255,.13); }
+        #pg-title { flex: 1; text-align: left; }
+        #pg-trophy {
+            flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,214,140,.12); border: 1px solid rgba(255,214,140,.28);
+            color: rgb(255,214,140); cursor: pointer; margin-right: 8px;
+        }
+        #pg-trophy svg { width: 19px; height: 19px; }
+        #pg-trophy:active { transform: scale(.94); background: rgba(255,214,140,.2); }
         #pg-head h2 {
             color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif;
             font-size: 17px; font-weight: 800; margin: 0;
         }
-        #pg-canvas { flex: 1; width: 100%; display: block; touch-action: manipulation; }
+        /* min-height:0 is essential: a <canvas> has an intrinsic pixel height
+           (we set it to the device-pixel size), and a flex item will not shrink
+           below its intrinsic size without this. Without it the canvas grew to
+           its full backing-store height and shoved the header and hint into
+           the middle of the screen — which is exactly what looked broken. */
+        #pg-lives { display: inline-flex; gap: 4px; align-items: center; margin-right: 4px; }
+        .pg-life { width: 8px; height: 8px; border-radius: 50%; background: rgb(232,154,138); transition: background .25s ease, opacity .25s ease; }
+        .pg-life.gone { background: rgba(255,255,255,.16); }
+        #pg-wave { font-size: 11.5px; font-weight: 800; color: var(--ink-faint); margin-right: 6px; letter-spacing: .02em; }
+        #pg-over {
+            position: absolute; inset: 0; z-index: 5;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(6,9,18,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            opacity: 0; pointer-events: none; transition: opacity .35s ease;
+        }
+        #pg-over.show { opacity: 1; pointer-events: auto; }
+        #pg-over-inner { text-align: center; padding: 0 26px; }
+        #pg-over.show #pg-over-inner > * { animation: cardPartIn .5s cubic-bezier(.22,1,.36,1) both; }
+        #pg-over.show #pg-over-score { animation-delay: .06s; }
+        #pg-over.show #pg-over-sub { animation-delay: .12s; }
+        #pg-over.show #pg-over-stats { animation-delay: .18s; }
+        #pg-over.show #pg-over-actions { animation-delay: .24s; }
+        #pg-over-label { color: var(--ink-faint); font-size: 12.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+        #pg-over-score { font-family: 'Baloo 2',sans-serif; font-size: 62px; font-weight: 800; color: #fff; line-height: 1.05; margin: 4px 0 2px; }
+        #pg-over-sub { color: rgb(255,214,140); font-size: 14px; font-weight: 800; }
+        #pg-over-stats { color: var(--ink-faint); font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+        #pg-over-actions { display: flex; gap: 9px; margin-top: 26px; }
+        #pg-over-board, #pg-over-again {
+            padding: 13px 22px; border-radius: var(--r-pill); cursor: pointer;
+            font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
+        #pg-over-board { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: var(--ink); }
+        #pg-over-again { background: linear-gradient(168deg,#fff,#e6ecf7); border: none; color: #0e1219; }
+        #pg-over-board:active, #pg-over-again:active { transform: scale(.97); }
+        #pg-canvas { flex: 1 1 0; min-height: 0; width: 100%; display: block; touch-action: none; }
         #pg-hint {
-            flex-shrink: 0; text-align: center; padding: 10px 24px 2px;
+            flex-shrink: 0; text-align: center; padding: 8px 24px 2px;
             color: var(--ink-faint); font-size: 12px; font-weight: 600; line-height: 1.45;
         }
+        #pg-score {
+            flex: 0 0 auto; display: flex; align-items: baseline; gap: 7px;
+            font-family: 'Baloo 2','Quicksand',sans-serif;
+        }
+        #pg-score-val { font-size: 21px; font-weight: 800; color: #fff; }
+        #pg-combo {
+            font-size: 12.5px; font-weight: 800; color: rgb(232,193,130); opacity: 0;
+            transition: opacity .18s ease, transform .18s ease; transform: translateY(2px);
+        }
+        #pg-combo.on { opacity: 1; transform: none; }
+        #pg-best {
+            flex-shrink: 0; text-align: center; padding: 2px 24px 0;
+            color: var(--ink-faint); font-size: 11.5px; font-weight: 700;
+        }
+        #lb-sheet {
+            position: fixed; inset: 0; z-index: 999700;
+            background: radial-gradient(ellipse at 50% 28%, #101a2e 0%, #080c17 58%, #04060c 100%);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top,0px) + 12px) 0 calc(env(safe-area-inset-bottom,0px) + 14px);
+            opacity: 0; pointer-events: none; transition: opacity .28s ease;
+        }
+        #lb-sheet.open { opacity: 1; pointer-events: auto; }
+        #lb-head { display: flex; align-items: center; gap: 10px; padding: 4px 14px 10px; flex-shrink: 0; }
+        #lb-head h2 { flex: 1; margin: 0; color: var(--ink); font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 17px; font-weight: 800; }
+        #lb-close {
+            flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+            color: var(--ink); cursor: pointer;
+        }
+        #lb-close svg { width: 20px; height: 20px; }
+        #lb-tabs { display: flex; gap: 6px; padding: 0 14px 10px; flex-shrink: 0; }
+        .lb-tab {
+            flex: 1; padding: 10px 0; border-radius: var(--r-pill); cursor: pointer;
+            background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10);
+            color: var(--ink-dim); font-family: 'Quicksand',sans-serif; font-size: 13.5px; font-weight: 700;
+            transition: background .18s ease, color .18s ease;
+        }
+        .lb-tab.active {
+            background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.07));
+            color: var(--ink); border-color: rgba(255,255,255,.2);
+        }
+        #lb-list { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 0 14px; }
+        .lb-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px; margin-bottom: 7px; border-radius: 16px;
+            background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08);
+            animation: lbRowIn .34s cubic-bezier(.22,1,.36,1) both; animation-delay: var(--lbd, 0s);
+        }
+        @keyframes lbRowIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+        .motion-reduced .lb-row { animation: none; }
+        .lb-row.me { background: rgba(169,200,232,.13); border-color: rgba(169,200,232,.30); }
+        .lb-rank {
+            flex: 0 0 30px; text-align: center;
+            font-family: 'Baloo 2',sans-serif; font-size: 15px; font-weight: 800; color: var(--ink-dim);
+        }
+        .lb-row.top1 .lb-rank { color: rgb(255,214,140); }
+        .lb-row.top2 .lb-rank { color: rgb(214,222,235); }
+        .lb-row.top3 .lb-rank { color: rgb(224,170,130); }
+        .lb-av {
+            flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(140deg, rgba(169,200,232,.85), rgba(157,196,168,.7));
+            color: #0d1119; font-size: 13px; font-weight: 800;
+        }
+        .lb-name { flex: 1; color: var(--ink); font-size: 14.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-score { font-family: 'Baloo 2',sans-serif; font-size: 17px; font-weight: 800; color: #fff; }
+        #lb-status { flex-shrink: 0; padding: 8px 18px 0; min-height: 18px; color: var(--ink-dim); font-size: 12.5px; font-weight: 700; text-align: center; }
+        #lb-status.bad { color: rgb(232,154,138); }
+        #lb-status.ok { color: rgb(157,196,168); }
+        #lb-addwrap { flex-shrink: 0; display: flex; gap: 8px; padding: 10px 14px 0; }
+        #lb-addfield {
+            flex: 1; display: flex; align-items: center; gap: 3px; padding: 0 14px;
+            border-radius: var(--r-pill); background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.12); color: var(--ink-faint);
+            font-family: 'Quicksand',sans-serif; font-size: 15px; font-weight: 700;
+        }
+        #lb-addinput {
+            flex: 1; min-width: 0; padding: 12px 0; background: none; border: none; outline: none;
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 14.5px; font-weight: 700;
+        }
+        #lb-addinput::placeholder { color: var(--ink-faint); font-weight: 600; font-size: 13px; }
+        #lb-addbtn {
+            flex: 0 0 auto; padding: 12px 20px; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: rgba(235,240,248,.94); color: #10141f;
+            font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
+        #lb-addbtn:disabled { opacity: .5; }
+        #lb-addbtn:active { transform: scale(.97); }
         #username-sheet {
             position: fixed; inset: 0; z-index: 999000;
             background: rgba(6, 9, 18, 0.62); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
@@ -1861,9 +2078,10 @@
 
         /* Undo toast — appears briefly after a thought is released */
         #undo-toast {
-            position: absolute; left: 50%;
+            position: absolute; left: 0; right: 0; margin-left: auto; margin-right: auto;
+            width: fit-content;
             bottom: calc(env(safe-area-inset-bottom, 0px) + 122px);
-            transform: translate(-50%, 10px);
+            transform: translateY(10px);
             z-index: 16;
             display: flex; align-items: center; gap: 14px;
             padding: 10px 10px 10px 18px; border-radius: 999px;
@@ -1871,7 +2089,7 @@
             opacity: 0; pointer-events: none;
             transition: opacity 0.25s ease, transform 0.25s ease;
         }
-        #undo-toast.visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+        #undo-toast.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
         #undo-toast button {
             border: none; border-radius: 999px; padding: 7px 14px;
             background: rgba(255, 255, 255, 0.14); color: var(--ink);
@@ -1945,7 +2163,7 @@
     <!-- The Explore finale: a single glass orb that spawns exactly over the
          button, scales up past the viewport with spring overshoot, then
          fades its own fill in its second half to "reveal" the galaxy
-         already in motion underneath — the illusion of flying through it. -->
+         already in motion underneath, the illusion of flying through it. -->
     <div id="orb-portal" class="ui-block">
         <div id="orb-core"></div>
     </div>
@@ -1963,6 +2181,9 @@
         </button>
         <button class="dock-mic" id="mic-btn" title="Speak a thought" aria-label="Speak">
             <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <button class="dock-btn" id="type-btn" title="Type a thought" aria-label="Type">
+            <svg viewBox="0 0 24 24"><rect x="3" y="6.5" width="18" height="11" rx="2.2"/><path d="M7 10h.01M10.5 10h.01M14 10h.01M17 10h.01M7 13.5h.01M17 13.5h.01M10 13.5h4"/></svg>
         </button>
         <button class="dock-btn" id="drawer-btn" title="All thoughts" aria-label="Index">
             <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
@@ -2038,7 +2259,7 @@
                     <path d="M240 42 q -10 -14 -20 0 q -10 14 -20 0" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-linecap="round"/>
                 </svg>
                 <h3>Speak your mind</h3>
-                <p>Tap the big bubble (or the mic in the dock) and just talk — a task, an idea, a worry, anything. Stop talking and it captures itself.</p>
+                <p>Tap the big bubble (or the mic in the dock) and just talk, a task, an idea, a worry, anything. Stop talking and it captures itself.</p>
                 <p>Say several things in one breath and they become separate bubbles automatically.</p>
             </div>
             <div class="howto-section">
@@ -2050,7 +2271,7 @@
                     <path d="M136 50 q 26 10 54 8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="3 4"/>
                 </svg>
                 <h3>It organizes itself</h3>
-                <p>Every thought files itself into the right bubble — related things cluster together, new topics start new bubbles. You never sort anything by hand.</p>
+                <p>Every thought files itself into the right bubble, related things cluster together, new topics start new bubbles. You never sort anything by hand.</p>
                 <p>Disagree with where something landed? Open it and use Move.</p>
             </div>
             <div class="howto-section">
@@ -2062,7 +2283,7 @@
                 </svg>
                 <h3>Every bubble is a world</h3>
                 <p>Tap any bubble to dive inside it. Speak in there to add thoughts inside that topic. Bubbles inside bubbles, as deep as your mind goes.</p>
-                <p>The trail at the top shows where you are — tap it or the home button to fly back out.</p>
+                <p>The trail at the top shows where you are, tap it or the home button to fly back out.</p>
             </div>
             <div class="howto-section">
                 <svg viewBox="0 0 300 84">
@@ -2076,7 +2297,7 @@
                     <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Let go</text>
                 </svg>
                 <h3>Finishing a thought</h3>
-                <p><b>Let go</b> is the everyday one: you’re finished with it, so it leaves your galaxy. <b>Delete</b> is for things that shouldn’t have been there at all. Both land in Old Bubbles where you can bring them back — but Mindorb remembers which was which.</p>
+                <p><b>Let go</b> is the everyday one: you’re finished with it, so it leaves your galaxy. <b>Delete</b> is for things that shouldn’t have been there at all. Both land in Old Bubbles where you can bring them back, but Mindorb remembers which was which.</p>
                 <p><b>Unpack</b> talks a tangled thought through with you and splits it into separate bubbles. <b>Move</b> refiles it anywhere. <b>Edit</b> rewords it.</p>
                 <p>Clearing things out is the point: this isn't a list that grows forever.</p>
             </div>
@@ -2089,7 +2310,7 @@
                     <rect x="60" y="62" width="140" height="10" rx="5" fill="rgba(255,255,255,0.05)"/>
                 </svg>
                 <h3>Find anything</h3>
-                <p>The list button in the dock opens All Thoughts — your whole galaxy as a scrollable tree, with search at the top. Tap any row to fly straight to that bubble.</p>
+                <p>The list button in the dock opens All Thoughts, your whole galaxy as a scrollable tree, with search at the top. Tap any row to fly straight to that bubble.</p>
             </div>
             <div class="howto-section">
                 <svg viewBox="0 0 300 84">
@@ -2098,7 +2319,7 @@
                     <path d="M108 62 q 42 18 84 0" fill="none" stroke="rgba(169,200,232,0.5)" stroke-width="1.4" stroke-dasharray="4 4"/>
                 </svg>
                 <h3>Ask your galaxy</h3>
-                <p>Instead of adding a thought, ask a question out loud — "what did I say about the trip?", "what should I focus on?" — and it answers from everything you've captured.</p>
+                <p>Instead of adding a thought, ask a question out loud, "what did I say about the trip?", "what should I focus on?", and it answers from everything you've captured.</p>
             </div>
             <div class="howto-section">
                 <svg viewBox="0 0 300 84">
@@ -2111,7 +2332,7 @@
                     <circle cx="222" cy="42" r="16" fill="none" stroke="#9DC4A8" stroke-width="1.5" opacity="0.9"/>
                 </svg>
                 <h3>Bring your old notes</h3>
-                <p>Paste a brain dump, a notes-app export, or any wall of text via the + button in All Thoughts — it gets untangled into organized bubbles automatically.</p>
+                <p>Paste a brain dump, a notes-app export, or any wall of text via the + button in All Thoughts, it gets untangled into organized bubbles automatically.</p>
             </div>
         </div>
     </div>
@@ -2266,7 +2487,7 @@
                     <span class="settings-row-main">Version</span>
                     <span id="settings-version-value" class="settings-row-value"></span>
                 </div>
-                <a href="privacy.html" target="_blank" rel="noopener" id="privacy-row" class="settings-row settings-row-nav">
+                <button id="privacy-row" class="settings-row settings-row-nav">
                     <span class="settings-row-icon">
                         <svg viewBox="0 0 24 24"><path d="M12 3.5l7 3v5c0 4.2-2.9 7.5-7 9-4.1-1.5-7-4.8-7-9v-5z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg>
                     </span>
@@ -2275,7 +2496,7 @@
                         <span class="settings-row-sub">What's stored, and what never leaves your device</span>
                     </span>
                     <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-                </a>
+                </button>
             </div>
             <div class="settings-section" style="display:none;">
                 <div class="settings-section-title">Danger Zone</div>
@@ -2298,12 +2519,17 @@
     <div id="import-sheet" class="ui-block">
         <div id="import-card" class="glass">
             <div id="import-title">Import old notes</div>
-            <div id="import-sub">Paste anything — old notes, a transcript, a brain dump. It'll be split and filed automatically.</div>
+            <div id="import-sub">Paste anything, old notes, a transcript, a brain dump. It'll be split and filed automatically.</div>
             <button id="import-photo-btn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-1.8A1 1 0 0 1 8.7 4.7h6.6a1 1 0 0 1 .9.5L17.3 7h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.8" r="3.3"/></svg>
                 <span>Take a photo of your notes</span>
             </button>
+            <button id="import-upload-btn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5"/><path d="M8 9l4-4 4 4"/><path d="M5 15v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/></svg>
+                <span>Upload a photo</span>
+            </button>
             <input type="file" id="import-photo-input" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="import-upload-input" accept="image/*" style="display:none;">
             <div id="import-or"><span>or paste below</span></div>
             <textarea id="import-input" placeholder="Paste your notes here…" autocomplete="off"></textarea>
             <div id="import-when">
@@ -2357,14 +2583,59 @@
 
     <div id="popgame-sheet">
         <div id="pg-head">
-            <button id="pg-close" class="page-back-btn" aria-label="Close">
+            <button id="pg-close" aria-label="Close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
             </button>
-            <h2>Pop Bubbles</h2>
-            <div class="page-head-spacer"></div>
+            <h2 id="pg-title">Pop Bubbles</h2>
+            <button id="pg-trophy" aria-label="Leaderboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 2.5M17 6h2.5a2.5 2.5 0 0 1-2.5 2.5"/><path d="M12 14v3M9 20h6"/></svg>
+            </button>
+            <div id="pg-score">
+                <span id="pg-wave"></span>
+                <span id="pg-lives"></span>
+                <span id="pg-score-val">0</span>
+                <span id="pg-combo"></span>
+            </div>
         </div>
         <canvas id="pg-canvas"></canvas>
-        <div id="pg-hint">Tap the bubbles. There's no score and no way to lose.</div>
+        <div id="pg-over">
+            <div id="pg-over-inner">
+                <div id="pg-over-label">Run over</div>
+                <div id="pg-over-score">0</div>
+                <div id="pg-over-sub"></div>
+                <div id="pg-over-stats"></div>
+                <div id="pg-over-actions">
+                    <button id="pg-over-board">Leaderboard</button>
+                    <button id="pg-over-again">Play again</button>
+                </div>
+            </div>
+        </div>
+        <div id="pg-hint">Pop them before they float away. Chain pops for a combo.</div>
+        <div id="pg-best"></div>
+    </div>
+
+    <div id="lb-sheet">
+        <div id="lb-head">
+            <button id="lb-close" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <h2>Leaderboard</h2>
+            <div style="flex:0 0 40px"></div>
+        </div>
+        <div id="lb-tabs">
+            <button class="lb-tab active" data-scope="friends">Friends</button>
+            <button class="lb-tab" data-scope="global">Global</button>
+        </div>
+        <div id="lb-list"></div>
+        <div id="lb-status"></div>
+        <div id="lb-addwrap">
+            <div id="lb-addfield">
+                <span>@</span>
+                <input id="lb-addinput" type="text" maxlength="20" placeholder="add a friend by username"
+                       autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            </div>
+            <button id="lb-addbtn">Add</button>
+        </div>
     </div>
 
     <div id="username-sheet">
@@ -2557,19 +2828,19 @@
                     // plain sphere, its deformation terms (≤ ~0.2) and the
                     // smin blend radius (0.35) are both out of reach, so the
                     // undeformed distance is *exactly* equivalent for both
-                    // marching and blending — trig skipped, zero visual delta.
+                    // marching and blending, trig skipped, zero visual delta.
                     float plainD = length(p - bPos3D) - r;
                     float d2;
                     if (plainD > 0.5) {
                         d2 = plainD;
                     } else {
                     // Base wobble deepens as a bubble "charges" during the
-                    // hold-to-release breath — the surface visibly draws in air.
+                    // hold-to-release breath, the surface visibly draws in air.
                     float wobble = sin(p.x * 4.0 + u_time * 1.6 + bData.x * 6.0)
                                  * cos(p.y * 3.6 - u_time * 1.3) * 0.012 * (1.0 + fx.w * 1.2);
 
                     // Deformation amplitude: baseline "alive" ripple scaled up
-                    // by listening state and driven by live mic volume — loud
+                    // by listening state and driven by live mic volume, loud
                     // speech visibly churns the surface, capped so the
                     // raymarcher stays artifact-free at peak amplitude.
                     float liveAmp = fx.x * (1.0 + u_listening * 1.2 + u_volume * 2.6) * (1.0 + u_breath * 0.6);
@@ -2577,7 +2848,7 @@
                                    + sin(p.z * 5.5 + tFast * 0.5) * cos(p.x * 3.0 + tFast)) * 0.018 * liveAmp;
                     ripples += sin(p.x * 8.5 - tFast * 1.7) * cos(p.y * 7.2 + tFast * 1.3)
                              * u_listening * fx.x * 0.016;
-                    // High-frequency "syllable" band — only lights up with
+                    // High-frequency "syllable" band, only lights up with
                     // actual voice energy, giving speech its jittery texture.
                     ripples += sin(p.x * 13.0 + tFast * 3.1) * cos(p.y * 11.0 - tFast * 2.6)
                              * u_volume * fx.x * 0.028;
@@ -2626,8 +2897,8 @@
             /* ---------- Galaxy background (very dark, very subtle) ----------
                Pure procedural: a hash grid gives sparse twinkling stars at
                two scales, and two octaves of value noise lay a faint deep
-               violet/blue nebula wash underneath. All cheap arithmetic —
-               far below the raymarch cost — and tuned to stay near-black
+               violet/blue nebula wash underneath. All cheap arithmetic,
+               far below the raymarch cost, and tuned to stay near-black
                so the bubbles remain the only bright thing on screen. */
             float hash21(vec2 p) {
                 p = fract(p * vec2(123.34, 456.21));
@@ -2656,19 +2927,19 @@
                 float twinkle = 0.72 + 0.28 * sin(u_time * (0.4 + h * 0.8) + h * 40.0);
                 return (core * (0.30 + mag * mag * 0.9) + halo) * twinkle;
             }
-            // A palette of dark, distinct hues — one per depth level. Blends
+            // A palette of dark, distinct hues, one per depth level. Blends
             // smoothly for fractional depths so travel fades between them, and
             // cycles/rotates for very deep levels so it never runs out.
             vec3 levelColor(float d) {
                 // Six anchor hues (all dark), then it loops with a slow rotation
                 // so even 10+ levels keep getting fresh-feeling color.
                 vec3 pal[6];
-                pal[0] = vec3(0.045, 0.090, 0.210);  // 0 home  — deep blue
-                pal[1] = vec3(0.150, 0.060, 0.220);  // 1       — violet
-                pal[2] = vec3(0.210, 0.060, 0.120);  // 2       — magenta-rose
-                pal[3] = vec3(0.230, 0.110, 0.045);  // 3       — amber-ember
-                pal[4] = vec3(0.060, 0.185, 0.130);  // 4       — teal-green
-                pal[5] = vec3(0.055, 0.155, 0.220);  // 5       — cyan-blue
+                pal[0] = vec3(0.045, 0.090, 0.210);  // 0 home, deep blue
+                pal[1] = vec3(0.150, 0.060, 0.220);  // 1     , violet
+                pal[2] = vec3(0.210, 0.060, 0.120);  // 2     , magenta-rose
+                pal[3] = vec3(0.230, 0.110, 0.045);  // 3     , amber-ember
+                pal[4] = vec3(0.060, 0.185, 0.130);  // 4     , teal-green
+                pal[5] = vec3(0.055, 0.155, 0.220);  // 5     , cyan-blue
                 float dd = mod(d, 6.0);
                 int i0 = int(floor(dd));
                 int i1 = int(mod(floor(dd) + 1.0, 6.0));
@@ -2689,11 +2960,11 @@
                 // The whole galaxy DRIFTS. A slow constant travel plus the
                 // accumulated motion from bubbles moving (u_drift) makes it feel
                 // like you're gliding through space. Nebula and each star layer
-                // move at DIFFERENT speeds — parallax — so nearer stars streak
+                // move at DIFFERENT speeds, parallax, so nearer stars streak
                 // past faster than the distant nebula, selling real depth.
                 vec2 baseDrift = u_drift + vec2(u_time * 0.010, u_time * 0.006);
 
-                // Nebula wash — drifts slowly (it's "far away"). Its color
+                // Nebula wash, drifts slowly (it's "far away"). Its color
                 // cycles gently through deep violet -> blue -> teal over time,
                 // staying dark throughout.
                 vec2 q = p * 1.5 + vec2(3.1, 7.4) + baseDrift * 0.35;
@@ -2708,17 +2979,17 @@
                 vec3 tint = mix(violet, mix(blue, teal, m2), m1);
                 // PER-LEVEL COLOR: every depth level has its own hue, blending
                 // smoothly as you travel between them. Applied as a real
-                // full-screen wash so it's clearly visible — brightest at the
+                // full-screen wash so it's clearly visible, brightest at the
                 // center, easing toward the dark edges (keeps a space vignette).
                 vec3 levelCol = levelColor(u_depth);
                 tint = mix(tint, levelCol, 0.7);
                 col += tint * shape;
-                // Full-field wash — softer, so the color reads without
+                // Full-field wash, softer, so the color reads without
                 // overwhelming the calm dark space.
                 float wash = 0.30 * (1.0 - 0.68 * length(p));
                 col += levelCol * wash;
 
-                // Star layers at different parallax depths — distant layer barely
+                // Star layers at different parallax depths, distant layer barely
                 // moves, near layer streaks past.
                 float sFar  = starLayer(p + baseDrift * 0.5, 9.0);
                 float sNear = starLayer(p + vec2(4.7, 2.3) + baseDrift * 1.25, 21.0) * 0.55;
@@ -2773,7 +3044,7 @@
                 /* ---- REFRACTION: see the galaxy THROUGH the bubble ----
                    The background is a pure function of ray direction, so we
                    can bend the view ray with Snell's law at the film surface
-                   and simply evaluate the galaxy along the bent direction —
+                   and simply evaluate the galaxy along the bent direction,
                    real physically-based transparency with zero extra passes.
                    The screen mapping p = -2*rd.xy/rd.z inverts the camera
                    projection used in main(). */
@@ -2794,7 +3065,7 @@
                 /* ---- THIN-FILM INTERFERENCE: real soap colors ----
                    Optical path difference through a soap film of varying
                    thickness, per RGB wavelength. Colors now shift correctly
-                   with viewing angle and drift as the film flows — the way
+                   with viewing angle and drift as the film flows, the way
                    real soap swirls behave. */
                 float swirl = sin(pos.x * 2.8 + u_time * 0.2) * cos(pos.y * 2.8 + u_time * 0.15);
                 float thickness = 330.0 + 210.0 * (0.5 + 0.5 * swirl)
@@ -2815,24 +3086,24 @@
                 vec3 finalColor = through * (1.0 - fresnel * 0.72) * 0.92;
                 finalColor += mirrored * fresnel * 1.15;
                 finalColor += film * fresnel * (0.55 + localBlend * 0.25);
-                // Urgency TINTS the rim red rather than adding white light —
+                // Urgency TINTS the rim red rather than adding white light,
                 // the glass keeps its transparency; the edge turns to ember.
                 vec3 sheenCol = mix(vec3(0.96, 0.98, 1.0), vec3(1.0, 0.22, 0.16), urgAtHit * 0.9);
                 finalColor += sheenCol * fresnel * 0.35;
                 finalColor += vec3(specKey * 2.2 * specMask) + vec3(specFill * 0.3 * specMask);
 
                 // A restrained pulsing red ember on the rim only (no flat
-                // additive term — that was whitening the glass).
+                // additive term, that was whitening the glass).
                 float urgePulse = 0.78 + 0.22 * sin(u_time * 2.4);
                 finalColor += vec3(0.95, 0.20, 0.14) * urgAtHit * urgePulse * fresnel * 0.85;
 
                 // Release-ritual charge: as you hold a bubble it fills with
-                // warm inner light — a breath drawn in before letting go.
+                // warm inner light, a breath drawn in before letting go.
                 finalColor += vec3(1.0, 0.88, 0.72) * chargeAtHit * (fresnel * 0.85 + 0.10);
 
                 // Warm calm glow on the open/focused bubble.
                 finalColor += vec3(0.55, 0.38, 0.18) * focusAtHit * fresnel * 0.6;
-                // Cool listening bloom while the mic is live — brightens
+                // Cool listening bloom while the mic is live, brightens
                 // with actual voice energy.
                 finalColor += vec3(0.16, 0.42, 0.62) * u_listening * (1.0 + u_volume * 1.4) * focusAtHit * fresnel * 1.6;
 
@@ -2848,7 +3119,7 @@
 
                 // Lazy background: bubble-covered pixels are already the
                 // most expensive on screen (full raymarch + shading + two
-                // environment samples for refraction/reflection) — skipping
+                // environment samples for refraction/reflection), skipping
                 // the base galaxy there trims the worst-case pixel cost.
                 vec3 finalRGB;
                 if (col.a >= 0.999) {
@@ -3207,6 +3478,7 @@
            ========================================================= */
         const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const DEFAULT_HOUR = 9;     // a day with no stated time means "morning"
+        const LATE_NIGHT_UNTIL = 4; // before 4am, "tomorrow" still means the day on the clock
         const EVENING_HOUR = 19;    // "tonight" / "this evening"
 
         function atHour(d, h, m) {
@@ -3260,8 +3532,13 @@
             if (/\btonight\b|\bthis evening\b/.test(t)) return withClock(now, EVENING_HOUR);
             if (/\bthis (morning|afternoon)\b/.test(t)) return withClock(now, /morning/.test(t) ? DEFAULT_HOUR : 14);
             if (/\btoday\b/.test(t)) return withClock(now, clock ? DEFAULT_HOUR : EVENING_HOUR);
-            if (/\btomorrow\b/.test(t)) return withClock(dayFrom(1), DEFAULT_HOUR);
-            if (/\bday after tomorrow\b/.test(t)) return withClock(dayFrom(2), DEFAULT_HOUR);
+            // LATE NIGHT. Someone still awake at 1am saying "tomorrow" means
+            // the day that is just beginning — not thirty hours away. Below
+            // the small-hours cutoff, the day-words shift back one, so a
+            // 1am "tomorrow" lands on the date already showing on the clock.
+            const smallHours = now.getHours() < LATE_NIGHT_UNTIL ? -1 : 0;
+            if (/\bday after tomorrow\b/.test(t)) return withClock(dayFrom(2 + smallHours), DEFAULT_HOUR);
+            if (/\btomorrow\b/.test(t)) return withClock(dayFrom(1 + smallHours), DEFAULT_HOUR);
 
             // Weekday names, with "next" pushing a full week out.
             const wd = t.match(/\b(?:(next|this)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
@@ -3395,7 +3672,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23p';
+        const BUILD_TAG = '2026-07-23v';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -3557,7 +3834,6 @@
             if (!currentUser) return;
             const sheet = $('username-sheet');
             if (!sheet) return;
-            document.getElementById('settings-page').classList.remove('open');
             $('un-input').value = currentUsername || '';
             setUnState('', '');
             $('un-save').disabled = true;
@@ -3591,7 +3867,7 @@
             if (unCheckTimer) { clearTimeout(unCheckTimer); unCheckTimer = null; }
             if (!raw) { setUnState('', ''); return; }
             if (!USERNAME_RE.test(raw)) {
-                setUnState('3\u201320 characters \u2014 letters, numbers and underscores only.', 'bad');
+                setUnState('3\u201320 characters, letters, numbers and underscores only.', 'bad');
                 return;
             }
             if (currentUsername && raw.toLowerCase() === currentUsername.toLowerCase()) {
@@ -3606,7 +3882,7 @@
                 unLastChecked = raw;
                 if (res.ok) { setUnState('@' + raw + ' is available', 'ok'); $('un-save').disabled = false; }
                 else if (res.reason === 'taken') setUnState('@' + raw + ' is taken.', 'bad');
-                else setUnState("Couldn't check right now \u2014 you can still try saving.", '');
+                else setUnState("Couldn't check right now, you can still try saving.", '');
                 if (!res.ok && res.reason !== 'taken') $('un-save').disabled = false;
             }, 420);
         }
@@ -3625,8 +3901,8 @@
                     // check above can be passed by two people at once, and
                     // only the database can settle who actually got it.
                     const dup = error.code === '23505' || /duplicate|unique/i.test(error.message || '');
-                    setUnState(dup ? ('@' + name + ' was just taken \u2014 try another.')
-                                   : "Couldn't save that \u2014 check your connection.", 'bad');
+                    setUnState(dup ? ('@' + name + ' was just taken, try another.')
+                                   : "Couldn't save that, check your connection.", 'bad');
                     btn.disabled = false;
                     return;
                 }
@@ -3636,7 +3912,7 @@
                 showVoiceStatus('You\u2019re @' + name, { autoHideMs: 1800 });
                 setTimeout(closeUsernameSheet, 700);
             } catch (e) {
-                setUnState("Couldn't save that \u2014 check your connection.", 'bad');
+                setUnState("Couldn't save that, check your connection.", 'bad');
                 btn.disabled = false;
             }
         }
@@ -3650,6 +3926,11 @@
         // so it cannot disturb the main scene, and its loop only exists while
         // the sheet is actually open — it costs nothing the rest of the time.
         let pgRaf = null, pgBubbles = [], pgBits = [], pgLast = 0, pgSeeded = false;
+        let pgScore = 0, pgCombo = 0, pgLastPop = 0, pgPopped = 0, pgMissed = 0;
+        let pgLives = 3, pgWave = 1, pgOver = false, pgStart = 0;
+        const PG_LIVES = 3;
+        let pgFloaters = [];
+        const PG_BEST_KEY = 'mindorb-pop-best';
         const PG_TINTS = [
             [169, 200, 232],   // the app's own bubble palette
             [157, 196, 168],
@@ -3667,60 +3948,178 @@
             return { w, h, dpr };
         }
         function pgSpawn(w, h, atBottom) {
-            const r = 26 + Math.random() * 38;
+            // Every wave the bubbles get smaller and faster, so a long run
+            // stops being comfortable and starts demanding real accuracy.
+            const wave = pgWave;
+            const shrink = Math.max(0.42, 1 - (wave - 1) * 0.07);
+            const rise = 1 + (wave - 1) * 0.16;
+            const r = (24 + Math.random() * 32) * shrink;
+            const golden = Math.random() < Math.min(0.04 + wave * 0.006, 0.10);
             return {
                 x: r + Math.random() * Math.max(1, w - r * 2),
-                y: atBottom ? (h + r + Math.random() * h * 0.5) : (r + Math.random() * Math.max(1, h - r * 2)),
-                r,
-                vy: -(4 + Math.random() * 9),        // px/sec, drifting gently up
-                vx: (Math.random() - 0.5) * 6,
+                y: atBottom ? (h + r + Math.random() * h * 0.35) : (r + Math.random() * Math.max(1, h - r * 2)),
+                r: golden ? r * 0.8 : r,
+                // Buoyancy: a real bubble accelerates as it rises, and the
+                // bigger it is the faster it goes.
+                vy: -(10 + Math.random() * 12) * rise * (0.7 + r / 60),
+                vx: (Math.random() - 0.5) * 10,
+                // Its own gentle sway, independent of everything else.
+                swayAmp: 8 + Math.random() * 22,
+                swayFreq: 0.6 + Math.random() * 0.9,
+                swayPhase: Math.random() * Math.PI * 2,
                 tint: PG_TINTS[(Math.random() * PG_TINTS.length) | 0],
+                hue: Math.random() * Math.PI * 2,
+                golden,
                 phase: Math.random() * Math.PI * 2,
                 born: performance.now()
             };
         }
-        function pgPop(b) {
-            // The feedback IS the point — reuse the app's own pop, which is
-            // already tuned, and let it scale with the bubble's size.
-            try { playPop(b.r * 2); } catch (e) {}
-            buzz([12, 18, 6]);
-            const reduced = document.documentElement.classList.contains('motion-reduced');
-            const n = reduced ? 5 : 14;
-            for (let i = 0; i < n; i++) {
-                const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
-                const sp = 60 + Math.random() * 180;
-                pgBits.push({
-                    x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-                    r: 1.5 + Math.random() * 2.5, life: 1, tint: b.tint
-                });
+        // Bubbles are solid objects, not overlapping stickers. This pushes any
+        // two that intersect gently apart and trades a little of their motion,
+        // which is what makes a cluster read as real.
+        function pgResolveOverlaps(w) {
+            for (let i = 0; i < pgBubbles.length; i++) {
+                for (let j = i + 1; j < pgBubbles.length; j++) {
+                    const a = pgBubbles[i], b = pgBubbles[j];
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const min = a.r + b.r;
+                    const d2 = dx * dx + dy * dy;
+                    if (d2 >= min * min || d2 === 0) continue;
+                    const d = Math.sqrt(d2);
+                    const push = (min - d) * 0.5;
+                    const nx = dx / d, ny = dy / d;
+                    a.x -= nx * push; a.y -= ny * push;
+                    b.x += nx * push; b.y += ny * push;
+                    // A soft exchange along the contact normal, so they nudge
+                    // each other aside instead of sticking.
+                    const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+                    if (rel < 0) {
+                        const imp = rel * 0.4;
+                        a.vx += nx * imp; a.vy += ny * imp;
+                        b.vx -= nx * imp; b.vy -= ny * imp;
+                    }
+                    a.x = Math.max(a.r, Math.min(w - a.r, a.x));
+                    b.x = Math.max(b.r, Math.min(w - b.r, b.x));
+                }
             }
         }
+        function pgPop(b) {
+            const now = performance.now();
+            // Chaining pops quickly builds a combo — that's the skill, and
+            // the reason to keep going rather than tap idly.
+            if (now - pgLastPop < 900) pgCombo = Math.min(pgCombo + 1, 9);
+            else pgCombo = 1;
+            pgLastPop = now;
+            const base = b.golden ? 50 : Math.round(28 - b.r * 0.28);   // smaller = worth more
+            const gained = Math.max(4, base) * pgCombo;
+            pgScore += gained;
+            pgPopped++;
+            pgFloaters.push({ x: b.x, y: b.y, life: 1,
+                              text: '+' + gained, golden: b.golden, combo: pgCombo });
+            try { playPop(b.r * 2); } catch (e) {}
+            buzz(b.golden ? [10, 20, 10, 20, 14] : [12, 18, 6]);
+            const reduced = document.documentElement.classList.contains('motion-reduced');
+            const n = reduced ? 6 : (b.golden ? 26 : 16);
+            for (let i = 0; i < n; i++) {
+                const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+                const sp = 70 + Math.random() * 220;
+                pgBits.push({ x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                              r: 1.5 + Math.random() * 2.6, life: 1,
+                              tint: b.golden ? [255, 214, 140] : b.tint });
+            }
+            pgSyncHud();
+        }
+        function pgSyncHud() {
+            const v = $('pg-score-val'); if (v) v.textContent = pgScore;
+            const lv = $('pg-lives');
+            if (lv) {
+                lv.innerHTML = '';
+                for (let i = 0; i < PG_LIVES; i++) {
+                    const d = document.createElement('span');
+                    d.className = 'pg-life' + (i < pgLives ? '' : ' gone');
+                    lv.appendChild(d);
+                }
+            }
+            const wv = $('pg-wave'); if (wv) wv.textContent = 'Wave ' + pgWave;
+            const cEl = $('pg-combo');
+            if (cEl) {
+                if (pgCombo > 1) { cEl.textContent = '\u00d7' + pgCombo; cEl.classList.add('on'); }
+                else cEl.classList.remove('on');
+            }
+        }
+        // Draws a bubble the way the REAL ones look: a near-black glassy body,
+        // a thin iridescent rim that shifts hue around the circumference, a
+        // bright specular and a soft second highlight. The galaxy uses a
+        // shader for this; here it is rebuilt with canvas gradients so the two
+        // read as the same object.
         function pgDrawBubble(ctx, b, t) {
-            const wobble = Math.sin(t * 0.0016 + b.phase) * 0.035 + 1;
+            const wobble = 1 + Math.sin(t * 0.0016 + b.phase) * 0.03;
             const r = b.r * wobble;
-            const [tr, tg, tb] = b.tint;
-            // Body: dark and translucent, like the real ones.
-            const body = ctx.createRadialGradient(b.x - r * 0.25, b.y - r * 0.3, r * 0.1, b.x, b.y, r);
-            body.addColorStop(0, 'rgba(255,255,255,0.10)');
-            body.addColorStop(0.55, 'rgba(18,24,38,0.55)');
-            body.addColorStop(1, 'rgba(10,14,24,0.72)');
-            ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+            const x = b.x, y = b.y;
+
+            // Outer bloom.
+            const bloom = ctx.createRadialGradient(x, y, r * 0.82, x, y, r * 1.34);
+            bloom.addColorStop(0, `rgba(${b.tint[0]},${b.tint[1]},${b.tint[2]},0.16)`);
+            bloom.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.beginPath(); ctx.arc(x, y, r * 1.34, 0, Math.PI * 2);
+            ctx.fillStyle = bloom; ctx.fill();
+
+            // Glass body — dark, denser at the edge, like the shader.
+            const body = ctx.createRadialGradient(x - r * 0.28, y - r * 0.32, r * 0.06, x, y, r);
+            body.addColorStop(0,    'rgba(46,54,74,0.62)');
+            body.addColorStop(0.42, 'rgba(20,26,40,0.60)');
+            body.addColorStop(0.82, 'rgba(11,15,25,0.72)');
+            body.addColorStop(1,    'rgba(8,11,19,0.80)');
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
             ctx.fillStyle = body; ctx.fill();
-            // Iridescent rim.
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = `rgba(${tr},${tg},${tb},0.85)`;
+
+            // Iridescent rim: a conic sweep of hues, exactly the thing that
+            // makes the real bubbles read as soap film rather than circles.
+            const hueShift = b.hue + t * 0.00004;
+            if (ctx.createConicGradient) {
+                const rim = ctx.createConicGradient(hueShift, x, y);
+                for (let i = 0; i <= 6; i++) {
+                    const p = i / 6;
+                    const h = (b.hue * 57.3 + p * 360) % 360;
+                    rim.addColorStop(p, `hsla(${h}, 78%, 72%, 0.92)`);
+                }
+                ctx.strokeStyle = rim;
+            } else {
+                ctx.strokeStyle = `rgba(${b.tint[0]},${b.tint[1]},${b.tint[2]},0.9)`;
+            }
+            ctx.lineWidth = Math.max(1.4, r * 0.055);
+            ctx.beginPath(); ctx.arc(x, y, r - ctx.lineWidth * 0.5, 0, Math.PI * 2);
             ctx.stroke();
-            // Outer glow.
-            ctx.beginPath(); ctx.arc(b.x, b.y, r + 1.5, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(${tr},${tg},${tb},0.18)`;
-            ctx.lineWidth = 5; ctx.stroke();
-            // Specular highlight — the thing that sells it as a bubble.
-            ctx.beginPath();
-            ctx.arc(b.x - r * 0.34, b.y - r * 0.36, r * 0.15, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fill();
-            ctx.beginPath();
-            ctx.arc(b.x + r * 0.30, b.y + r * 0.34, r * 0.09, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.20)'; ctx.fill();
+
+            // Inner sheen just inside the rim.
+            ctx.beginPath(); ctx.arc(x, y, r * 0.88, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+            ctx.lineWidth = Math.max(1, r * 0.03);
+            ctx.stroke();
+
+            // Primary specular.
+            const sx = x - r * 0.33, sy = y - r * 0.36;
+            const spec = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 0.30);
+            spec.addColorStop(0, 'rgba(255,255,255,0.95)');
+            spec.addColorStop(0.45, 'rgba(255,255,255,0.30)');
+            spec.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.beginPath(); ctx.arc(sx, sy, r * 0.30, 0, Math.PI * 2);
+            ctx.fillStyle = spec; ctx.fill();
+
+            // Soft bounce light low-right.
+            const bx = x + r * 0.30, by = y + r * 0.36;
+            const b2 = ctx.createRadialGradient(bx, by, 0, bx, by, r * 0.26);
+            b2.addColorStop(0, 'rgba(255,255,255,0.20)');
+            b2.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.beginPath(); ctx.arc(bx, by, r * 0.26, 0, Math.PI * 2);
+            ctx.fillStyle = b2; ctx.fill();
+
+            // A golden one is worth chasing — mark it clearly.
+            if (b.golden) {
+                ctx.beginPath(); ctx.arc(x, y, r * 0.30, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,214,140,${0.30 + 0.18 * Math.sin(t * 0.006)})`;
+                ctx.fill();
+            }
         }
         function pgFrame(now) {
             const cv = $('pg-canvas');
@@ -3733,17 +4132,67 @@
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, w, h);
 
-            const target = Math.max(6, Math.min(16, Math.round((w * h) / 26000)));
+            if (pgCombo > 0 && now - pgLastPop > 1400) { pgCombo = 0; pgSyncHud(); }
+            // A new wave every 25 pops: fewer, faster, smaller bubbles.
+            const wantWave = 1 + Math.floor(pgPopped / 25);
+            if (wantWave !== pgWave && !pgOver) {
+                pgWave = wantWave;
+                pgFloaters.push({ x: w / 2, y: h * 0.42, life: 1.6,
+                                  text: 'Wave ' + pgWave, golden: true, combo: 3 });
+                try { playPop(120); } catch (e) {}
+                pgSyncHud();
+            }
+            const target = Math.max(5, Math.min(14, Math.round((w * h) / 30000)));
             while (pgBubbles.length < target) pgBubbles.push(pgSpawn(w, h, pgSeeded));
             pgSeeded = true;
 
+            const tSec = now / 1000;
             for (const b of pgBubbles) {
-                b.y += b.vy * dt; b.x += b.vx * dt;
-                if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
-                if (b.x > w - b.r) { b.x = w - b.r; b.vx = -Math.abs(b.vx); }
+                // Buoyancy: it keeps accelerating upward, like a real bubble.
+                b.vy -= 5 * dt;
+                // Its own sway, which is what stops a field of bubbles looking
+                // like it is on rails.
+                const sway = Math.sin(tSec * b.swayFreq + b.swayPhase) * b.swayAmp;
+                b.y += b.vy * dt;
+                b.x += (b.vx + sway) * dt;
+                if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * 0.7; }
+                if (b.x > w - b.r) { b.x = w - b.r; b.vx = -Math.abs(b.vx) * 0.7; }
                 // Drifted off the top — quietly reappear from below.
-                if (b.y < -b.r * 1.5) { Object.assign(b, pgSpawn(w, h, true)); }
+                if (b.y < -b.r * 1.5) {
+                    // It escaped. A run that can END is what makes a score
+                    // worth comparing on a leaderboard at all.
+                    if (!pgOver) {
+                        pgMissed++;
+                        pgCombo = 0;
+                        pgLives--;
+                        buzz([26, 40, 26]);
+                        pgFloaters.push({ x: b.x, y: Math.max(30, b.r), life: 1,
+                                          text: 'missed', golden: false, combo: 1 });
+                        pgSyncHud();
+                        if (pgLives <= 0) { pgGameOver(); return; }
+                    }
+                    Object.assign(b, pgSpawn(w, h, true));
+                }
                 pgDrawBubble(ctx, b, now);
+            }
+            // A few relaxation passes: one is not enough to untangle a cluster,
+            // and bubbles visibly intersecting is the thing that made them read
+            // as flat stickers rather than objects.
+            pgResolveOverlaps(w); pgResolveOverlaps(w); pgResolveOverlaps(w);
+            // Floating "+N" marks — the feedback that makes a good hit land.
+            for (let i = pgFloaters.length - 1; i >= 0; i--) {
+                const f = pgFloaters[i];
+                f.life -= dt * 1.25;
+                f.y -= 46 * dt;
+                if (f.life <= 0) { pgFloaters.splice(i, 1); continue; }
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, f.life);
+                ctx.font = '800 ' + (f.combo > 2 ? 20 : 16) + "px 'Baloo 2', sans-serif";
+                ctx.textAlign = 'center';
+                ctx.fillStyle = f.golden ? 'rgb(255,214,140)'
+                              : (f.combo > 2 ? 'rgb(232,193,130)' : 'rgba(255,255,255,0.92)');
+                ctx.fillText(f.text, f.x, f.y);
+                ctx.restore();
             }
             for (let i = pgBits.length - 1; i >= 0; i--) {
                 const p = pgBits[i];
@@ -3757,6 +4206,34 @@
                 ctx.fill();
             }
             pgRaf = requestAnimationFrame(pgFrame);
+        }
+        function pgGameOver() {
+            if (pgOver) return;
+            pgOver = true;
+            pgCombo = 0;
+            buzz([40, 60, 40, 60, 80]);
+            let best = 0;
+            try { best = parseInt(localStorage.getItem(PG_BEST_KEY) || '0', 10) || 0; } catch (e) {}
+            const isBest = pgScore > best;
+            if (isBest) { try { localStorage.setItem(PG_BEST_KEY, String(pgScore)); } catch (e) {} }
+            try { submitScore(pgScore); } catch (e) {}
+            const ov = $('pg-over');
+            if (ov) {
+                $('pg-over-score').textContent = pgScore;
+                $('pg-over-sub').textContent = isBest ? 'A new personal best'
+                    : ('Best ' + Math.max(best, pgScore));
+                $('pg-over-stats').textContent = pgPopped + ' popped \u00b7 wave ' + pgWave;
+                ov.classList.add('show');
+            }
+            if (pgRaf) { cancelAnimationFrame(pgRaf); pgRaf = null; }
+        }
+        function pgRestart() {
+            const ov = $('pg-over'); if (ov) ov.classList.remove('show');
+            pgBubbles = []; pgBits = []; pgFloaters = []; pgSeeded = false; pgLast = 0;
+            pgScore = 0; pgCombo = 0; pgPopped = 0; pgMissed = 0; pgLastPop = 0;
+            pgLives = PG_LIVES; pgWave = 1; pgOver = false; pgStart = performance.now();
+            pgSyncHud();
+            if (!pgRaf) pgRaf = requestAnimationFrame(pgFrame);
         }
         function pgHit(clientX, clientY) {
             const cv = $('pg-canvas');
@@ -3780,9 +4257,14 @@
         function openPopGame() {
             const sheet = $('popgame-sheet');
             if (!sheet) return;
-            document.getElementById('settings-page').classList.remove('open');
             sheet.classList.add('open');
-            pgBubbles = []; pgBits = []; pgSeeded = false; pgLast = 0;
+            pgBubbles = []; pgBits = []; pgFloaters = []; pgSeeded = false; pgLast = 0;
+            pgScore = 0; pgCombo = 0; pgPopped = 0; pgMissed = 0; pgLastPop = 0;
+            pgSyncHud();
+            let best = 0;
+            try { best = parseInt(localStorage.getItem(PG_BEST_KEY) || '0', 10) || 0; } catch (e) {}
+            const bestEl = $('pg-best');
+            if (bestEl) bestEl.textContent = best ? ('Best ' + best) : '';
             if (!pgRaf) pgRaf = requestAnimationFrame(pgFrame);
         }
         function closePopGame() {
@@ -3791,7 +4273,14 @@
             // Stop the loop outright — a game quietly running behind a closed
             // panel would drain the battery for no reason.
             if (pgRaf) { cancelAnimationFrame(pgRaf); pgRaf = null; }
-            pgBubbles = []; pgBits = [];
+            // Keep the personal best — the reason to come back and beat it.
+            try {
+                const prev = parseInt(localStorage.getItem(PG_BEST_KEY) || '0', 10) || 0;
+                if (pgScore > prev) localStorage.setItem(PG_BEST_KEY, String(pgScore));
+            } catch (e) {}
+            // Fire and forget — a leaderboard write must never delay closing.
+            try { submitScore(pgScore); } catch (e) {}
+            pgBubbles = []; pgBits = []; pgFloaters = [];
         }
         // ===== SHARING A BUBBLE =====
         // A share is a snapshot, not a live link: the sender's later edits
@@ -3881,11 +4370,11 @@
                     }
                 } catch (e) { copied = false; }
                 if (!copied) copied = legacyCopy(url);
-                showVoiceStatus(copied ? 'Link copied \u2014 send it to anyone'
+                showVoiceStatus(copied ? 'Link copied, send it to anyone'
                                        : 'Share link: ' + url,
                                 { autoHideMs: copied ? 2600 : 7000 });
             } catch (e) {
-                showVoiceStatus("Couldn't create the link \u2014 check your connection", { error: true, autoHideMs: 3000 });
+                showVoiceStatus("Couldn't create the link, check your connection", { error: true, autoHideMs: 3000 });
             }
         }
         // ---- receiving ----
@@ -3940,9 +4429,14 @@
             // itself only serves shares to signed-in users), so ask first.
             if (!currentUser) {
                 try {
-                    const { data } = await sb.from('shared_bubbles').select('owner_username').eq('id', token).maybeSingle();
-                    const who = data && typeof data.owner_username === 'string'
-                        ? data.owner_username.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
+                    // Row-level security correctly hides the share itself from
+                    // anonymous visitors, which also hides the sender's name.
+                    // This tiny function exposes ONLY the username, so the
+                    // sign-in prompt can say whose bubble it is without
+                    // leaking any of the content.
+                    const { data } = await sb.rpc('share_sender', { share_id: token });
+                    const who = typeof data === 'string'
+                        ? data.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
                     paintArrival(null, who, false);
                 } catch (e) { paintArrival(null, null, false); }
                 pendingShare = { token, payload: null, from: null };
@@ -3977,7 +4471,7 @@
                 paintArrival(clean, who, true);
             } catch (e) {
                 $('sa-status').className = 'bad';
-                $('sa-status').textContent = "Couldn't load that bubble \u2014 check your connection.";
+                $('sa-status').textContent = "Couldn't load that bubble, check your connection.";
             }
         }
         function closeSharedBubble() {
@@ -4063,6 +4557,150 @@
                 showVoiceStatus('Added to your galaxy', { autoHideMs: 2000 });
             }, 900);
         }
+        // Signing out must leave a CLEAN device. Previously the account was
+        // ended but every synced thought stayed in local storage, so the next
+        // person to open the app saw the last user's galaxy. The cloud copy is
+        // untouched — signing back in restores everything.
+        async function signOutAndClear() {
+            try { if (sb) await sb.auth.signOut(); } catch (e) {}
+            currentUser = null;
+            currentUsername = null;
+            thoughts.length = 0;
+            releasedArchive.length = 0;
+            objects.length = 0;
+            openThoughtObj = null;
+            navStack.length = 0;
+            releasedCount = 0;
+            createdCount = 0;
+            try {
+                localStorage.removeItem('thoughts-app-v2');
+                localStorage.removeItem(LAST_MOD_KEY);
+                localStorage.removeItem('mindorb-feedback-outbox');
+            } catch (e) {}
+            try { saveState(); } catch (e) {}
+            updateAccountRow();
+            updateDrawerUI();
+            try { flyHome(); } catch (e) {}
+            showVoiceStatus('Signed out, this device is clear', { autoHideMs: 2600 });
+        }
+        // ===== LEADERBOARD =====
+        // Two scopes on purpose: Global is the real ladder, Friends is the one
+        // people actually check. Friends are added by @username, which is what
+        // usernames were already for.
+        let lbScope = 'friends';
+        async function submitScore(score) {
+            if (!sb || !currentUser || !score) return;
+            try {
+                // Only ever raises your own record — a bad run can't wipe a
+                // good one, so playing again is never a risk.
+                const { data } = await sb.from('pop_scores')
+                    .select('best').eq('user_id', currentUser.id).maybeSingle();
+                const prev = data && typeof data.best === 'number' ? data.best : 0;
+                if (score <= prev) return;
+                await sb.from('pop_scores').upsert({
+                    user_id: currentUser.id,
+                    username: currentUsername || null,
+                    best: score,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+            } catch (e) { /* a leaderboard is never worth interrupting play for */ }
+        }
+        function openLeaderboard() {
+            const sheet = $('lb-sheet');
+            if (!sheet) return;
+            sheet.classList.add('open');
+            $('lb-status').textContent = ''; $('lb-status').className = '';
+            loadLeaderboard();
+        }
+        function closeLeaderboard() {
+            const sheet = $('lb-sheet');
+            if (sheet) sheet.classList.remove('open');
+        }
+        function lbRow(rank, name, score, isMe) {
+            const row = document.createElement('div');
+            row.className = 'lb-row' + (isMe ? ' me' : '') + (rank <= 3 ? ' top' + rank : '');
+            row.style.setProperty('--lbd', (Math.min(rank, 12) * 0.03).toFixed(2) + 's');
+            const r = document.createElement('span');
+            r.className = 'lb-rank'; r.textContent = rank <= 3 ? ['\u2460','\u2461','\u2462'][rank-1] : String(rank);
+            const av = document.createElement('span');
+            av.className = 'lb-av'; av.textContent = (name || '?')[0].toUpperCase();
+            const n = document.createElement('span');
+            n.className = 'lb-name'; n.textContent = (isMe ? 'You' : '@' + name);
+            const s = document.createElement('span');
+            s.className = 'lb-score'; s.textContent = score;
+            row.append(r, av, n, s);
+            return row;
+        }
+        async function loadLeaderboard() {
+            const list = $('lb-list'), status = $('lb-status');
+            list.innerHTML = '';
+            status.className = '';
+            if (!currentUser || !sb) {
+                status.textContent = 'Sign in to see the leaderboard.';
+                return;
+            }
+            status.textContent = 'Loading\u2026';
+            try {
+                let rows = [];
+                if (lbScope === 'global') {
+                    const { data, error } = await sb.from('pop_scores')
+                        .select('user_id, username, best').order('best', { ascending: false }).limit(50);
+                    if (error) throw new Error(error.message);
+                    rows = data || [];
+                } else {
+                    const { data: fr, error: e1 } = await sb.from('friends')
+                        .select('friend_id').eq('user_id', currentUser.id);
+                    if (e1) throw new Error(e1.message);
+                    const ids = (fr || []).map(f => f.friend_id).concat([currentUser.id]);
+                    const { data, error } = await sb.from('pop_scores')
+                        .select('user_id, username, best').in('user_id', ids)
+                        .order('best', { ascending: false }).limit(50);
+                    if (error) throw new Error(error.message);
+                    rows = data || [];
+                }
+                if (!rows.length) {
+                    status.textContent = lbScope === 'friends'
+                        ? 'No scores yet, add a friend below, or play a round.'
+                        : 'No scores yet. Be the first.';
+                    return;
+                }
+                status.textContent = '';
+                rows.forEach((r, i) => {
+                    list.appendChild(lbRow(i + 1, r.username || 'anon', r.best || 0,
+                                           r.user_id === currentUser.id));
+                });
+            } catch (e) {
+                status.className = 'bad';
+                status.textContent = "Couldn't load the leaderboard.";
+            }
+        }
+        async function addFriendByUsername() {
+            const input = $('lb-addinput'), status = $('lb-status'), btn = $('lb-addbtn');
+            const name = (input.value || '').trim().replace(/^@/, '');
+            if (!name) return;
+            if (!currentUser || !sb) { status.className = 'bad'; status.textContent = 'Sign in first.'; return; }
+            if (currentUsername && name.toLowerCase() === currentUsername.toLowerCase()) {
+                status.className = 'bad'; status.textContent = "That's you."; return;
+            }
+            btn.disabled = true;
+            status.className = ''; status.textContent = 'Looking\u2026';
+            try {
+                const { data } = await sb.from('profiles')
+                    .select('user_id').ilike('username', name).maybeSingle();
+                if (!data) { status.className = 'bad'; status.textContent = 'No one goes by @' + name + '.'; return; }
+                const { error } = await sb.from('friends')
+                    .upsert({ user_id: currentUser.id, friend_id: data.user_id }, { onConflict: 'user_id,friend_id' });
+                if (error) throw new Error(error.message);
+                input.value = '';
+                status.className = 'ok'; status.textContent = 'Added @' + name;
+                lbScope = 'friends';
+                document.querySelectorAll('.lb-tab').forEach(t =>
+                    t.classList.toggle('active', t.dataset.scope === 'friends'));
+                loadLeaderboard();
+            } catch (e) {
+                status.className = 'bad'; status.textContent = "Couldn't add them right now.";
+            } finally { btn.disabled = false; }
+        }
         function updateAccountRow() {
             const status = document.getElementById('account-status');
             const btn = document.getElementById('btn-account-action');
@@ -4079,7 +4717,7 @@
                 // A username belongs to an account, so this only appears once
                 // there is one to attach it to.
                 if (unRow) unRow.style.display = '';
-                if (unSub) unSub.textContent = currentUsername ? ('@' + currentUsername) : 'Not set yet \u2014 tap to choose';
+                if (unSub) unSub.textContent = currentUsername ? ('@' + currentUsername) : 'Not set yet, tap to choose';
             } else {
                 if (unRow) unRow.style.display = 'none';
                 currentUsername = null;
@@ -4128,11 +4766,11 @@
         }
         function confirmDeleteAccount() {
             if (!currentUser) {
-                showVoiceStatus('Sign in first \u2014 there\u2019s no account to delete yet', { autoHideMs: 2600 });
+                showVoiceStatus('Sign in first, there\u2019s no account to delete yet', { autoHideMs: 2600 });
                 return;
             }
             showMoveSuggest(
-                'Permanently delete your account and all synced data? This can\u2019t be undone \u2014 consider exporting your data first.',
+                'Permanently delete your account and all synced data? This can\u2019t be undone, consider exporting your data first.',
                 deleteAccountForever,
                 { cancelLabel: 'Cancel', confirmLabel: 'Delete Account', danger: true }
             );
@@ -4142,14 +4780,14 @@
             try {
                 const { error } = await sb.rpc('delete_my_account');
                 if (error) {
-                    showVoiceStatus('Couldn\u2019t delete your account \u2014 try again', { error: true, autoHideMs: 3000 });
+                    showVoiceStatus('Couldn\u2019t delete your account, try again', { error: true, autoHideMs: 3000 });
                     return;
                 }
                 document.getElementById('settings-page').classList.remove('open');
                 showVoiceStatus('Account deleted', { autoHideMs: 2000 });
                 setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 900);
             } catch (e) {
-                showVoiceStatus('Couldn\u2019t reach the server \u2014 check your connection', { error: true, autoHideMs: 3000 });
+                showVoiceStatus('Couldn\u2019t reach the server, check your connection', { error: true, autoHideMs: 3000 });
             }
         }
         function openAuthSheet() {
@@ -4179,7 +4817,7 @@
             const uname = document.getElementById('auth-username');
             if (authMagicLink) {
                 title.textContent = 'Email me a link';
-                sub.textContent = 'No password needed — we\u2019ll email you a one-tap sign-in link.';
+                sub.textContent = 'No password needed, we\u2019ll email you a one-tap sign-in link.';
                 primary.textContent = 'Send Magic Link';
                 pw.style.display = 'none';
                 uname.style.display = 'none';
@@ -4215,7 +4853,7 @@
                     const settingsPage = document.getElementById('settings-page');
                     if (settingsPage) settingsPage.classList.remove('open');
                     setTimeout(() => {
-                        showMoveSuggest('Sign out of ' + email + '?', () => { if (sb) sb.auth.signOut(); },
+                        showMoveSuggest('Sign out of ' + email + '?', () => { signOutAndClear(); },
                             { cancelLabel: 'Cancel', confirmLabel: 'Sign Out', danger: true });
                     }, 120);
                 }
@@ -4289,7 +4927,7 @@
                                 // Rare race — someone else grabbed the name in
                                 // the moment between the check and the insert.
                                 // The account itself is fine either way.
-                                showAuthError('Account created, but that username was just taken \u2014 set one anytime in Settings.');
+                                showAuthError('Account created, but that username was just taken, set one anytime in Settings.');
                                 errEl.style.color = '#E8C182';
                             } else {
                                 // fetchUsername() already fired from the
@@ -4362,9 +5000,9 @@
         let onboardStep = -1; // -1 = inactive
         const ONBOARD_STEPS = [
             { title: 'You never file anything', body: 'Say what\u2019s on your mind and Mindorb works out what it\u2019s about, then files it for you. No folders. No tags. No deciding where things go.', pos: 'bottom', btn: 'Next', interactive: false, illo: 'flow', shows: [] },
-            { title: 'Try it \u2014 just talk', body: 'Tap the big bubble and say something that\u2019s actually on your mind right now. A task, a worry, a half-formed idea.', pos: 'top', btn: null, interactive: true, pulse: true, shows: [] },
-            { title: 'Go inside it', body: 'Every bubble holds more. Tap the one you just made \u2014 anything related you say later gathers in here on its own.', pos: 'top', btn: null, interactive: true, shows: [] },
-            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time \u2014 \u201Ctonight\u201D, \u201Cby Friday\u201D \u2014 and it becomes a real deadline automatically. Finished with something? Let it go and it leaves your galaxy.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock', shows: [] },
+            { title: 'Try it, just talk', body: 'Tap the big bubble and say something that\u2019s actually on your mind right now. A task, a worry, a half-formed idea. Prefer to type? The keyboard button in the dock does the same thing.', pos: 'top', btn: null, interactive: true, pulse: true, shows: [] },
+            { title: 'Go inside it', body: 'Every bubble holds more. Tap the one you just made, anything related you say later gathers in here on its own.', pos: 'top', btn: null, interactive: true, shows: [] },
+            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time, \u201Ctonight\u201D, \u201Cby Friday\u201D, and it becomes a real deadline automatically. Finished with something? Let it go and it leaves your galaxy.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock', shows: [] },
             { title: 'Bring the rest of your brain', body: 'Got notes scattered somewhere else? The + in All Thoughts turns a whole wall of text into organized bubbles in one go.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true, shows: ['drawer-handle'] },
         ];
         function onboardEligible() {
@@ -4606,7 +5244,15 @@
             if (onboardEligible()) {
                 // Let the launch warp land first — the galaxy arriving IS the
                 // first impression; the card follows it.
-                setTimeout(() => { if (onboardEligible()) onboardShowStep(0); }, 1700);
+                setTimeout(() => {
+                    if (!onboardEligible()) return;
+                    // Start from a clean screen. A detail card left open would
+                    // otherwise sit underneath the coach card, which is exactly
+                    // the overlap that looked broken.
+                    try { if (typeof detailCardOpen !== 'undefined' && detailCardOpen) closeThought(true); } catch (e) {}
+                    try { document.getElementById('move-picker').classList.remove('open'); } catch (e) {}
+                    onboardShowStep(0);
+                }, 1700);
             }
         });
 
@@ -4665,7 +5311,6 @@
             });
             const howtoOpen = document.getElementById('howto-open-btn');
             if (howtoOpen) howtoOpen.addEventListener('click', () => {
-                document.getElementById('settings-page').classList.remove('open');
                 document.getElementById('howto-page').classList.add('open');
                 playGlassSweep(document.getElementById('howto-page'));
             });
@@ -4673,7 +5318,6 @@
             if (howtoClose) howtoClose.addEventListener('click', () => document.getElementById('howto-page').classList.remove('open'));
             const archiveOpen = document.getElementById('archive-open-btn');
             if (archiveOpen) archiveOpen.addEventListener('click', () => {
-                document.getElementById('settings-page').classList.remove('open');
                 document.getElementById('archive-search').value = '';
                 archiveSelectMode = false; archiveSelected = new Set();
                 document.getElementById('archive-select-btn').classList.remove('active');
@@ -4724,6 +5368,36 @@
                 const tok = new URL(location.href).searchParams.get(SHARE_PARAM);
                 if (tok && /^[a-z0-9]{6,24}$/i.test(tok)) setTimeout(() => openSharedBubble(tok), 900);
             } catch (e) {}
+            const lbCloseBtn = document.getElementById('lb-close');
+            if (lbCloseBtn) lbCloseBtn.addEventListener('click', closeLeaderboard);
+            document.querySelectorAll('.lb-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    lbScope = tab.dataset.scope;
+                    document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t === tab));
+                    loadLeaderboard();
+                });
+            });
+            const lbAdd = document.getElementById('lb-addbtn');
+            if (lbAdd) lbAdd.addEventListener('click', addFriendByUsername);
+            const lbInput = document.getElementById('lb-addinput');
+            if (lbInput) lbInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); lbInput.blur(); addFriendByUsername(); }
+            });
+            const pgAgain = document.getElementById('pg-over-again');
+            if (pgAgain) pgAgain.addEventListener('click', pgRestart);
+            const pgBoard = document.getElementById('pg-over-board');
+            if (pgBoard) pgBoard.addEventListener('click', openLeaderboard);
+            const lbOpenBtn = document.getElementById('pg-trophy');
+            if (lbOpenBtn) lbOpenBtn.addEventListener('click', openLeaderboard);
+            const privacyRow = document.getElementById('privacy-row');
+            if (privacyRow) privacyRow.addEventListener('click', () => {
+                // window.open, not a relative <a href>. Inside an installed PWA
+                // a relative link navigates the single page away, which looks
+                // exactly like the app resetting itself.
+                const url = new URL('privacy.html', location.href).href;
+                const w = window.open(url, '_blank', 'noopener');
+                if (!w) showVoiceStatus('Privacy policy: ' + url, { autoHideMs: 6000 });
+            });
             const pgRow = document.getElementById('popgame-row');
             if (pgRow) pgRow.addEventListener('click', openPopGame);
             const pgCloseBtn = document.getElementById('pg-close');
@@ -4779,7 +5453,7 @@
             catch (e) {
                 if (!warnedStorage) {
                     warnedStorage = true;
-                    showVoiceStatus("Couldn't save — thoughts will only last this session", { error: true, autoHideMs: 3200 });
+                    showVoiceStatus("Couldn't save, thoughts will only last this session", { error: true, autoHideMs: 3200 });
                 }
             }
             try { markLocalModified(); scheduleCloudPush(); } catch (e) {}
@@ -5219,7 +5893,13 @@
             pendingUndo = entries;
             clearTimeout(undoTimer);
             const n = entries.length;
-            $('undo-text').textContent = n > 1 ? (n + ' thoughts let go') : 'Let go';
+            // The thought already records WHICH outcome it got, so the toast
+            // can stop guessing: deleting something said "Let go" before.
+            const wasDone = entries.some(e => e && e.thought && e.thought.doneAt);
+            const word = wasDone ? 'let go' : 'deleted';
+            $('undo-text').textContent = n > 1
+                ? (n + ' thoughts ' + word)
+                : (wasDone ? 'Let go' : 'Deleted');
             $('undo-toast').classList.add('visible');
             undoTimer = setTimeout(() => {
                 $('undo-toast').classList.remove('visible');
@@ -5505,7 +6185,7 @@
             try { onboardNotify('thought-opened'); } catch (e) {}
             try {
                 if ((obj.thought.children || []).length >= 3) {
-                    showContextualHint('sounding-board', 'Try asking your galaxy a question out loud \u2014 it knows everything in here.');
+                    showContextualHint('sounding-board', 'Try asking your galaxy a question out loud, it knows everything in here.');
                 }
             } catch (e) {}
 
@@ -5852,7 +6532,7 @@
             if (openThoughtObj.anim) openThoughtObj.anim = null;
             releaseThought(openThoughtObj, completed);
             closeThought(true);
-            if (completed) showVoiceStatus('Let go \u2014 it\u2019s off your mind', { autoHideMs: 1600 });
+            if (completed) showVoiceStatus('Let go, it\u2019s off your mind', { autoHideMs: 1600 });
         }
         // `true` = deliberately finished with (Let go). `false` = discarded.
         $('btn-letgo').addEventListener('click', () => finishThought(true));
@@ -5889,7 +6569,14 @@
                     // Days until the deadline (negative = already overdue).
                     // Only present when there IS one, so undated thoughts
                     // cost nothing in the prompt.
-                    if (t.dueAt) row.du = Math.round((t.dueAt - now) / 86400000);
+                    if (t.dueAt) {
+                        // CALENDAR days, not elapsed hours. Something due at 9am
+                        // tomorrow is 12 hours away, which rounds to zero and
+                        // would tell the AI it is due TODAY. People mean days.
+                        const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+                        const d1 = new Date(t.dueAt); d1.setHours(0, 0, 0, 0);
+                        row.du = Math.round((d1 - d0) / 86400000);
+                    }
                     out.push(row);
                     walk(t.children, path ? path + ' > ' + t.summary : t.summary);
                 }
@@ -6126,7 +6813,7 @@
                 out.appendChild(block);
                 ensureUntangleReply(th, out);
             } catch (e) {
-                thinking.textContent = "Couldn't reach the thinking partner — check connection.";
+                thinking.textContent = "Couldn't reach the thinking partner, check connection.";
             }
         }
         // A reply box so you can think WITH it, not just read one answer.
@@ -6458,14 +7145,27 @@
         // correct the transcription before anything is filed.
         const photoBtn = $('import-photo-btn');
         const photoInput = $('import-photo-input');
+        const uploadBtn = $('import-upload-btn');
+        const uploadInput = $('import-upload-input');
+        if (uploadBtn && uploadInput) {
+            uploadBtn.addEventListener('click', () => { uploadInput.value = ''; uploadInput.click(); });
+            uploadInput.addEventListener('change', () => handlePhotoFile(uploadInput));
+        }
         if (photoBtn && photoInput) {
             photoBtn.addEventListener('click', () => { photoInput.value = ''; photoInput.click(); });
-            photoInput.addEventListener('change', async () => {
+            photoInput.addEventListener('change', () => handlePhotoFile(photoInput));
+        }
+        {
+            // Camera and library share ONE path, so the two entry points can
+            // never drift apart in behaviour.
+            window.handlePhotoFile = async function (inputEl) {
+                const photoInput = inputEl;
                 const file = photoInput.files && photoInput.files[0];
                 if (!file) return;
                 const status = $('import-status');
                 if (!ROUTER_URL) { status.textContent = 'No connection to the AI.'; return; }
-                photoBtn.disabled = true;
+                if (photoBtn) photoBtn.disabled = true;
+                if (uploadBtn) uploadBtn.disabled = true;
                 status.textContent = 'Reading your notes…';
                 try {
                     const { b64, mime } = await downscaleImageToBase64(file, 1600, 0.82);
@@ -6477,22 +7177,23 @@
                     const data = await resp.json();
                     const text = (data && data.text || '').trim();
                     if (!text) {
-                        status.textContent = "Couldn't read any writing in that photo — try more light, or paste instead.";
+                        status.textContent = "Couldn't read any writing in that photo, try more light, or paste instead.";
                     } else {
                         const box = $('import-input');
                         // Append rather than replace, so several pages can be
                         // photographed one after another into one import.
                         box.value = box.value.trim() ? (box.value.trim() + '\n\n' + text) : text;
                         const lines = text.split('\n').filter(l => l.trim()).length;
-                        status.textContent = 'Read ' + lines + (lines === 1 ? ' line' : ' lines') + ' — check it below, then organize.';
+                        status.textContent = 'Read ' + lines + (lines === 1 ? ' line' : ' lines') + ', check it below, then organize.';
                     }
                 } catch (e) {
-                    status.textContent = "Couldn't read that photo — check your connection, or paste instead.";
+                    status.textContent = "Couldn't read that photo, check your connection, or paste instead.";
                 } finally {
-                    photoBtn.disabled = false;
+                    if (photoBtn) photoBtn.disabled = false;
+                    if (uploadBtn) uploadBtn.disabled = false;
                     photoInput.value = '';
                 }
-            });
+            };
         }
         // A phone photo is several megabytes and many times larger than the
         // model needs. Shrinking it here keeps the upload small enough to be
@@ -6575,11 +7276,11 @@
                 syncFloaters();
                 $('import-go').disabled = false;
             } catch (e) {
-                const msg = (e && e.name === 'AbortError') ? 'took too long — try a shorter paste, or split it up'
+                const msg = (e && e.name === 'AbortError') ? 'took too long, try a shorter paste, or split it up'
                     : (e && e.message) ? e.message : 'unknown error';
                 await growth.fail();
                 openImportSheet();
-                status.textContent = 'Import failed — ' + msg;
+                status.textContent = 'Import failed, ' + msg;
                 $('import-go').disabled = false;
             }
         });
@@ -6903,7 +7604,7 @@
             }
             if (!result.needsChoice) return; // not found — nothing to do
             showMoveSuggest(
-                JSON.stringify(topLabel) + ' isn\u2019t in your galaxy anymore \u2014 restore just this, or bring the whole thing back?',
+                JSON.stringify(topLabel) + ' isn\u2019t in your galaxy anymore, restore just this, or bring the whole thing back?',
                 () => {
                     if (restoreFromArchive(topThoughtId)) {
                         markHomecoming(topThoughtId);
@@ -6964,7 +7665,7 @@
             if (!filtered.length) {
                 scroll.appendChild(makeEmptyState(
                     q ? 'search' : 'calm',
-                    q ? ('Nothing here matches "' + query + '"') : 'Nothing here yet \u2014 what you let go of or delete shows up here.'
+                    q ? ('Nothing here matches "' + query + '"') : 'Nothing here yet, what you let go of or delete shows up here.'
                 ));
                 return;
             }
@@ -7110,12 +7811,18 @@
             // left stuck at its hardcoded HTML value forever.
             const dc = $('drawer-count');
             if (dc) dc.textContent = String(countAll(thoughts));
-            const lifeCreated = Math.max(createdCount, countAll(thoughts));
+            // "Cleared" could exceed "created", which is impossible on its face.
+            // Cause: thoughts arriving from ANOTHER DEVICE via sync are merged
+            // in as plain objects and never pass through makeThought(), so
+            // they were never counted as created — but clearing them did count.
+            // Everything ever made is at least what's live plus what's gone.
+            const lifeCreated = Math.max(createdCount, countAll(thoughts) + releasedCount);
+            if (lifeCreated > createdCount) createdCount = lifeCreated;
             tweenStat(drawerSub, lifeCreated, releasedCount);
             const dt = $('drawer-title'); if (dt) dt.textContent = 'All Thoughts';
             drawerList.innerHTML = '';
             if (thoughts.length === 0) {
-                drawerList.appendChild(makeEmptyState('galaxy', 'Nothing stored — your mind is clear.'));
+                drawerList.appendChild(makeEmptyState('galaxy', 'Nothing stored, your mind is clear.'));
                 return;
             }
             if (drawerUrgent) {
@@ -7308,6 +8015,15 @@
             });
             trail.classList.add('visible');
         }
+        // Typing used to be reachable ONLY by double-tapping the mic, which
+        // nobody discovers on their own. The gesture still works; this simply
+        // makes the option visible.
+        const typeBtnEl = $('type-btn');
+        if (typeBtnEl) typeBtnEl.addEventListener('click', () => {
+            if (transitioning) return;
+            if (isListening) { try { stopListeningEarly(); } catch (e) {} }
+            if (!textEntry.classList.contains('open')) toggleTextEntry();
+        });
         $('home-btn').addEventListener('click', () => { if (!transitioning) flyHome(); });
         $('back-btn').addEventListener('click', () => { if (!transitioning) closeThought(false); });
 
@@ -7456,12 +8172,12 @@
            zero delay; then the AI backend is asked to refine both,
            and if it answers, the thought quietly upgrades in place.
            If the backend is unset, slow, or down, the heuristic
-           simply stays — the app never blocks or breaks.
+           simply stays, the app never blocks or breaks.
            ========================================================= */
 
         // Paste your deployed Cloudflare Worker URL here. Leave empty to
         // run purely on the local heuristic (no AI).
-        // v2 talks to the ROUTER worker — it files thoughts into the tree.
+        // v2 talks to the ROUTER worker, it files thoughts into the tree.
         // (Set this to your deployed worker-v2.js URL.)
         const ROUTER_URL = "https://thoughts-router.judagreen06.workers.dev";
         // ===== IN-APP FEEDBACK =====
@@ -7477,7 +8193,6 @@
             const st = document.getElementById('fb-status');
             st.textContent = ''; st.className = '';
             document.getElementById('fb-send').disabled = false;
-            document.getElementById('settings-page').classList.remove('open');
             sheet.classList.add('open');
             try { playGlassSweep(sheet); } catch (e) {}
             setTimeout(() => { try { document.getElementById('fb-text').focus(); } catch (e) {} }, 260);
@@ -7521,12 +8236,12 @@
                     body: JSON.stringify(payload)
                 }, 12000);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                st.className = 'ok'; st.textContent = 'Thank you — sent.';
+                st.className = 'ok'; st.textContent = 'Thank you, sent.';
                 setTimeout(closeFeedbackSheet, 900);
             } catch (e) {
                 // Honest about what happened, and clear that it wasn't lost.
                 st.className = 'error';
-                st.textContent = "Couldn't reach the server — your note is saved and will be here next time.";
+                st.textContent = "Couldn't reach the server, your note is saved and will be here next time.";
                 sendBtn.disabled = false;
             }
         }
@@ -7696,7 +8411,7 @@
                 // children yet, so an existing family of sub-thoughts is
                 // never silently discarded.
                 if (Array.isArray(data.splits) && data.splits.length >= 2 && !(th.children && th.children.length)) {
-                    showMoveSuggest('This now reads like ' + data.splits.length + ' separate thoughts \u2014 split it up?', () => {
+                    showMoveSuggest('This now reads like ' + data.splits.length + ' separate thoughts, split it up?', () => {
                         removeThoughtEverywhere(th.id);
                         data.splits.forEach((s, i) => {
                             const ownText = (s.full && s.full.trim()) ? s.full.trim() : (s.label || th.full);
@@ -7792,7 +8507,7 @@
                 if (resp.status === 429 || resp.status === 503) {
                     thought.routePending = false;
                     thought.routed = false; saveState();
-                    showVoiceStatus('AI is busy — will file this shortly', { autoHideMs: 2600 });
+                    showVoiceStatus('AI is busy, will file this shortly', { autoHideMs: 2600 });
                     if (!thought.routeRetried) { thought.routeRetried = true; setTimeout(() => routeThought(thought), 11000); }
                     return;
                 }
@@ -7800,12 +8515,12 @@
                     let reason = '';
                     try { reason = (await resp.json()).reason || ''; } catch (e) {}
                     if (reason === 'too_long') {
-                        showVoiceStatus("That's a lot in one go — try splitting it into a couple of thoughts", { error: true, autoHideMs: 3600 });
+                        showVoiceStatus("That's a lot in one go, try splitting it into a couple of thoughts", { error: true, autoHideMs: 3600 });
                         return;
                     }
                 }
                 if (!resp.ok) {
-                    showVoiceStatus('AI unavailable — thought saved, will file later', { error: true, autoHideMs: 3000 });
+                    showVoiceStatus('AI unavailable, thought saved, will file later', { error: true, autoHideMs: 3000 });
                     return;
                 }
                 const data = await resp.json();
@@ -7927,7 +8642,7 @@
                     thought.short = thought.summary.split(/\s+/).slice(0, 2).join(' ');
                 }
                 saveState();
-                showVoiceStatus('AI unavailable — saved, will file itself when back', { error: true, autoHideMs: 3000 });
+                showVoiceStatus('AI unavailable, saved, will file itself when back', { error: true, autoHideMs: 3000 });
                 setTimeout(retryUnrouted, 15000);
                 setTimeout(retryUnrouted, 45000);
             }
@@ -8354,7 +9069,7 @@
                 // reset hard, tell the user, instead of silently ignoring them.
                 if (micStream && micStream.getTracks().length && micStream.getTracks().every(tr => tr.readyState === 'ended')) {
                     hardResetAudio();
-                    showVoiceStatus('Mic connection dropped — tap to try again', { error: true, autoHideMs: 2600 });
+                    showVoiceStatus('Mic connection dropped, tap to try again', { error: true, autoHideMs: 2600 });
                     return;
                 }
                 // Same failure mode, different cause: after the app sits open
@@ -8370,7 +9085,7 @@
                     try { audioCtx.resume().catch(() => {}); } catch (e) {}
                     if (now - audioStuckSince > 1500) {
                         hardResetAudio();
-                        showVoiceStatus('Mic connection dropped — tap to try again', { error: true, autoHideMs: 2600 });
+                        showVoiceStatus('Mic connection dropped, tap to try again', { error: true, autoHideMs: 2600 });
                         return;
                     }
                 } else {
@@ -8389,7 +9104,7 @@
                 if (rawVolume > 0.001) everSawAnySignal = true;
                 if (!everSawAnySignal && now - t0 > 2500) {
                     hardResetAudio();
-                    showVoiceStatus('Mic connection dropped — tap to try again', { error: true, autoHideMs: 2600 });
+                    showVoiceStatus('Mic connection dropped, tap to try again', { error: true, autoHideMs: 2600 });
                     return;
                 }
                 // Real speech sits well above ambient noise/mic self-noise —
@@ -8474,7 +9189,22 @@
                     throw new Error('HTTP ' + resp.status + (bodyText ? ': ' + bodyText : ''));
                 }
                 const data = await resp.json();
-                const answer = (data.text || '').trim() || "I couldn't find anything about that.";
+                let answer = (data.text || '').trim();
+                // BELT AND BRACES: if the server ever hands back raw model
+                // JSON (an older worker, a malformed reply), rescue the prose
+                // rather than rendering `{"answer":"...` on screen.
+                if (/^\s*\{[\s\S]*"answer"\s*:/.test(answer)) {
+                    let rescued = '';
+                    try {
+                        const o = JSON.parse(answer);
+                        if (o && typeof o.answer === 'string') rescued = o.answer;
+                    } catch (e) {
+                        const m = answer.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+                        if (m) { try { rescued = JSON.parse('"' + m[1] + '"'); } catch (e2) { rescued = m[1]; } }
+                    }
+                    if (rescued) answer = rescued.trim();
+                }
+                if (!answer) answer = "I couldn't find anything about that.";
                 hideVoiceStatus();
                 // Prefer the model's weighted contributions; if it returned
                 // plain prose, fall back to whatever it cited inline.
@@ -8486,6 +9216,8 @@
                 items = items.filter(x => findThoughtById(x.id));
                 await runThoughtPath(items);
                 showRecallCard(question, answer, data.confidence, {
+                    format: data.format || 'prose',
+                    items: Array.isArray(data.items) ? data.items : [],
                     verdict: verdict,
                     conflicts: data.conflicts || [],
                     missing: data.missing || '',
@@ -8498,7 +9230,7 @@
                 // "check connection" being too vague to ever debug.
                 const msg = (e && e.name === 'AbortError') ? 'Request timed out'
                     : (e && e.message) ? e.message : 'Unknown error';
-                showVoiceStatus("Search failed — " + msg, { error: true, autoHideMs: 4000 });
+                showVoiceStatus("Search failed, " + msg, { error: true, autoHideMs: 4000 });
             } finally {
                 recallBusy = false;
             }
@@ -8716,7 +9448,71 @@
                 });
             }
             card.querySelector('#recall-q').textContent = question;
-            renderWithRefs(card.querySelector('#recall-a'), answer);
+            const aEl = card.querySelector('#recall-a');
+            renderWithRefs(aEl, answer);
+            // If the answer is really a list, render it AS a list — a shopping
+            // list read as a paragraph is the wrong shape for the job.
+            const exFmt = (extras || {}).format;
+            const exItems = ((extras || {}).items) || [];
+            if ((exFmt === 'checklist' || exFmt === 'steps') && exItems.length) {
+                const list = document.createElement('div');
+                list.className = 'ra-list';
+                exItems.forEach((txt, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'ra-item';
+                    if (exFmt === 'checklist') {
+                        const box = document.createElement('span');
+                        box.className = 'ra-box';
+                        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        svg.setAttribute('viewBox', '0 0 24 24');
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        path.setAttribute('d', 'M5 13l4 4L19 7');
+                        svg.appendChild(path); box.appendChild(svg); row.appendChild(box);
+                        // Ticking is local and momentary — this is a working
+                        // surface, not a second place your data lives.
+                        row.addEventListener('click', () => {
+                            row.classList.toggle('done');
+                            buzz([8]);
+                        });
+                    } else {
+                        const num = document.createElement('span');
+                        num.className = 'ra-num';
+                        num.textContent = String(i + 1);
+                        row.appendChild(num);
+                    }
+                    const t = document.createElement('span');
+                    t.className = 'ra-text';
+                    t.textContent = txt;
+                    row.appendChild(t);
+                    list.appendChild(row);
+                });
+                aEl.appendChild(list);
+                // The list is disposable unless you say otherwise — this turns
+                // it into real bubbles you actually own.
+                const save = document.createElement('button');
+                save.className = 'ra-save';
+                save.textContent = exFmt === 'checklist'
+                    ? 'Keep this as a checklist bubble'
+                    : 'Keep these steps as bubbles';
+                save.addEventListener('click', () => {
+                    save.disabled = true;
+                    const parent = makeThought(
+                        (question || 'List').replace(/\?+$/, '').slice(0, 60),
+                        answer || question || 'List');
+                    parent.routed = true;
+                    fileThought(parent, null);
+                    exItems.forEach((txt, i) => {
+                        const kid = makeThought(txt, txt);
+                        kid.routed = true;
+                        fileThought(kid, parent.id);
+                    });
+                    saveState();
+                    updateDrawerUI();
+                    save.textContent = 'Saved to your galaxy';
+                    try { markHomecoming(parent.id); } catch (e) {}
+                });
+                aEl.appendChild(save);
+            }
             // Honesty line: the app says when it's guessing.
             let conf = card.querySelector('#recall-conf');
             if (conf) conf.remove();
@@ -8753,7 +9549,7 @@
                 conf = document.createElement('div');
                 conf.id = 'recall-conf';
                 conf.innerHTML = 'Confidence: <span class="lvl-' + lvl + '">' + lvl + '</span>';
-                if (v.why) conf.appendChild(document.createTextNode(' — ' + v.why));
+                if (v.why) conf.appendChild(document.createTextNode(', ' + v.why));
                 card.appendChild(conf);
             }
             let saveRow = card.querySelector('#recall-save');
@@ -8911,7 +9707,7 @@
             if (found.length === 0) {
                 showVoiceStatus(kind === 'urgent' ? 'Nothing urgent right now'
                     : kind === 'important' ? 'Nothing marked important right now'
-                    : "Nothing's been neglected — you're on top of it", { autoHideMs: 2000 });
+                    : "Nothing's been neglected, you're on top of it", { autoHideMs: 2000 });
                 return;
             }
             const myGen = ++ghostGen;
@@ -8949,8 +9745,8 @@
                 objects.push(g);
                 urgentGhosts.push(g);
             }, 260 + i * 110));
-            showVoiceStatus(kind === 'urgent' ? 'Everything urgent — tap one to go to it'
-                : kind === 'important' ? 'Everything important — tap one to go to it'
+            showVoiceStatus(kind === 'urgent' ? 'Everything urgent, tap one to go to it'
+                : kind === 'important' ? 'Everything important, tap one to go to it'
                 : "Drifting back: what you haven't touched in a while", { autoHideMs: 3200 });
             clearTimeout(showUrgentGhosts._t);
             showUrgentGhosts._t = setTimeout(() => clearUrgentGhosts(true), 8000);
@@ -9134,7 +9930,7 @@
             const result = await transcribeBlob(blob);
             if (result.text) { hideVoiceStatus(); if (!handleLocalCommand(result.text)) addThought(result.text, voiceTarget); }
             else if (result.silent) showVoiceStatus("Didn't catch that", { error: true, autoHideMs: 1400 });
-            else showVoiceStatus("Couldn't transcribe — " + (result.error || 'unknown error'), { error: true, autoHideMs: 3200 });
+            else showVoiceStatus("Couldn't transcribe, " + (result.error || 'unknown error'), { error: true, autoHideMs: 3200 });
         }
         // Web-Speech finish (non-Safari): prefer the server transcript, fall
         // back to the dictation text so it can never be worse than before.
@@ -9216,7 +10012,7 @@
                 return;
             }
             if (!speechSupported) {
-                showVoiceStatus('Voice input not supported here — tap the keyboard icon to type', { error: true, autoHideMs: 2600 });
+                showVoiceStatus('Voice input not supported here, tap the keyboard icon to type', { error: true, autoHideMs: 2600 });
                 return;
             }
             finalTranscript = ''; interimTranscript = ''; gotAnyResult = false;
@@ -9289,7 +10085,7 @@
                         stopSpeechDetector();
                         discardVoiceRecorder();
                         stopAudioAnalyser();
-                        showVoiceStatus("Voice isn't responding in this browser — try Chrome, Edge, or Safari, or tap the keyboard icon", { error: true, autoHideMs: 3400 });
+                        showVoiceStatus("Voice isn't responding in this browser, try Chrome, Edge, or Safari, or tap the keyboard icon", { error: true, autoHideMs: 3400 });
                     }
                 }, 6000);
             } catch (err) {
