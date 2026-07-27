@@ -444,7 +444,8 @@
            reveal for every transient overlay (typing, edit, import, search,
            untangle reply), independent of any element's own transitions. */
         body.ui-focused #dock, body.ui-focused #breadcrumb, body.ui-focused #trail, body.ui-focused #voice-status,
-        body.ui-instant #dock, body.ui-instant #breadcrumb, body.ui-instant #trail, body.ui-instant #voice-status {
+        body.ui-instant #dock, body.ui-instant #breadcrumb, body.ui-instant #trail, body.ui-instant #voice-status,
+        body.ui-instant #detail-card {
             transition: none !important;
         }
         body.ui-focused #dock, body.ui-focused #breadcrumb, body.ui-focused #trail, body.ui-focused #voice-status {
@@ -1178,6 +1179,31 @@
         #import-card { width: min(92vw, 420px); border-radius: var(--r-l); padding: 18px; }
         #import-title { color: var(--ink); font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 18px; }
         #import-sub { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; line-height: 1.45; margin: 6px 0 12px; }
+        #import-photo-btn {
+            width: 100%; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center; gap: 9px;
+            padding: 13px 14px; border-radius: 14px; cursor: pointer;
+            background: linear-gradient(180deg, rgba(169,200,232,0.16), rgba(169,200,232,0.08));
+            border: 1px solid rgba(169,200,232,0.28);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+            color: var(--ink); font-family: 'Quicksand', sans-serif;
+            font-size: 14px; font-weight: 700;
+            transition: transform 0.12s ease, background 0.18s ease;
+        }
+        #import-photo-btn:active { transform: scale(0.98); background: linear-gradient(180deg, rgba(169,200,232,0.24), rgba(169,200,232,0.12)); }
+        #import-photo-btn:disabled { opacity: 0.55; }
+        #import-photo-btn svg {
+            width: 19px; height: 19px; flex-shrink: 0; fill: none; stroke: currentColor;
+            stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+        }
+        #import-or {
+            display: flex; align-items: center; gap: 10px;
+            margin: 11px 0 9px; color: var(--ink-faint);
+            font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;
+        }
+        #import-or::before, #import-or::after {
+            content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.10);
+        }
         #import-input {
             width: 100%; box-sizing: border-box; height: 19vh; min-height: 88px; resize: none;
             padding: 12px 14px; border-radius: 14px;
@@ -1346,21 +1372,103 @@
         #detail-answer.prompt { color: var(--ink-faint); font-weight: 600; }
 
         #detail-meta { color: var(--ink-faint); font-size: 10.5px; font-weight: 600; margin-top: 4px; }
+        /* An overdue deadline should catch the eye when you glance at the
+           card, without ever shouting. A slow breath does that; a flash or a
+           colour change would just be nagging. Only ever on OVERDUE — a
+           deadline that is merely approaching stays perfectly still. */
+        #detail-due.overdue svg { animation: overdueBreath 2.6s ease-in-out infinite; }
+        @keyframes overdueBreath {
+            0%, 100% { opacity: 0.65; transform: scale(1); }
+            50%      { opacity: 1;    transform: scale(1.12); }
+        }
+        .motion-reduced #detail-due.overdue svg { animation: none; opacity: 1; }
+
+        /* The tool icons lift very slightly under the finger, so a press feels
+           like it made contact rather than just registering. */
+        .tool-btn svg { transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .tool-btn:active svg { transform: translateY(-2px) scale(1.08); }
+        .motion-reduced .tool-btn svg { transition: none; }
+        .motion-reduced .tool-btn:active svg { transform: none; }
+
+        /* Settings rows answer the tap themselves instead of waiting for the
+           panel behind them to respond. */
+        .settings-row-nav { transition: transform 0.13s ease, background 0.18s ease; }
+        .settings-row-nav:active { transform: scale(0.985); background: rgba(255,255,255,0.075); }
+        .motion-reduced .settings-row-nav { transition: none; }
+        .motion-reduced .settings-row-nav:active { transform: none; }
+
+        /* Archive rows arrive in sequence, the same way the drawer list and
+           the settings sections already do — one consistent idea across the
+           whole app rather than three different behaviours. */
+        #archive-scroll .archive-item {
+            animation: archiveRowIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+            animation-delay: var(--ad, 0s);
+        }
+        @keyframes archiveRowIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .motion-reduced #archive-scroll .archive-item { animation: none; opacity: 1; transform: none; }
+        /* Restoring used to be invisible: tap Restore, the panel closes, and
+           something changed somewhere off-screen. This glow marks the spot,
+           answering "where did it come back to?" without any text. */
+        .bubble-text.homecoming {
+            animation: homecomingGlow 1.9s cubic-bezier(0.22, 1, 0.36, 1) 1;
+        }
+        @keyframes homecomingGlow {
+            0%   { text-shadow: 0 0 0 rgba(169,200,232,0); }
+            22%  { text-shadow: 0 0 18px rgba(169,200,232,0.95), 0 0 34px rgba(157,196,168,0.55); }
+            100% { text-shadow: 0 0 0 rgba(169,200,232,0); }
+        }
+        .motion-reduced .bubble-text.homecoming { animation: none; }
+        /* Two outcomes deserve two different exits. Letting go RISES and
+           dissolves — the same direction as its arrow, and the same thing the
+           bubble itself does. Deleting SINKS away. You can tell which one you
+           chose from the motion alone, without reading anything. */
+        #detail-card.exit-letgo {
+            animation: cardExitUp 0.42s cubic-bezier(0.5, 0, 0.75, 0) forwards !important;
+        }
+        #detail-card.exit-delete {
+            animation: cardExitDown 0.34s cubic-bezier(0.4, 0, 1, 0.5) forwards !important;
+        }
+        @keyframes cardExitUp {
+            0%   { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0px); }
+            100% { opacity: 0; transform: translate(-50%, -46px) scale(1.04); filter: blur(3px); }
+        }
+        @keyframes cardExitDown {
+            0%   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, 22px) scale(0.94); }
+        }
+        .motion-reduced #detail-card.exit-letgo,
+        .motion-reduced #detail-card.exit-delete { animation: none !important; opacity: 0; }
+        /* The card's parts arrive in sequence rather than landing as one
+           slab: urgency, then the thought, then when it's due, then the
+           things you can do about it. It reads as the card composing itself,
+           which is the difference between "appeared" and "presented". */
+        #detail-card.open .stagger-in {
+            animation: cardPartIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+            animation-delay: var(--sd, 0s);
+        }
+        @keyframes cardPartIn {
+            from { opacity: 0; transform: translateY(7px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .motion-reduced #detail-card.open .stagger-in { animation: none; opacity: 1; transform: none; }
         /* Tools are occasional — glass pills that sit quietly under the
            thought, using the same specular-highlight treatment the bubbles
            themselves have, so the card belongs to this app and not to a
            generic settings screen. */
-        #detail-actions { display: flex; gap: 7px; margin-top: 14px; }
+        #detail-actions { display: flex; gap: 5px; margin-top: 14px; }
         .tool-btn {
-            flex: 1;
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            flex: 1; min-width: 0;
+            display: inline-flex; align-items: center; justify-content: center; gap: 5px;
             padding: 10px 0; border-radius: var(--r-pill);
             background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
             border: 1px solid rgba(255,255,255,0.10);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
             cursor: pointer; color: var(--ink-dim);
-            font-family: 'Quicksand', sans-serif; font-size: 12.5px; font-weight: 700;
-            letter-spacing: 0.01em;
+            font-family: 'Quicksand', sans-serif; font-size: 11.5px; font-weight: 700;
+            letter-spacing: 0.005em; white-space: nowrap;
             transition: color 0.18s ease, background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
         }
         .tool-btn svg {
@@ -1477,6 +1585,206 @@
         }
         .untangle-send:active { transform: scale(0.92); }
         .untangle-send svg { width: 14px; height: 14px; stroke: #10141c; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+        /* TUTORIAL FOCUS. While the guided intro runs, everything the current
+           step doesn't actually need disappears, so a first-time user is
+           looking at exactly one thing. A step opts an element back in with
+           .ob-show.
+           NOTE: every one of these is centred with a transform, so the
+           animation only ever touches opacity and blur — animating transform
+           here would knock them out of position. */
+        body.onboarding #dock,
+        body.onboarding #trail,
+        body.onboarding #hint,
+        body.onboarding #undo-toast,
+        body.onboarding #drawer-handle {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.45s ease, filter 0.45s ease;
+            filter: blur(4px);
+        }
+        body.onboarding #dock.ob-show,
+        body.onboarding #trail.ob-show,
+        body.onboarding #hint.ob-show,
+        body.onboarding #drawer-handle.ob-show {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            filter: blur(0);
+        }
+        /* Coming back: the interface reassembles itself, one piece at a time,
+           condensing out of a blur rather than just switching on. */
+        body.ob-returning #dock,
+        body.ob-returning #trail,
+        body.ob-returning #hint,
+        body.ob-returning #drawer-handle {
+            animation: obReturn 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+            animation-delay: var(--obd, 0s);
+        }
+        @keyframes obReturn {
+            0%   { opacity: 0; filter: blur(7px) brightness(1.5); }
+            60%  { opacity: 1; filter: blur(0) brightness(1.18); }
+            100% { opacity: 1; filter: blur(0) brightness(1); }
+        }
+        .motion-reduced body.ob-returning #dock,
+        .motion-reduced body.ob-returning #trail,
+        .motion-reduced body.ob-returning #hint,
+        .motion-reduced body.ob-returning #drawer-handle { animation: none; opacity: 1; filter: none; }
+        .motion-reduced body.onboarding #dock,
+        .motion-reduced body.onboarding #trail,
+        .motion-reduced body.onboarding #hint,
+        .motion-reduced body.onboarding #undo-toast,
+        .motion-reduced body.onboarding #drawer-handle { transition: none; filter: none; }
+        /* THE ARRIVAL. Someone sent you a thought — that should feel like
+           receiving something, not like opening a dialog. The bubble is the
+           hero: full size, lit, breathing, on its own patch of sky. */
+        #popgame-sheet {
+            position: fixed; inset: 0; z-index: 999500;
+            background: radial-gradient(ellipse at 50% 32%, #101a2e 0%, #080c17 55%, #04060c 100%);
+            display: flex; align-items: center; justify-content: center;
+            padding: calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.4s ease;
+            overflow: hidden;
+        }
+        #share-arrival.open { opacity: 1; pointer-events: auto; }
+        #sa-stars { position: absolute; inset: 0; pointer-events: none; }
+        .sa-star {
+            position: absolute; border-radius: 50%; background: #fff;
+            animation: saTwinkle 4s ease-in-out infinite;
+        }
+        @keyframes saTwinkle { 0%,100% { opacity: .12; } 50% { opacity: .7; } }
+        .motion-reduced .sa-star { animation: none; opacity: .35; }
+        #sa-inner {
+            position: relative; width: 100%; max-width: 340px;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+        }
+        #share-arrival.open #sa-inner > * {
+            animation: saPartIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+            animation-delay: var(--sad, 0s);
+        }
+        @keyframes saPartIn { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
+        .motion-reduced #share-arrival.open #sa-inner > * { animation: none; }
+        #sa-from {
+            display: flex; align-items: center; gap: 9px; margin-bottom: 26px;
+            color: var(--ink-dim); font-size: 13.5px; font-weight: 700;
+        }
+        #sa-avatar {
+            width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(140deg, rgba(169,200,232,.9), rgba(157,196,168,.75));
+            color: #0d1119; font-size: 12px; font-weight: 800;
+        }
+        /* The bubble itself, built from the same recipe as the real ones. */
+        #sa-orb {
+            position: relative; width: 210px; height: 210px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background:
+                radial-gradient(circle at 32% 26%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 10%, transparent 24%),
+                radial-gradient(circle at 50% 50%, rgba(169,200,232,.20) 0%, rgba(157,196,168,.16) 42%, rgba(232,193,130,.14) 72%, rgba(232,154,138,.12) 100%);
+            border: 1px solid rgba(255,255,255,.20);
+            box-shadow: 0 0 60px rgba(169,200,232,.22), inset 0 0 50px rgba(255,255,255,.05);
+            animation: saOrbFloat 6s ease-in-out infinite;
+        }
+        @keyframes saOrbFloat {
+            0%,100% { transform: translateY(0) scale(1); box-shadow: 0 0 60px rgba(169,200,232,.22), inset 0 0 50px rgba(255,255,255,.05); }
+            50%     { transform: translateY(-9px) scale(1.015); box-shadow: 0 0 82px rgba(169,200,232,.34), inset 0 0 50px rgba(255,255,255,.07); }
+        }
+        .motion-reduced #sa-orb { animation: none; }
+        #sa-orb-label {
+            padding: 0 30px; color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
+            font-weight: 800; font-size: 21px; line-height: 1.25;
+            text-shadow: 0 2px 18px rgba(0,0,0,.5); word-break: break-word;
+        }
+        #sa-kids {
+            margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+        }
+        .sa-kid {
+            padding: 5px 11px; border-radius: 999px;
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10);
+            color: var(--ink-dim); font-size: 11.5px; font-weight: 700;
+        }
+        #sa-status { min-height: 18px; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
+        #sa-status.bad { color: rgb(232,154,138); }
+        #sa-status.ok { color: rgb(157,196,168); }
+        #sa-actions { display: flex; gap: 9px; margin-top: 20px; width: 100%; }
+        #sa-dismiss, #sa-add, #sa-signin {
+            padding: 13px 0; border-radius: var(--r-pill); cursor: pointer;
+            font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 700;
+            transition: transform .12s ease, opacity .18s ease;
+        }
+        #sa-dismiss { flex: 1; background: rgba(255,255,255,.06); border: 1px solid var(--glass-border); color: var(--ink); }
+        #sa-add {
+            flex: 1.6; border: none; color: #0e1219;
+            background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
+            box-shadow: 0 8px 22px rgba(120,160,220,.22), inset 0 1px 0 rgba(255,255,255,.85);
+        }
+        #sa-signin {
+            display: none; width: 100%; margin-top: 20px; border: none; color: #0e1219;
+            background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
+        }
+        #sa-dismiss:active, #sa-add:active, #sa-signin:active { transform: scale(.97); }
+        #sa-add:disabled { opacity: .5; }
+        #popgame-sheet {
+            position: fixed; inset: 0; z-index: 999000;
+            background: radial-gradient(ellipse at 50% 35%, #0d1424 0%, #070a13 55%, #04060c 100%);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 calc(env(safe-area-inset-bottom, 0px) + 10px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.28s ease;
+        }
+        #popgame-sheet.open { opacity: 1; pointer-events: auto; }
+        #pg-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 14px 8px; flex-shrink: 0;
+        }
+        #pg-head h2 {
+            color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif;
+            font-size: 17px; font-weight: 800; margin: 0;
+        }
+        #pg-canvas { flex: 1; width: 100%; display: block; touch-action: manipulation; }
+        #pg-hint {
+            flex-shrink: 0; text-align: center; padding: 10px 24px 2px;
+            color: var(--ink-faint); font-size: 12px; font-weight: 600; line-height: 1.45;
+        }
+        #username-sheet {
+            position: fixed; inset: 0; z-index: 999000;
+            background: rgba(6, 9, 18, 0.62); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top, 0px) + 22px) 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+            opacity: 0; pointer-events: none; transform: scale(0.96);
+            transition: opacity 0.24s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #username-sheet.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+        .motion-reduced #username-sheet { transition-duration: 0.12s !important; }
+        #username-sheet h3 { color: var(--ink); font-size: 17px; font-weight: 800; margin: 4px 4px 4px; font-family: 'Baloo 2', 'Quicksand', sans-serif; }
+        #un-sub { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; margin: 0 4px 14px; line-height: 1.45; }
+        #un-field {
+            display: flex; align-items: center; gap: 2px;
+            padding: 4px 14px; border-radius: var(--r-m);
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+            transition: border-color 0.18s ease;
+        }
+        #un-field.ok { border-color: rgba(157, 196, 168, 0.55); }
+        #un-field.bad { border-color: rgba(232, 154, 138, 0.55); }
+        #un-at { color: var(--ink-faint); font-family: 'Quicksand', sans-serif; font-size: 17px; font-weight: 700; }
+        #un-input {
+            flex: 1; padding: 12px 0; background: none; border: none; outline: none;
+            color: var(--ink); font-family: 'Quicksand', sans-serif;
+            font-size: 17px; font-weight: 700; letter-spacing: 0.01em;
+        }
+        #un-input::placeholder { color: var(--ink-faint); font-weight: 600; }
+        #un-status { min-height: 18px; margin: 10px 4px 0; font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
+        #un-status.ok { color: rgb(157, 196, 168); }
+        #un-status.bad { color: rgb(232, 154, 138); }
+        #un-actions { display: flex; gap: 8px; margin-top: auto; }
+        #un-cancel, #un-save {
+            flex: 1; padding: 13px 0; border-radius: var(--r-pill);
+            font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
+            transition: transform 0.12s ease, opacity 0.18s ease;
+        }
+        #un-cancel { background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--ink); }
+        #un-save { flex: 1.5; background: rgba(235,240,248,0.94); border: none; color: #10141f; }
+        #un-save:disabled { opacity: 0.45; }
+        #un-cancel:active, #un-save:active { transform: scale(0.97); }
         #feedback-sheet {
             position: fixed; inset: 0; z-index: 999000;
             background: rgba(6, 9, 18, 0.62); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
@@ -1849,6 +2157,16 @@
                     <span class="settings-row-main"><span id="account-status">Not signed in</span></span>
                     <button id="btn-account-action">Sign In</button>
                 </div>
+                <button id="username-row" class="settings-row settings-row-nav" style="display:none;">
+                    <span class="settings-row-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 3v18M7 8h10M7 16h10"/></svg>
+                    </span>
+                    <span class="settings-row-main">
+                        <span>Username</span>
+                        <span class="settings-row-sub" id="username-row-sub">Not set yet</span>
+                    </span>
+                    <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                </button>
             </div>
             <div class="settings-section">
                 <div class="settings-section-title">Your Data</div>
@@ -1910,6 +2228,19 @@
                 </div>
             </div>
             <div class="settings-section">
+                <div class="settings-section-title">A Quiet Minute</div>
+                <button id="popgame-row" class="settings-row settings-row-nav">
+                    <span class="settings-row-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="9" cy="14" r="4.2"/><circle cx="16.5" cy="8.5" r="2.8"/><circle cx="17.5" cy="16.5" r="1.8"/></svg>
+                    </span>
+                    <span class="settings-row-main">
+                        <span>Pop Bubbles</span>
+                        <span class="settings-row-sub">Something to do with your hands for a minute</span>
+                    </span>
+                    <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                </button>
+            </div>
+            <div class="settings-section">
                 <div class="settings-section-title">Help</div>
                 <button id="howto-open-btn" class="settings-row settings-row-nav">
                     <span class="settings-row-icon">
@@ -1935,6 +2266,16 @@
                     <span class="settings-row-main">Version</span>
                     <span id="settings-version-value" class="settings-row-value"></span>
                 </div>
+                <a href="privacy.html" target="_blank" rel="noopener" id="privacy-row" class="settings-row settings-row-nav">
+                    <span class="settings-row-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 3.5l7 3v5c0 4.2-2.9 7.5-7 9-4.1-1.5-7-4.8-7-9v-5z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg>
+                    </span>
+                    <span class="settings-row-main">
+                        <span>Privacy</span>
+                        <span class="settings-row-sub">What's stored, and what never leaves your device</span>
+                    </span>
+                    <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                </a>
             </div>
             <div class="settings-section" style="display:none;">
                 <div class="settings-section-title">Danger Zone</div>
@@ -1958,6 +2299,12 @@
         <div id="import-card" class="glass">
             <div id="import-title">Import old notes</div>
             <div id="import-sub">Paste anything — old notes, a transcript, a brain dump. It'll be split and filed automatically.</div>
+            <button id="import-photo-btn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-1.8A1 1 0 0 1 8.7 4.7h6.6a1 1 0 0 1 .9.5L17.3 7h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.8" r="3.3"/></svg>
+                <span>Take a photo of your notes</span>
+            </button>
+            <input type="file" id="import-photo-input" accept="image/*" capture="environment" style="display:none;">
+            <div id="import-or"><span>or paste below</span></div>
             <textarea id="import-input" placeholder="Paste your notes here…" autocomplete="off"></textarea>
             <div id="import-when">
                 <span>Roughly when are these from?</span>
@@ -1986,6 +2333,53 @@
         <div id="mp-hint" style="display:none;"></div>
         <div class="mp-scroll" id="mp-list"></div>
         <button id="mp-cancel">Cancel</button>
+    </div>
+
+    <div id="share-arrival">
+        <div id="sa-stars"></div>
+        <div id="sa-inner">
+            <div id="sa-from">
+                <span id="sa-avatar"></span>
+                <span id="sa-fromtext">Someone shared a bubble with you</span>
+            </div>
+            <div id="sa-orb">
+                <div id="sa-orb-label"></div>
+            </div>
+            <div id="sa-kids"></div>
+            <div id="sa-status"></div>
+            <div id="sa-actions">
+                <button id="sa-dismiss">Just looking</button>
+                <button id="sa-add">Add to my galaxy</button>
+            </div>
+            <button id="sa-signin">Sign in to see it</button>
+        </div>
+    </div>
+
+    <div id="popgame-sheet">
+        <div id="pg-head">
+            <button id="pg-close" class="page-back-btn" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <h2>Pop Bubbles</h2>
+            <div class="page-head-spacer"></div>
+        </div>
+        <canvas id="pg-canvas"></canvas>
+        <div id="pg-hint">Tap the bubbles. There's no score and no way to lose.</div>
+    </div>
+
+    <div id="username-sheet">
+        <h3>Choose your username</h3>
+        <div id="un-sub">Letters, numbers and underscores. 3–20 characters. Every username is unique.</div>
+        <div id="un-field">
+            <span id="un-at">@</span>
+            <input id="un-input" type="text" maxlength="20" placeholder="username"
+                   autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div id="un-status"></div>
+        <div id="un-actions">
+            <button id="un-cancel">Cancel</button>
+            <button id="un-save" disabled>Save</button>
+        </div>
     </div>
 
     <div id="feedback-sheet">
@@ -2046,6 +2440,10 @@
             <button class="tool-btn" id="btn-edit" aria-label="Edit this thought">
                 <svg viewBox="0 0 24 24"><path d="M5 19h3.5L19 8.5a2.1 2.1 0 0 0-3-3L5.5 16V19z"/><path d="M14.5 7l2.5 2.5"/></svg>
                 <span class="tool-label">Edit</span>
+            </button>
+            <button class="tool-btn" id="btn-share" aria-label="Share this thought">
+                <svg viewBox="0 0 24 24"><path d="M12 15V4"/><path d="M8.5 7.5L12 4l3.5 3.5"/><path d="M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg>
+                <span class="tool-label">Share</span>
             </button>
         </div>
         <div id="detail-outcomes">
@@ -2783,8 +3181,7 @@
                 }
                 return true;
             };
-            const missing = pool.filter(t => !liveIds[t.id] && belongsHere(t))
-                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            const missing = byWhatMattersNow(pool.filter(t => !liveIds[t.id] && belongsHere(t)))
                 .slice(0, slots);
             missing.forEach((t, i) => setTimeout(() => {
                 const stillParent = openThoughtObj ? (openThoughtObj.thought || null) : null;
@@ -2892,6 +3289,11 @@
             if (!ts) return '';
             now = now ? new Date(now) : new Date();
             const d = new Date(ts);
+            // A corrupt or non-numeric deadline (a bad sync payload, a hand-
+            // edited export, Infinity) otherwise rendered the literal text
+            // "Invalid Date" straight onto the card. Showing nothing is the
+            // honest outcome — we don't know when it's due.
+            if (!isFinite(d.getTime())) return '';
             const startOf = (x) => { const y = new Date(x); y.setHours(0, 0, 0, 0); return y; };
             const days = Math.round((startOf(d) - startOf(now)) / 86400000);
             const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -2993,7 +3395,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23e';
+        const BUILD_TAG = '2026-07-23p';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -3143,18 +3545,543 @@
             pushToCloud();
         }
         let currentUsername = null;
+        // ===== USERNAME =====
+        // The signup flow has always told people they can "set one anytime in
+        // Settings" — this is the screen that finally makes that true, and
+        // the only way a Google sign-in ever gets a username at all.
+        const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+        let unCheckTimer = null;
+        let unCheckSeq = 0;          // guards against slow replies landing late
+        let unLastChecked = '';
+        function openUsernameSheet() {
+            if (!currentUser) return;
+            const sheet = $('username-sheet');
+            if (!sheet) return;
+            document.getElementById('settings-page').classList.remove('open');
+            $('un-input').value = currentUsername || '';
+            setUnState('', '');
+            $('un-save').disabled = true;
+            sheet.classList.add('open');
+            try { playGlassSweep(sheet); } catch (e) {}
+            setTimeout(() => { try { $('un-input').focus(); } catch (e) {} }, 260);
+        }
+        function closeUsernameSheet() {
+            const sheet = $('username-sheet');
+            if (sheet) sheet.classList.remove('open');
+            if (unCheckTimer) { clearTimeout(unCheckTimer); unCheckTimer = null; }
+        }
+        function setUnState(msg, kind) {
+            const st = $('un-status'), field = $('un-field');
+            if (st) { st.textContent = msg; st.className = kind || ''; }
+            if (field) { field.classList.remove('ok', 'bad'); if (kind) field.classList.add(kind); }
+        }
+        // Availability is only ever ADVISORY. Someone else can claim a name
+        // between this check and the save, so the database has the final say.
+        async function checkUsernameAvailable(name) {
+            if (!sb) return { ok: false, reason: 'offline' };
+            const { data, error } = await sb.from('profiles')
+                .select('user_id').ilike('username', name).maybeSingle();
+            if (error) return { ok: false, reason: 'error' };
+            if (data && data.user_id !== (currentUser && currentUser.id)) return { ok: false, reason: 'taken' };
+            return { ok: true };
+        }
+        function onUsernameTyped() {
+            const raw = $('un-input').value.trim();
+            $('un-save').disabled = true;
+            if (unCheckTimer) { clearTimeout(unCheckTimer); unCheckTimer = null; }
+            if (!raw) { setUnState('', ''); return; }
+            if (!USERNAME_RE.test(raw)) {
+                setUnState('3\u201320 characters \u2014 letters, numbers and underscores only.', 'bad');
+                return;
+            }
+            if (currentUsername && raw.toLowerCase() === currentUsername.toLowerCase()) {
+                setUnState('This is already your username.', '');
+                return;
+            }
+            setUnState('Checking\u2026', '');
+            const seq = ++unCheckSeq;
+            unCheckTimer = setTimeout(async () => {
+                const res = await checkUsernameAvailable(raw);
+                if (seq !== unCheckSeq) return;      // a newer keystroke won
+                unLastChecked = raw;
+                if (res.ok) { setUnState('@' + raw + ' is available', 'ok'); $('un-save').disabled = false; }
+                else if (res.reason === 'taken') setUnState('@' + raw + ' is taken.', 'bad');
+                else setUnState("Couldn't check right now \u2014 you can still try saving.", '');
+                if (!res.ok && res.reason !== 'taken') $('un-save').disabled = false;
+            }, 420);
+        }
+        async function saveUsername() {
+            const name = $('un-input').value.trim();
+            if (!USERNAME_RE.test(name) || !sb || !currentUser) return;
+            const btn = $('un-save');
+            btn.disabled = true;
+            setUnState('Saving\u2026', '');
+            try {
+                const { error } = await sb.from('profiles')
+                    .upsert({ user_id: currentUser.id, username: name }, { onConflict: 'user_id' });
+                if (error) {
+                    // 23505 = unique violation. This is the ONLY real guarantee
+                    // that two people can't share a name: the availability
+                    // check above can be passed by two people at once, and
+                    // only the database can settle who actually got it.
+                    const dup = error.code === '23505' || /duplicate|unique/i.test(error.message || '');
+                    setUnState(dup ? ('@' + name + ' was just taken \u2014 try another.')
+                                   : "Couldn't save that \u2014 check your connection.", 'bad');
+                    btn.disabled = false;
+                    return;
+                }
+                currentUsername = name;
+                updateAccountRow();
+                setUnState('Saved', 'ok');
+                showVoiceStatus('You\u2019re @' + name, { autoHideMs: 1800 });
+                setTimeout(closeUsernameSheet, 700);
+            } catch (e) {
+                setUnState("Couldn't save that \u2014 check your connection.", 'bad');
+                btn.disabled = false;
+            }
+        }
+        // ===== POP BUBBLES =====
+        // A place to put your hands for a minute. Deliberately has NO score,
+        // NO timer and NO way to lose: the calm comes from simple repetition,
+        // and the moment you add a score it becomes a performance task, which
+        // is the opposite of what this is for.
+        //
+        // Runs on its own 2D canvas rather than the galaxy's WebGL renderer,
+        // so it cannot disturb the main scene, and its loop only exists while
+        // the sheet is actually open — it costs nothing the rest of the time.
+        let pgRaf = null, pgBubbles = [], pgBits = [], pgLast = 0, pgSeeded = false;
+        const PG_TINTS = [
+            [169, 200, 232],   // the app's own bubble palette
+            [157, 196, 168],
+            [232, 193, 130],
+            [232, 154, 138],
+            [198, 176, 232]
+        ];
+        function pgCanvasSize() {
+            const cv = $('pg-canvas');
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const w = cv.clientWidth, h = cv.clientHeight;
+            if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+                cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+            }
+            return { w, h, dpr };
+        }
+        function pgSpawn(w, h, atBottom) {
+            const r = 26 + Math.random() * 38;
+            return {
+                x: r + Math.random() * Math.max(1, w - r * 2),
+                y: atBottom ? (h + r + Math.random() * h * 0.5) : (r + Math.random() * Math.max(1, h - r * 2)),
+                r,
+                vy: -(4 + Math.random() * 9),        // px/sec, drifting gently up
+                vx: (Math.random() - 0.5) * 6,
+                tint: PG_TINTS[(Math.random() * PG_TINTS.length) | 0],
+                phase: Math.random() * Math.PI * 2,
+                born: performance.now()
+            };
+        }
+        function pgPop(b) {
+            // The feedback IS the point — reuse the app's own pop, which is
+            // already tuned, and let it scale with the bubble's size.
+            try { playPop(b.r * 2); } catch (e) {}
+            buzz([12, 18, 6]);
+            const reduced = document.documentElement.classList.contains('motion-reduced');
+            const n = reduced ? 5 : 14;
+            for (let i = 0; i < n; i++) {
+                const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+                const sp = 60 + Math.random() * 180;
+                pgBits.push({
+                    x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                    r: 1.5 + Math.random() * 2.5, life: 1, tint: b.tint
+                });
+            }
+        }
+        function pgDrawBubble(ctx, b, t) {
+            const wobble = Math.sin(t * 0.0016 + b.phase) * 0.035 + 1;
+            const r = b.r * wobble;
+            const [tr, tg, tb] = b.tint;
+            // Body: dark and translucent, like the real ones.
+            const body = ctx.createRadialGradient(b.x - r * 0.25, b.y - r * 0.3, r * 0.1, b.x, b.y, r);
+            body.addColorStop(0, 'rgba(255,255,255,0.10)');
+            body.addColorStop(0.55, 'rgba(18,24,38,0.55)');
+            body.addColorStop(1, 'rgba(10,14,24,0.72)');
+            ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = body; ctx.fill();
+            // Iridescent rim.
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = `rgba(${tr},${tg},${tb},0.85)`;
+            ctx.stroke();
+            // Outer glow.
+            ctx.beginPath(); ctx.arc(b.x, b.y, r + 1.5, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${tr},${tg},${tb},0.18)`;
+            ctx.lineWidth = 5; ctx.stroke();
+            // Specular highlight — the thing that sells it as a bubble.
+            ctx.beginPath();
+            ctx.arc(b.x - r * 0.34, b.y - r * 0.36, r * 0.15, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fill();
+            ctx.beginPath();
+            ctx.arc(b.x + r * 0.30, b.y + r * 0.34, r * 0.09, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.20)'; ctx.fill();
+        }
+        function pgFrame(now) {
+            const cv = $('pg-canvas');
+            if (!cv || !$('popgame-sheet').classList.contains('open')) { pgRaf = null; return; }
+            const { w, h, dpr } = pgCanvasSize();
+            const ctx = cv.getContext('2d');
+            if (!ctx) { pgRaf = null; return; }
+            const dt = Math.min((now - (pgLast || now)) / 1000, 0.05);
+            pgLast = now;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+
+            const target = Math.max(6, Math.min(16, Math.round((w * h) / 26000)));
+            while (pgBubbles.length < target) pgBubbles.push(pgSpawn(w, h, pgSeeded));
+            pgSeeded = true;
+
+            for (const b of pgBubbles) {
+                b.y += b.vy * dt; b.x += b.vx * dt;
+                if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
+                if (b.x > w - b.r) { b.x = w - b.r; b.vx = -Math.abs(b.vx); }
+                // Drifted off the top — quietly reappear from below.
+                if (b.y < -b.r * 1.5) { Object.assign(b, pgSpawn(w, h, true)); }
+                pgDrawBubble(ctx, b, now);
+            }
+            for (let i = pgBits.length - 1; i >= 0; i--) {
+                const p = pgBits[i];
+                p.x += p.vx * dt; p.y += p.vy * dt;
+                p.vy += 180 * dt;               // a little gravity on the spray
+                p.life -= dt * 1.9;
+                if (p.life <= 0) { pgBits.splice(i, 1); continue; }
+                const [tr, tg, tb] = p.tint;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${tr},${tg},${tb},${Math.max(0, p.life) * 0.9})`;
+                ctx.fill();
+            }
+            pgRaf = requestAnimationFrame(pgFrame);
+        }
+        function pgHit(clientX, clientY) {
+            const cv = $('pg-canvas');
+            const rect = cv.getBoundingClientRect();
+            const x = clientX - rect.left, y = clientY - rect.top;
+            // Newest-drawn first so the one visually on top is the one that pops.
+            for (let i = pgBubbles.length - 1; i >= 0; i--) {
+                const b = pgBubbles[i];
+                const dx = x - b.x, dy = y - b.y;
+                // A touch is imprecise — allow a small forgiving margin so a
+                // near-miss still pops rather than feeling unresponsive.
+                if (dx * dx + dy * dy <= (b.r + 10) * (b.r + 10)) {
+                    pgPop(b);
+                    const { w, h } = pgCanvasSize();
+                    Object.assign(b, pgSpawn(w, h, true));
+                    return true;
+                }
+            }
+            return false;
+        }
+        function openPopGame() {
+            const sheet = $('popgame-sheet');
+            if (!sheet) return;
+            document.getElementById('settings-page').classList.remove('open');
+            sheet.classList.add('open');
+            pgBubbles = []; pgBits = []; pgSeeded = false; pgLast = 0;
+            if (!pgRaf) pgRaf = requestAnimationFrame(pgFrame);
+        }
+        function closePopGame() {
+            const sheet = $('popgame-sheet');
+            if (sheet) sheet.classList.remove('open');
+            // Stop the loop outright — a game quietly running behind a closed
+            // panel would drain the battery for no reason.
+            if (pgRaf) { cancelAnimationFrame(pgRaf); pgRaf = null; }
+            pgBubbles = []; pgBits = [];
+        }
+        // ===== SHARING A BUBBLE =====
+        // A share is a snapshot, not a live link: the sender's later edits
+        // don't rewrite what the recipient received, which is what people
+        // actually expect from "I sent you this".
+        const SHARE_PARAM = 'b';
+        function shareToken() {
+            const a = 'abcdefghijkmnpqrstuvwxyz23456789';   // no look-alike chars
+            let s = '';
+            const buf = new Uint8Array(10);
+            (window.crypto || {}).getRandomValues ? crypto.getRandomValues(buf) : buf.forEach((_, i) => buf[i] = Math.random() * 256);
+            for (let i = 0; i < 10; i++) s += a[buf[i] % a.length];
+            return s;
+        }
+        // Strip a subtree down to what's worth sending. Deliberately drops
+        // ids, parent links and completion state — the recipient gets the
+        // CONTENT, not a copy of the sender's bookkeeping.
+        function shareableSubtree(t, depth) {
+            if (!t || (depth || 0) > 4) return null;
+            return {
+                summary: t.summary || 'Untitled',
+                short: t.short || '',
+                full: t.full || t.summary || '',
+                dueAt: t.dueAt || null,
+                children: (t.children || []).slice(0, 40)
+                    .map(k => shareableSubtree(k, (depth || 0) + 1)).filter(Boolean)
+            };
+        }
+        function countShared(node) {
+            if (!node) return 0;
+            let n = 1;
+            for (const k of (node.children || [])) n += countShared(k);
+            return n;
+        }
+        // Older/locked-down browsers block the async clipboard API. A hidden,
+        // selected input still copies in almost all of them.
+        function legacyCopy(text) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+                document.body.appendChild(ta);
+                ta.select();
+                ta.setSelectionRange(0, text.length);
+                const ok = document.execCommand && document.execCommand('copy');
+                ta.remove();
+                return !!ok;
+            } catch (e) { return false; }
+        }
+        async function shareCurrentThought() {
+            if (!openThoughtObj || !openThoughtObj.thought) return;
+            const th = openThoughtObj.thought;
+            if (!sb || !currentUser) {
+                showVoiceStatus('Sign in first to share a bubble', { autoHideMs: 2600 });
+                try { openAuthSheet && openAuthSheet(); } catch (e) {}
+                return;
+            }
+            showVoiceStatus('Preparing your bubble\u2026', { autoHideMs: 4000 });
+            const token = shareToken();
+            try {
+                const { error } = await sb.from('shared_bubbles').insert({
+                    id: token,
+                    owner_id: currentUser.id,
+                    owner_username: currentUsername || null,
+                    payload: shareableSubtree(th, 0)
+                });
+                if (error) throw new Error(error.message || 'insert failed');
+                const url = location.origin + location.pathname + '?' + SHARE_PARAM + '=' + token;
+                const title = th.summary || 'A bubble';
+                hideVoiceStatus();
+                // Native share sheet where it exists; clipboard everywhere else.
+                if (navigator.share) {
+                    try {
+                        await navigator.share({ title: 'Mindorb', text: title, url });
+                        return;
+                    } catch (e) { if (e && e.name === 'AbortError') return; }
+                }
+                // Clipboard first; it needs a secure context and permission,
+                // so fall back to a selection-based copy before ever resorting
+                // to dumping a raw URL at the user.
+                let copied = false;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(url);
+                        copied = true;
+                    }
+                } catch (e) { copied = false; }
+                if (!copied) copied = legacyCopy(url);
+                showVoiceStatus(copied ? 'Link copied \u2014 send it to anyone'
+                                       : 'Share link: ' + url,
+                                { autoHideMs: copied ? 2600 : 7000 });
+            } catch (e) {
+                showVoiceStatus("Couldn't create the link \u2014 check your connection", { error: true, autoHideMs: 3000 });
+            }
+        }
+        // ---- receiving ----
+        let pendingShare = null;      // { token, payload, from }
+        function seedArrivalStars() {
+            const wrap = $('sa-stars');
+            if (!wrap || wrap.children.length) return;
+            for (let i = 0; i < 26; i++) {
+                const s = document.createElement('div');
+                s.className = 'sa-star';
+                const sz = 1 + Math.random() * 2;
+                s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random() * 100}%;left:${Math.random() * 100}%;animation-delay:${(Math.random() * 4).toFixed(2)}s`;
+                wrap.appendChild(s);
+            }
+        }
+        function paintArrival(payload, from, signedIn) {
+            seedArrivalStars();
+            const nameText = from ? ('@' + from + ' shared a bubble with you') : 'Someone shared a bubble with you';
+            $('sa-fromtext').textContent = signedIn ? nameText
+                : (from ? ('Sign in to see @' + from + '\u2019s bubble') : 'Sign in to see this bubble');
+            $('sa-avatar').textContent = (from ? from[0] : '?').toUpperCase();
+            $('sa-orb-label').textContent = signedIn ? (payload ? payload.summary : '') : '\u2726';
+            const kids = $('sa-kids');
+            kids.innerHTML = '';
+            if (signedIn && payload && payload.children && payload.children.length) {
+                payload.children.slice(0, 8).forEach(k => {
+                    const el = document.createElement('div');
+                    el.className = 'sa-kid';
+                    el.textContent = k.summary;
+                    kids.appendChild(el);
+                });
+                if (payload.children.length > 8) {
+                    const el = document.createElement('div');
+                    el.className = 'sa-kid';
+                    el.textContent = '+' + (payload.children.length - 8) + ' more';
+                    kids.appendChild(el);
+                }
+            }
+            $('sa-actions').style.display = signedIn ? 'flex' : 'none';
+            $('sa-signin').style.display = signedIn ? 'none' : 'block';
+            // Stagger the arrival.
+            [...$('sa-inner').children].forEach((el, i) => el.style.setProperty('--sad', (i * 0.09).toFixed(2) + 's'));
+        }
+        async function openSharedBubble(token) {
+            const sheet = $('share-arrival');
+            if (!sheet) return;
+            sheet.classList.add('open');
+            $('sa-status').textContent = ''; $('sa-status').className = '';
+            paintArrival(null, null, false);
+            if (!sb) { $('sa-status').className = 'bad'; $('sa-status').textContent = 'Cloud is unavailable right now.'; return; }
+            // Signed out: the row is unreadable to us anyway (the database
+            // itself only serves shares to signed-in users), so ask first.
+            if (!currentUser) {
+                try {
+                    const { data } = await sb.from('shared_bubbles').select('owner_username').eq('id', token).maybeSingle();
+                    const who = data && typeof data.owner_username === 'string'
+                        ? data.owner_username.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
+                    paintArrival(null, who, false);
+                } catch (e) { paintArrival(null, null, false); }
+                pendingShare = { token, payload: null, from: null };
+                return;
+            }
+            try {
+                const { data, error } = await sb.from('shared_bubbles')
+                    .select('payload, owner_username').eq('id', token).maybeSingle();
+                if (error) throw new Error(error.message);
+                if (!data) {
+                    paintArrival(null, null, true);
+                    $('sa-orb-label').textContent = 'Not found';
+                    $('sa-status').className = 'bad';
+                    $('sa-status').textContent = 'This link has expired or was removed.';
+                    $('sa-add').style.display = 'none';
+                    return;
+                }
+                const clean = sanitizeSharedPayload(data.payload);
+                if (!clean) {
+                    paintArrival(null, data.owner_username, true);
+                    $('sa-orb-label').textContent = 'Empty';
+                    $('sa-status').className = 'bad';
+                    $('sa-status').textContent = "There's nothing readable in this share.";
+                    $('sa-add').style.display = 'none';
+                    return;
+                }
+                // The sender's username is shown on screen — clamp it too.
+                const who = typeof data.owner_username === 'string'
+                    ? data.owner_username.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
+                pendingShare = { token, payload: clean, from: who };
+                $('sa-add').style.display = '';
+                paintArrival(clean, who, true);
+            } catch (e) {
+                $('sa-status').className = 'bad';
+                $('sa-status').textContent = "Couldn't load that bubble \u2014 check your connection.";
+            }
+        }
+        function closeSharedBubble() {
+            const sheet = $('share-arrival');
+            if (sheet) sheet.classList.remove('open');
+            pendingShare = null;
+            // Clean the token out of the address bar so a refresh doesn't
+            // reopen something you already dealt with.
+            try {
+                const u = new URL(location.href);
+                u.searchParams.delete(SHARE_PARAM);
+                history.replaceState({}, '', u.pathname + (u.search || '') + u.hash);
+            } catch (e) {}
+        }
+        // Rebuild a received subtree as genuinely NEW thoughts. Fresh ids are
+        // essential: reusing the sender's would collide with the recipient's
+        // own bubbles and confuse cloud sync between two devices.
+        // SECURITY: never trust a received payload's shape. The sender's app
+        // caps depth and breadth, but shared_bubbles rows can be written
+        // directly with any authenticated token — so a hostile or corrupt
+        // share could carry a hundred thousand children, absurd strings, or a
+        // nonsense deadline. Everything is clamped HERE, once, before it is
+        // displayed or adopted.
+        const SHARE_MAX_NODES = 200, SHARE_MAX_KIDS = 40, SHARE_MAX_DEPTH = 4;
+        const SHARE_MAX_SUMMARY = 200, SHARE_MAX_FULL = 2000;
+        function sanitizeSharedPayload(raw) {
+            let budget = SHARE_MAX_NODES;
+            const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+            const walk = (node, depth) => {
+                if (!node || typeof node !== 'object' || depth > SHARE_MAX_DEPTH || budget <= 0) return null;
+                budget--;
+                const summary = str(node.summary, SHARE_MAX_SUMMARY).trim();
+                const full = str(node.full, SHARE_MAX_FULL).trim();
+                if (!summary && !full) return null;
+                // A deadline must be a real, sane timestamp — not Infinity, not
+                // a string, not the year 90000.
+                let dueAt = null;
+                if (typeof node.dueAt === 'number' && isFinite(node.dueAt)) {
+                    const y = new Date(node.dueAt).getFullYear();
+                    if (y >= 2000 && y <= 2200) dueAt = node.dueAt;
+                }
+                const kidsIn = Array.isArray(node.children) ? node.children.slice(0, SHARE_MAX_KIDS) : [];
+                const children = [];
+                for (const k of kidsIn) {
+                    if (budget <= 0) break;
+                    const s = walk(k, depth + 1);
+                    if (s) children.push(s);
+                }
+                return {
+                    summary: summary || full.slice(0, SHARE_MAX_SUMMARY),
+                    short: str(node.short, 60),
+                    full: full || summary,
+                    dueAt,
+                    children
+                };
+            };
+            return walk(raw, 0);
+        }
+        function adoptShared(node, parentId, depth) {
+            if (!node || (depth || 0) > 4) return 0;
+            const t = makeThought(node.summary || node.full || 'Untitled', node.full || node.summary || '');
+            if (node.short) t.short = node.short;
+            if (typeof node.dueAt === 'number') { t.dueAt = node.dueAt; t.whenScanned = true; }
+            t.routed = true;
+            fileThought(t, parentId || null);
+            let n = 1;
+            for (const k of (node.children || [])) n += adoptShared(k, t.id, (depth || 0) + 1);
+            return n;
+        }
+        function addSharedToGalaxy() {
+            if (!pendingShare || !pendingShare.payload) return;
+            const btn = $('sa-add');
+            btn.disabled = true;
+            const n = adoptShared(pendingShare.payload, null, 0);
+            saveState();
+            updateDrawerUI();
+            $('sa-status').className = 'ok';
+            $('sa-status').textContent = 'Added ' + n + (n === 1 ? ' bubble' : ' bubbles') + ' to your galaxy';
+            setTimeout(() => {
+                closeSharedBubble();
+                btn.disabled = false;
+                try { flyHome(); } catch (e) {}
+                showVoiceStatus('Added to your galaxy', { autoHideMs: 2000 });
+            }, 900);
+        }
         function updateAccountRow() {
             const status = document.getElementById('account-status');
             const btn = document.getElementById('btn-account-action');
             if (!status || !btn) return;
             const deleteBtn = document.getElementById('delete-account-btn');
             const dangerSection = deleteBtn ? deleteBtn.closest('.settings-section') : null;
+            const unRow = document.getElementById('username-row');
+            const unSub = document.getElementById('username-row-sub');
             if (currentUser) {
                 status.textContent = currentUsername ? ('@' + currentUsername) : (currentUser.email || 'Signed in');
                 btn.textContent = 'Sign Out';
                 btn.classList.add('danger');
                 if (dangerSection) dangerSection.style.display = '';
+                // A username belongs to an account, so this only appears once
+                // there is one to attach it to.
+                if (unRow) unRow.style.display = '';
+                if (unSub) unSub.textContent = currentUsername ? ('@' + currentUsername) : 'Not set yet \u2014 tap to choose';
             } else {
+                if (unRow) unRow.style.display = 'none';
                 currentUsername = null;
                 status.textContent = 'Not signed in';
                 btn.textContent = 'Sign In';
@@ -3391,7 +4318,15 @@
                 sb.auth.onAuthStateChange((_event, session) => {
                     currentUser = session ? session.user : null;
                     updateAccountRow();
-                    if (currentUser) { pullAndMerge(); fetchUsername(); }
+                    if (currentUser) {
+                        pullAndMerge(); fetchUsername();
+                        // Someone who signed in specifically to open a shared
+                        // bubble should land on it, not on an empty galaxy.
+                        if (pendingShare && pendingShare.token && !pendingShare.payload) {
+                            const tok = pendingShare.token;
+                            setTimeout(() => openSharedBubble(tok), 400);
+                        }
+                    }
                 });
                 sb.auth.getSession().then(({ data }) => {
                     currentUser = data.session ? data.session.user : null;
@@ -3426,11 +4361,11 @@
         const ONBOARD_KEY = 'mindorb-onboard-done';
         let onboardStep = -1; // -1 = inactive
         const ONBOARD_STEPS = [
-            { title: 'You never file anything', body: 'Say what\u2019s on your mind and Mindorb works out what it\u2019s about, then files it for you. No folders. No tags. No deciding where things go.', pos: 'bottom', btn: 'Next', interactive: false, illo: 'flow' },
-            { title: 'Try it \u2014 just talk', body: 'Tap the big bubble and say something that\u2019s actually on your mind right now. A task, a worry, a half-formed idea.', pos: 'top', btn: null, interactive: true, pulse: true },
-            { title: 'Go inside it', body: 'Every bubble holds more. Tap the one you just made \u2014 anything related you say later gathers in here on its own.', pos: 'top', btn: null, interactive: true },
-            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time \u2014 \u201Ctonight\u201D, \u201Cby Friday\u201D \u2014 and it becomes a real deadline automatically. Finished with something? Let it go and it leaves your galaxy.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock' },
-            { title: 'Bring the rest of your brain', body: 'Got notes scattered somewhere else? The + in All Thoughts turns a whole wall of text into organized bubbles in one go.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
+            { title: 'You never file anything', body: 'Say what\u2019s on your mind and Mindorb works out what it\u2019s about, then files it for you. No folders. No tags. No deciding where things go.', pos: 'bottom', btn: 'Next', interactive: false, illo: 'flow', shows: [] },
+            { title: 'Try it \u2014 just talk', body: 'Tap the big bubble and say something that\u2019s actually on your mind right now. A task, a worry, a half-formed idea.', pos: 'top', btn: null, interactive: true, pulse: true, shows: [] },
+            { title: 'Go inside it', body: 'Every bubble holds more. Tap the one you just made \u2014 anything related you say later gathers in here on its own.', pos: 'top', btn: null, interactive: true, shows: [] },
+            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time \u2014 \u201Ctonight\u201D, \u201Cby Friday\u201D \u2014 and it becomes a real deadline automatically. Finished with something? Let it go and it leaves your galaxy.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock', shows: [] },
+            { title: 'Bring the rest of your brain', body: 'Got notes scattered somewhere else? The + in All Thoughts turns a whole wall of text into organized bubbles in one go.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true, shows: ['drawer-handle'] },
         ];
         function onboardEligible() {
             try {
@@ -3510,6 +4445,16 @@
             // The very first card carries the one sentence that actually
             // explains what this app is — it shouldn't be skippable before
             // it's even been read. Skip becomes available from step 1 on.
+            // Everything the interface offers goes quiet except what THIS
+            // step actually asks you to use.
+            document.body.classList.add('onboarding');
+            document.body.classList.remove('ob-returning');
+            const OB_CHROME = ['dock', 'trail', 'hint', 'undo-toast', 'drawer-handle'];
+            const wanted = s.shows || [];
+            OB_CHROME.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('ob-show', wanted.indexOf(id) > -1);
+            });
             const skipBtn = document.getElementById('onboard-skip');
             if (skipBtn) skipBtn.style.display = (i === 0) ? 'none' : 'block';
             card.classList.add('show');
@@ -3533,9 +4478,41 @@
             onboardCardClearance = null;
             setTimeout(() => onboardShowStep(next), 340);
         }
+        // Brings the interface back, whether you finished the tour or skipped
+        // it on the first card. Runs on BOTH paths deliberately: leaving
+        // someone with a permanently hidden dock because they tapped Skip
+        // would be the worst possible outcome of this feature.
+        function onboardRestoreChrome() {
+            const OB_CHROME = ['dock', 'trail', 'hint', 'undo-toast', 'drawer-handle'];
+            const reduced = document.documentElement.classList.contains('motion-reduced');
+            OB_CHROME.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('ob-show');
+                // Staggered so the interface reassembles piece by piece.
+                el.style.setProperty('--obd', reduced ? '0s' : (i * 0.075).toFixed(3) + 's');
+            });
+            document.body.classList.remove('onboarding');
+            document.body.classList.add('ob-returning');
+            // onboardShowStep hides the one-line hint because the coach card
+            // says the same thing. Nothing was putting it back, so anyone who
+            // SKIPPED on the first card lost it for the whole session — the
+            // exact person who needed it most. Restore it when the galaxy is
+            // still empty; once there are bubbles it belongs hidden anyway.
+            const hintEl2 = document.getElementById('hint');
+            if (hintEl2 && !thoughts.length) hintEl2.classList.remove('hidden');
+            setTimeout(() => {
+                document.body.classList.remove('ob-returning');
+                OB_CHROME.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.removeProperty('--obd');
+                });
+            }, reduced ? 60 : 1200);
+        }
         function onboardFinish(viaExplore) {
             onboardStep = -1;
             onboardCardClearance = null; // bubbles get the full screen back
+            onboardRestoreChrome();
             try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
             const card = document.getElementById('onboard-card');
             const pulse = document.getElementById('onboard-pulse');
@@ -3732,6 +4709,59 @@
             if (exportBtn) exportBtn.addEventListener('click', exportUserData);
             const deleteAccountBtn = document.getElementById('delete-account-btn');
             if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', confirmDeleteAccount);
+            const shareBtn = document.getElementById('btn-share');
+            if (shareBtn) shareBtn.addEventListener('click', shareCurrentThought);
+            const saAdd = document.getElementById('sa-add');
+            if (saAdd) saAdd.addEventListener('click', addSharedToGalaxy);
+            const saDismiss = document.getElementById('sa-dismiss');
+            if (saDismiss) saDismiss.addEventListener('click', closeSharedBubble);
+            const saSignin = document.getElementById('sa-signin');
+            if (saSignin) saSignin.addEventListener('click', () => {
+                try { openAuthSheet(); } catch (e) {}
+            });
+            // A share link opens straight into the arrival screen.
+            try {
+                const tok = new URL(location.href).searchParams.get(SHARE_PARAM);
+                if (tok && /^[a-z0-9]{6,24}$/i.test(tok)) setTimeout(() => openSharedBubble(tok), 900);
+            } catch (e) {}
+            const pgRow = document.getElementById('popgame-row');
+            if (pgRow) pgRow.addEventListener('click', openPopGame);
+            const pgCloseBtn = document.getElementById('pg-close');
+            if (pgCloseBtn) pgCloseBtn.addEventListener('click', closePopGame);
+            const pgCv = document.getElementById('pg-canvas');
+            if (pgCv) {
+                // pointerdown, not click: the pop must land the instant the
+                // finger touches down, or the whole thing feels laggy.
+                pgCv.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    pgHit(e.clientX, e.clientY);
+                });
+            }
+            // Leaving the app pauses the loop; coming back resumes it.
+            document.addEventListener('visibilitychange', () => {
+                const open = document.getElementById('popgame-sheet').classList.contains('open');
+                if (document.visibilityState === 'hidden') {
+                    if (pgRaf) { cancelAnimationFrame(pgRaf); pgRaf = null; }
+                } else if (open && !pgRaf) {
+                    pgLast = 0;
+                    pgRaf = requestAnimationFrame(pgFrame);
+                }
+            });
+            const unRowBtn = document.getElementById('username-row');
+            if (unRowBtn) unRowBtn.addEventListener('click', openUsernameSheet);
+            const unInput = document.getElementById('un-input');
+            if (unInput) {
+                unInput.addEventListener('input', onUsernameTyped);
+                unInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !document.getElementById('un-save').disabled) {
+                        e.preventDefault(); unInput.blur(); saveUsername();
+                    }
+                });
+            }
+            const unCancel = document.getElementById('un-cancel');
+            if (unCancel) unCancel.addEventListener('click', closeUsernameSheet);
+            const unSave = document.getElementById('un-save');
+            if (unSave) unSave.addEventListener('click', saveUsername);
             const fbOpen = document.getElementById('feedback-open-btn');
             if (fbOpen) fbOpen.addEventListener('click', openFeedbackSheet);
             const fbCancel = document.getElementById('fb-cancel');
@@ -4032,13 +5062,38 @@
         function coreObj() { return objects.find(o => o.role === 'center' || o.role === 'breadcrumb' || o.role === 'breadcrumb-incoming'); }
         function floatingThoughts() { return objects.filter(o => o.role === 'thought'); }
 
+        // WHAT EARNS A PLACE IN THE GALAXY.
+        // Only a handful of bubbles fit on screen, and picking them purely by
+        // age meant something due tomorrow morning could be invisible while a
+        // three-week-old idea floated front and centre. Anything overdue or
+        // due soon now outranks age; everything else still falls back to
+        // newest-first, so an undated galaxy behaves exactly as before.
+        function bubblePriority(t, now) {
+            if (!t) return 0;
+            if (typeof t.dueAt !== 'number' || !isFinite(t.dueAt)) return 0;
+            const hours = (t.dueAt - now) / 3600000;
+            if (hours <= 0) return 4;          // overdue
+            if (hours <= 24) return 3;         // today
+            if (hours <= 72) return 2;         // next couple of days
+            if (hours <= 24 * 7) return 1;     // this week
+            return 0;                          // on the horizon: age decides
+        }
+        function byWhatMattersNow(list) {
+            const now = Date.now();
+            return [...(list || [])].sort((a, b) => {
+                const pa = bubblePriority(a, now), pb = bubblePriority(b, now);
+                if (pa !== pb) return pb - pa;                 // urgency first
+                if (pa > 0) return (a.dueAt || 0) - (b.dueAt || 0);  // soonest first
+                return (b.createdAt || 0) - (a.createdAt || 0);      // else newest
+            });
+        }
         function layoutInitial() {
             objects = [{
                 role: 'center', thought: null,
                 x: 0, y: 0, r: coreRadius, restR: coreRadius,
                 vx: 0, vy: 0, el: null, anim: null, collapse: 0, urgency: 0
             }];
-            const recent = [...thoughts].sort((a, b) => b.createdAt - a.createdAt).slice(0, maxFloating()).reverse();
+            const recent = byWhatMattersNow(thoughts).slice(0, maxFloating()).reverse();
             const spawnSatellites = () => recent.forEach((th, i) => setTimeout(() => spawnThoughtObj(th, true), 120 + i * 90));
             if (launchScreenDonePromise) launchScreenDonePromise.then(spawnSatellites);
             else spawnSatellites();
@@ -4353,6 +5408,24 @@
         // delete, single or bulk): closes the archive page and the drawer
         // behind it — leaving the drawer open behind a closed archive page
         // looked messy — and returns to the main galaxy view.
+        // Marks a just-restored thought once its bubble actually exists. The
+        // bubble is spawned asynchronously after flyHome, so this watches
+        // briefly rather than assuming it is already on screen.
+        function markHomecoming(id) {
+            let tries = 0;
+            const look = () => {
+                const o = objects.find(x => x.thought && x.thought.id === id && !x.removed && x.el);
+                if (o && o.el) {
+                    o.el.classList.remove('homecoming');
+                    void o.el.offsetWidth;
+                    o.el.classList.add('homecoming');
+                    setTimeout(() => { if (o.el) o.el.classList.remove('homecoming'); }, 2100);
+                    return;
+                }
+                if (++tries < 40) setTimeout(look, 120);
+            };
+            setTimeout(look, 260);
+        }
         function finishArchiveAction() {
             const archivePage = document.getElementById('archive-page');
             if (archivePage) archivePage.classList.remove('open');
@@ -4519,7 +5592,7 @@
             // pieces (only clearly multi-part thoughts produce any).
             setTimeout(() => {
                 transitioning = false;
-                const kids = [...obj.thought.children].sort((a, b) => b.createdAt - a.createdAt).slice(0, maxFloating()).reverse();
+                const kids = byWhatMattersNow(obj.thought.children).slice(0, maxFloating()).reverse();
                 kids.forEach((child, i) => setTimeout(() => {
                     if (openThoughtObj === obj) spawnThoughtObj(child, true, obj.thought);
                 }, i * 80));
@@ -4725,6 +5798,17 @@
             detailUrgencyDot.style.background = c;
             detailUrgencyText.style.color = c;
             const wasAlreadyOpen = detailCardOpen;
+            // Re-trigger the sequence on every open (removing then re-adding
+            // the class restarts the animation; without the reflow read the
+            // browser coalesces it and nothing plays).
+            const parts = [detailMeta, $('detail-full'), $('detail-due'),
+                           $('detail-actions'), $('detail-outcomes')].filter(Boolean);
+            parts.forEach((el) => el.classList.remove('stagger-in'));
+            void detailCard.offsetWidth;
+            parts.forEach((el, i) => {
+                el.style.setProperty('--sd', (0.03 + i * 0.045).toFixed(3) + 's');
+                el.classList.add('stagger-in');
+            });
             detailCard.classList.add('open');
             detailCardOpen = true;
             if (!wasAlreadyOpen) playGlassSweep(detailCard);
@@ -4755,6 +5839,11 @@
         function finishThought(completed) {
             if (detailCard.classList.contains('editing')) { exitEditMode(true); return; }
             if (!openThoughtObj) return;
+            // Send the card off in the direction that matches the choice.
+            detailCard.classList.remove('exit-letgo', 'exit-delete');
+            void detailCard.offsetWidth;
+            detailCard.classList.add(completed ? 'exit-letgo' : 'exit-delete');
+            setTimeout(() => detailCard.classList.remove('exit-letgo', 'exit-delete'), 480);
             // If the outcome is pressed shortly after diving into this bubble,
             // its "open-incoming"→"open" settle animation may still be
             // in-flight — releaseThought()'s own guard (`obj.anim` truthy)
@@ -5041,6 +6130,7 @@
             }
         }
         // A reply box so you can think WITH it, not just read one answer.
+        let kbPinTimer = null;   // keyboard-follow loop while the reply box is focused
         function ensureUntangleReply(th, out) {
             const old = out.querySelector('.untangle-reply');
             if (old) old.remove();
@@ -5064,7 +6154,19 @@
                 askUntangle(th, out, v).finally(() => { untangleBusy = false; });
             };
             inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); send(); } });
-            inp.addEventListener('blur', () => { detailCard.style.transform = 'translate(-50%, 0)'; setUIFocus(false); });
+            inp.addEventListener('blur', () => {
+                // Stop the keyboard-pinning loop first — left running, it
+                // keeps nudging the card for another ~half second after the
+                // reply is already sent.
+                if (kbPinTimer) { clearInterval(kbPinTimer); kbPinTimer = null; }
+                // setUIFocus(false) brackets the next style change with
+                // `ui-instant`, so the card returns to rest WITHOUT animating.
+                // Order matters: sending a reply changes the card's height in
+                // the same frame, and a 280ms slide running against an instant
+                // resize is exactly what read as a bounce.
+                setUIFocus(false);
+                detailCard.style.transform = 'translate(-50%, 0)';
+            });
             const sendBtn = document.createElement('button');
             sendBtn.className = 'untangle-send';
             sendBtn.title = 'Send';
@@ -5075,7 +6177,12 @@
                 let kbH = 340;
                 try { kbH = parseInt(localStorage.getItem('thoughts-kb-h')) || 340; } catch (e) {}
                 detailCard.style.transform = 'translate(-50%, -' + Math.max(0, kbH - 6) + 'px)';
-                let n = 0; const iv = setInterval(() => { pinScroll(); syncKeyboard(); if (++n > 30) clearInterval(iv); }, 16);
+                let n = 0;
+                if (kbPinTimer) clearInterval(kbPinTimer);
+                kbPinTimer = setInterval(() => {
+                    pinScroll(); syncKeyboard();
+                    if (++n > 30) { clearInterval(kbPinTimer); kbPinTimer = null; }
+                }, 16);
             });
             wrap.appendChild(inp);
             wrap.appendChild(sendBtn);
@@ -5344,6 +6451,72 @@
                     el.classList.remove('on');
                 }
             };
+        }
+        // PHOTO IMPORT: read a page of notes with the camera. The result is
+        // dropped into the SAME textarea a paste would fill, so it goes
+        // through the identical import pipeline — and you get to read and
+        // correct the transcription before anything is filed.
+        const photoBtn = $('import-photo-btn');
+        const photoInput = $('import-photo-input');
+        if (photoBtn && photoInput) {
+            photoBtn.addEventListener('click', () => { photoInput.value = ''; photoInput.click(); });
+            photoInput.addEventListener('change', async () => {
+                const file = photoInput.files && photoInput.files[0];
+                if (!file) return;
+                const status = $('import-status');
+                if (!ROUTER_URL) { status.textContent = 'No connection to the AI.'; return; }
+                photoBtn.disabled = true;
+                status.textContent = 'Reading your notes…';
+                try {
+                    const { b64, mime } = await downscaleImageToBase64(file, 1600, 0.82);
+                    const resp = await fetchWithTimeout(ROUTER_URL, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'readimage', image: b64, mime })
+                    }, 45000);
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const data = await resp.json();
+                    const text = (data && data.text || '').trim();
+                    if (!text) {
+                        status.textContent = "Couldn't read any writing in that photo — try more light, or paste instead.";
+                    } else {
+                        const box = $('import-input');
+                        // Append rather than replace, so several pages can be
+                        // photographed one after another into one import.
+                        box.value = box.value.trim() ? (box.value.trim() + '\n\n' + text) : text;
+                        const lines = text.split('\n').filter(l => l.trim()).length;
+                        status.textContent = 'Read ' + lines + (lines === 1 ? ' line' : ' lines') + ' — check it below, then organize.';
+                    }
+                } catch (e) {
+                    status.textContent = "Couldn't read that photo — check your connection, or paste instead.";
+                } finally {
+                    photoBtn.disabled = false;
+                    photoInput.value = '';
+                }
+            });
+        }
+        // A phone photo is several megabytes and many times larger than the
+        // model needs. Shrinking it here keeps the upload small enough to be
+        // accepted at all, and makes it fast on a phone connection.
+        function downscaleImageToBase64(file, maxEdge, quality) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+                        const w = Math.max(1, Math.round(img.width * scale));
+                        const h = Math.max(1, Math.round(img.height * scale));
+                        const cv = document.createElement('canvas');
+                        cv.width = w; cv.height = h;
+                        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                        const dataUrl = cv.toDataURL('image/jpeg', quality || 0.82);
+                        URL.revokeObjectURL(url);
+                        resolve({ b64: dataUrl.split(',')[1], mime: 'image/jpeg' });
+                    } catch (e) { URL.revokeObjectURL(url); reject(e); }
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('could not open image')); };
+                img.src = url;
+            });
         }
         $('import-go').addEventListener('click', async () => {
             const raw = $('import-input').value.trim();
@@ -5636,6 +6809,12 @@
         // focused, are never fighting a lingering CSS transition.
         function openImportSheet() {
             const sheet = $('import-sheet'), card = $('import-card');
+            // Clear anything left over from a previous attempt — a stale
+            // error line or a still-disabled photo button would otherwise
+            // greet the next person who opens this.
+            const st = $('import-status'); if (st) st.textContent = '';
+            const pb = $('import-photo-btn'); if (pb) pb.disabled = false;
+            const go = $('import-go'); if (go) go.disabled = false;
             sheet.classList.add('open');
             playGlassSweep(card);
             card.classList.add('entering');
@@ -5656,12 +6835,16 @@
         }
         let archiveSelectMode = false;
         let archiveSelected = new Set(); // thought ids, any depth
+        let _archiveRowIdx = 0;
         function makeArchiveRow(id, topThoughtId, label, metaText, onRestore, onDeleteForever, depth) {
             depth = depth || 0;
             const item = document.createElement('div');
             item.className = 'archive-item' + (depth > 0 ? ' archive-item-child' : '') + (archiveSelectMode ? ' select-mode' : '');
             item.dataset.id = id;
             item.dataset.topId = topThoughtId;
+            // Capped so a large archive still fills quickly — a 200-row list
+            // trickling in one by one would be an obstacle, not a flourish.
+            item.style.setProperty('--ad', (Math.min(_archiveRowIdx++, 12) * 0.028).toFixed(3) + 's');
             if (depth > 0) item.style.marginLeft = Math.min(depth * 20, 80) + 'px';
             if (archiveSelectMode) {
                 const check = document.createElement('span');
@@ -5723,6 +6906,7 @@
                 JSON.stringify(topLabel) + ' isn\u2019t in your galaxy anymore \u2014 restore just this, or bring the whole thing back?',
                 () => {
                     if (restoreFromArchive(topThoughtId)) {
+                        markHomecoming(topThoughtId);
                         showVoiceStatus('Restored ' + topLabel + ' and everything inside it', { autoHideMs: 2400 });
                         finishArchiveAction();
                     }
@@ -5766,6 +6950,7 @@
             }
         }
         function renderArchiveList(query) {
+            _archiveRowIdx = 0;   // replay the stagger from the top each render
             const scroll = document.getElementById('archive-scroll');
             if (!scroll) return;
             scroll.innerHTML = '';
@@ -5791,6 +6976,7 @@
                 const item = makeArchiveRow(topId, topId, parentLabel, rowMeta,
                     () => {
                         if (entry.thought && restoreFromArchive(entry.thought.id)) {
+                            markHomecoming(entry.thought.id);
                             showVoiceStatus('Restored to your galaxy', { autoHideMs: 2000 });
                             finishArchiveAction();
                         }
@@ -5877,6 +7063,44 @@
                 );
             });
         });
+        // Numbers that change deserve to be SEEN changing. Letting go of a
+        // thought bumps the cleared count, and a silent jump gives you nothing
+        // — a short count-up is the confirmation that it landed.
+        //
+        // Tracks what is ACTUALLY on screen rather than the last target, so an
+        // interruption mid-count resumes from the visible number instead of
+        // interpolating from a stale one (which briefly rendered negatives).
+        let _statShown = null, _statRaf = null;
+        function tweenStat(el, created, cleared) {
+            if (!el) return;
+            const write = (a, b) => {
+                el.textContent = Math.max(0, Math.round(a)) + ' created \u00b7 ' +
+                                 Math.max(0, Math.round(b)) + ' cleared';
+            };
+            const reduced = document.documentElement.classList.contains('motion-reduced');
+            if (!_statShown || reduced) {
+                _statShown = { created, cleared };
+                write(created, cleared);
+                return;
+            }
+            if (_statShown.created === created && _statShown.cleared === cleared) return;
+            const from = { created: _statShown.created, cleared: _statShown.cleared };
+            if (_statRaf) { cancelAnimationFrame(_statRaf); _statRaf = null; }
+            const t0 = performance.now(), dur = 520;
+            const ease = (t) => 1 - Math.pow(1 - t, 3);
+            const step = (now) => {
+                const k = Math.min(1, Math.max(0, (now - t0) / dur)), e = ease(k);
+                const cur = {
+                    created: from.created + (created - from.created) * e,
+                    cleared: from.cleared + (cleared - from.cleared) * e
+                };
+                _statShown = cur;                 // what's on screen, every frame
+                write(cur.created, cur.cleared);
+                if (k < 1) { _statRaf = requestAnimationFrame(step); }
+                else { _statRaf = null; _statShown = { created, cleared }; write(created, cleared); }
+            };
+            _statRaf = requestAnimationFrame(step);
+        }
         function updateDrawerUI() {
             drawerRowIndex = 0; // fresh stagger sequence each render pass
             // The dock's index button carries a live badge of the CURRENT
@@ -5887,7 +7111,7 @@
             const dc = $('drawer-count');
             if (dc) dc.textContent = String(countAll(thoughts));
             const lifeCreated = Math.max(createdCount, countAll(thoughts));
-            drawerSub.textContent = lifeCreated + ' created · ' + releasedCount + ' cleared';
+            tweenStat(drawerSub, lifeCreated, releasedCount);
             const dt = $('drawer-title'); if (dt) dt.textContent = 'All Thoughts';
             drawerList.innerHTML = '';
             if (thoughts.length === 0) {
@@ -6587,6 +7811,19 @@
                 const data = await resp.json();
                 if (data.error) return;
 
+                // ASK: the utterance was a question or a request to work with
+                // what's already in the galaxy, not a new thought. The local
+                // patterns catch the common shapes instantly; this is the
+                // backstop for everything they miss, since no fixed list of
+                // phrasings can cover how people actually talk.
+                if (data.intent === 'ask') {
+                    removeThoughtEverywhere(thought.id);
+                    saveState();
+                    updateDrawerUI();
+                    askRecall(thought.full || thought.summary);
+                    return;
+                }
+
                 // SEARCH: the utterance was a navigation command, not a new
                 // thought. Remove the placeholder bubble and fly to the target.
                 if (data.intent === 'search') {
@@ -6707,9 +7944,18 @@
             const text = full || label;
             const when = parseWhen(text);
             const dueAt = when ? when.at.getTime() : null;
+            // A blank summary renders as an invisible, unidentifiable bubble.
+            // Empty or whitespace-only input can arrive from a mis-heard
+            // recording, an OCR miss, or an AI split with an empty label, so
+            // guard it here — this covers every path that makes a thought.
+            let summary = summarizeSpeech(label || full);
+            if (!summary || !summary.trim()) {
+                const fallback = String(text || '').trim();
+                summary = fallback ? clampChars(titleCase(fallback)) : 'Untitled';
+            }
             return {
                 id: Date.now() + '-' + Math.floor(Math.random() * 1e6),
-                summary: summarizeSpeech(label || full),
+                summary: summary,
                 short: '',
                 full: text,
                 dueAt,                       // real deadline, or null
@@ -7543,6 +8789,33 @@
                 /\bwhat did i (say|decide|think|want|choose|pick)\b/i
             ];
             if (RECALL_PATTERNS.some(re => re.test(q))) {
+                askRecall(q);
+                return true;
+            }
+            // ASKING THE APP TO WORK WITH WHAT YOU ALREADY HAVE.
+            // The patterns above only understood "what did I…" shapes, so
+            // "help me organize tomorrow's schedule" fell through and became
+            // a bubble. These catch requests for the app to reason over the
+            // galaxy instead. Both halves must match — a request verb AND
+            // something the app actually knows about — so real-world tasks
+            // ("organize my closet", "help me remember to call mom", "plan a
+            // trip to Japan") still capture normally.
+            const ASK_VERB = /^\s*(help me|can you help|could you help|plan|organi[sz]e|summari[sz]e|walk me through|give me|make me|build me|put together|sort out|prioriti[sz]e|lay out|map out)\b/i;
+            const ASK_SCOPE = /\b(my (day|week|month|schedule|plate|tasks?|to ?dos?|list|thoughts?|bubbles?|galaxy|priorities|workload)|tomorrow|today|tonight|this (week|month|morning|afternoon|evening)|next week|coming up|what i have|what'?s due|what i need to do)\b/i;
+            if (ASK_VERB.test(q) && ASK_SCOPE.test(q)) {
+                askRecall(q);
+                return true;
+            }
+            // Direct questions about the current workload, which rarely start
+            // with the interrogatives the older patterns expect.
+            const WORKLOAD_PATTERNS = [
+                /^\s*what'?s\s+(on my plate|due|left|next|coming up|urgent|important)\b/i,
+                /^\s*what\s+do\s+i\s+(have|need to do|still need)\b/i,
+                /^\s*what\s+am\s+i\s+(forgetting|missing|behind on)\b/i,
+                /^\s*(is there )?anything\s+(due|urgent|important|overdue|i'?m forgetting)\b/i,
+                /^\s*(am i|are there)\s+.*\b(behind|overdue|late)\b/i
+            ];
+            if (WORKLOAD_PATTERNS.some(re => re.test(q))) {
                 askRecall(q);
                 return true;
             }
@@ -8774,6 +10047,16 @@
                 lastFloaterSync = now;
                 reconcileSceneWithTree();
                 syncFloaters();
+                // SAFETY NET: onboarding hides the dock, trail and drawer
+                // handle. If anything ever threw between showing a card and
+                // finishing the tour, they would stay hidden with no way back.
+                // The tour is over the moment onboardStep is -1, so any
+                // lingering focus mode after that is a bug — undo it.
+                if (onboardStep === -1 && document.body.classList.contains('onboarding')) {
+                    try { onboardRestoreChrome(); } catch (e) {
+                        document.body.classList.remove('onboarding');
+                    }
+                }
             }
             if (transitioning) {
                 if (!transitioningSince) transitioningSince = now;
