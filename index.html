@@ -1346,26 +1346,74 @@
         #detail-answer.prompt { color: var(--ink-faint); font-weight: 600; }
 
         #detail-meta { color: var(--ink-faint); font-size: 10.5px; font-weight: 600; margin-top: 4px; }
-        #detail-actions { display: flex; gap: 8px; margin-top: 8px; }
-        /* Outcomes get their own row: finishing a thought is the main event
-           and shouldn't be squeezed in beside the editing tools. */
-        #detail-outcomes { display: flex; gap: 8px; margin-top: 8px; }
+        /* Tools are occasional — glass pills that sit quietly under the
+           thought, using the same specular-highlight treatment the bubbles
+           themselves have, so the card belongs to this app and not to a
+           generic settings screen. */
+        #detail-actions { display: flex; gap: 7px; margin-top: 14px; }
+        .tool-btn {
+            flex: 1;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 10px 0; border-radius: var(--r-pill);
+            background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
+            border: 1px solid rgba(255,255,255,0.10);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+            cursor: pointer; color: var(--ink-dim);
+            font-family: 'Quicksand', sans-serif; font-size: 12.5px; font-weight: 700;
+            letter-spacing: 0.01em;
+            transition: color 0.18s ease, background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+        }
+        .tool-btn svg {
+            width: 15px; height: 15px; fill: none; stroke: currentColor;
+            stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+            opacity: 0.85;
+        }
+        .tool-btn:active {
+            transform: scale(0.965); color: var(--ink);
+            background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 0 14px rgba(169,200,232,0.16);
+        }
+        /* One clear action, plus a quiet way out. */
+        #detail-outcomes { display: flex; gap: 8px; margin-top: 9px; }
         .detail-btn {
-            flex: 1; padding: 10px 0; border-radius: var(--r-s);
-            font-family: 'Quicksand', sans-serif; font-size: 13px; font-weight: 700;
-            cursor: pointer; border: 1px solid var(--glass-border);
-            transition: transform 0.12s ease, background 0.2s ease;
+            padding: 13px 0; border-radius: var(--r-pill);
+            font-family: 'Quicksand', sans-serif; font-size: 14.5px; font-weight: 700;
+            letter-spacing: 0.01em; cursor: pointer; border: 1px solid transparent;
+            transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
         }
-        .detail-btn:active { transform: scale(0.96); }
-        #btn-done {
-            flex: 1.6;
-            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(232,238,248,0.92));
-            color: #10141c; border-color: transparent;
+        .detail-btn:active { transform: scale(0.975); }
+        #btn-letgo {
+            flex: 1;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background: linear-gradient(168deg, #ffffff 0%, #eef2fa 52%, #dfe7f5 100%);
+            color: #0e1219;
+            box-shadow: 0 8px 22px rgba(120, 160, 220, 0.20),
+                        0 1px 0 rgba(255, 255, 255, 0.85) inset,
+                        0 -1px 0 rgba(140, 170, 210, 0.28) inset;
         }
-        #btn-release { background: rgba(255, 255, 255, 0.06); color: var(--ink-dim); }
-        #btn-edit { background: rgba(255, 255, 255, 0.06); color: var(--ink); }
-        #btn-move { background: rgba(255, 255, 255, 0.06); color: var(--ink); }
-        #btn-untangle { background: rgba(169, 200, 232, 0.14); color: var(--ink); }
+        #btn-letgo svg {
+            width: 16px; height: 16px; fill: none; stroke: #0e1219;
+            stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        #btn-letgo:active { box-shadow: 0 3px 12px rgba(120, 160, 220, 0.18), 0 1px 0 rgba(255,255,255,0.7) inset; }
+        /* Deleting is rare. It stays a quiet glass square and only reveals
+           its warmth under the finger — no red slab competing for attention. */
+        #btn-delete {
+            flex: 0 0 52px; display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255, 255, 255, 0.045);
+            border-color: rgba(255, 255, 255, 0.10);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+            color: var(--ink-faint);
+        }
+        #btn-delete svg {
+            width: 17px; height: 17px; fill: none; stroke: currentColor;
+            stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+        }
+        #btn-delete:active {
+            color: rgb(240, 158, 142);
+            background: rgba(232, 154, 138, 0.14);
+            border-color: rgba(232, 154, 138, 0.30);
+        }
         /* The deadline line: quiet normally, warm once it actually matters. */
         #detail-due {
             display: none; margin-top: 9px; align-items: center; gap: 7px;
@@ -1656,7 +1704,7 @@
             <div id="bulk-actions">
                 <button id="bulk-select-all">Select All</button>
                 <button id="bulk-cancel">Cancel</button>
-                <button id="bulk-release" disabled>Release</button>
+                <button id="bulk-release" disabled>Let go</button>
             </div>
         </div>
         <div id="drawer-settings">
@@ -1717,10 +1765,10 @@
                     <text x="58" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Unpack</text>
                     <text x="121" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Move</text>
                     <text x="177" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Edit</text>
-                    <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Done</text>
+                    <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Let go</text>
                 </svg>
                 <h3>Finishing a thought</h3>
-                <p><b>Done</b> is for things you actually finished. <b>Let go</b> is for things that stopped mattering. Both clear the bubble — but Mindorb remembers which was which, so your Old Bubbles show what you accomplished, not just what you deleted.</p>
+                <p><b>Let go</b> is the everyday one: you’re finished with it, so it leaves your galaxy. <b>Delete</b> is for things that shouldn’t have been there at all. Both land in Old Bubbles where you can bring them back — but Mindorb remembers which was which.</p>
                 <p><b>Unpack</b> talks a tangled thought through with you and splits it into separate bubbles. <b>Move</b> refiles it anywhere. <b>Edit</b> rewords it.</p>
                 <p>Clearing things out is the point: this isn't a list that grows forever.</p>
             </div>
@@ -1769,7 +1817,7 @@
             <button id="archive-select-btn">Select</button>
         </div>
         <div id="archive-search-row">
-            <input id="archive-search" type="text" placeholder="Search released thoughts" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <input id="archive-search" type="text" placeholder="Search old bubbles" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
         <div id="archive-scroll"></div>
         <div id="archive-bulk-bar" style="display:none;">
@@ -1810,7 +1858,7 @@
                     </span>
                     <span class="settings-row-main">
                         <span>Old Bubbles</span>
-                        <span class="settings-row-sub">Restore or permanently delete released thoughts</span>
+                        <span class="settings-row-sub">Bring back anything you let go of or deleted</span>
                     </span>
                     <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
                 </button>
@@ -1929,7 +1977,7 @@
     </div>
 
     <div id="undo-toast" class="glass ui-block">
-        <span id="undo-text">Thought released</span>
+        <span id="undo-text">Let go</span>
         <button id="undo-btn">Undo</button>
     </div>
 
@@ -1987,13 +2035,27 @@
         <div id="detail-due"></div>
         <textarea id="detail-edit" maxlength="500"></textarea>
         <div id="detail-actions">
-            <button class="detail-btn" id="btn-untangle">Unpack</button>
-            <button class="detail-btn" id="btn-move">Move</button>
-            <button class="detail-btn" id="btn-edit">Edit</button>
+            <button class="tool-btn" id="btn-untangle" aria-label="Unpack this thought">
+                <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="2.2"/><circle cx="18.5" cy="6" r="2.2"/><circle cx="18.5" cy="18" r="2.2"/><path d="M7.7 11.2l8.8-4.1M7.7 12.8l8.8 4.1"/></svg>
+                <span class="tool-label">Unpack</span>
+            </button>
+            <button class="tool-btn" id="btn-move" aria-label="Move this thought">
+                <svg viewBox="0 0 24 24"><path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/><path d="M4 12h10M10.5 8.5L14 12l-3.5 3.5"/></svg>
+                <span class="tool-label">Move</span>
+            </button>
+            <button class="tool-btn" id="btn-edit" aria-label="Edit this thought">
+                <svg viewBox="0 0 24 24"><path d="M5 19h3.5L19 8.5a2.1 2.1 0 0 0-3-3L5.5 16V19z"/><path d="M14.5 7l2.5 2.5"/></svg>
+                <span class="tool-label">Edit</span>
+            </button>
         </div>
         <div id="detail-outcomes">
-            <button class="detail-btn" id="btn-release">Let go</button>
-            <button class="detail-btn" id="btn-done">Done</button>
+            <button class="detail-btn" id="btn-delete" aria-label="Delete this thought" title="Delete">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9.5 7V5.4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7"/><path d="M6.5 7l.9 12a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.5 7"/></svg>
+            </button>
+            <button class="detail-btn" id="btn-letgo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6"/><path d="M6.6 11.4L12 6l5.4 5.4"/></svg>
+                <span>Let go</span>
+            </button>
         </div>
     </div>
 
@@ -2931,7 +2993,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23c';
+        const BUILD_TAG = '2026-07-23e';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -3367,7 +3429,7 @@
             { title: 'You never file anything', body: 'Say what\u2019s on your mind and Mindorb works out what it\u2019s about, then files it for you. No folders. No tags. No deciding where things go.', pos: 'bottom', btn: 'Next', interactive: false, illo: 'flow' },
             { title: 'Try it \u2014 just talk', body: 'Tap the big bubble and say something that\u2019s actually on your mind right now. A task, a worry, a half-formed idea.', pos: 'top', btn: null, interactive: true, pulse: true },
             { title: 'Go inside it', body: 'Every bubble holds more. Tap the one you just made \u2014 anything related you say later gathers in here on its own.', pos: 'top', btn: null, interactive: true },
-            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time \u2014 \u201Ctonight\u201D, \u201Cby Friday\u201D \u2014 and it becomes a real deadline automatically. Finished something? Press Done. Stopped mattering? Let go.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock' },
+            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time \u2014 \u201Ctonight\u201D, \u201Cby Friday\u201D \u2014 and it becomes a real deadline automatically. Finished with something? Let it go and it leaves your galaxy.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock' },
             { title: 'Bring the rest of your brain', body: 'Got notes scattered somewhere else? The + in All Thoughts turns a whole wall of text into organized bubbles in one go.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
         ];
         function onboardEligible() {
@@ -4102,7 +4164,7 @@
             pendingUndo = entries;
             clearTimeout(undoTimer);
             const n = entries.length;
-            $('undo-text').textContent = n > 1 ? (n + ' thoughts released') : 'Thought released';
+            $('undo-text').textContent = n > 1 ? (n + ' thoughts let go') : 'Let go';
             $('undo-toast').classList.add('visible');
             undoTimer = setTimeout(() => {
                 $('undo-toast').classList.remove('visible');
@@ -4701,10 +4763,11 @@
             if (openThoughtObj.anim) openThoughtObj.anim = null;
             releaseThought(openThoughtObj, completed);
             closeThought(true);
-            if (completed) showVoiceStatus('\u2713 Done', { autoHideMs: 1400 });
+            if (completed) showVoiceStatus('Let go \u2014 it\u2019s off your mind', { autoHideMs: 1600 });
         }
-        $('btn-done').addEventListener('click', () => finishThought(true));
-        $('btn-release').addEventListener('click', () => finishThought(false));
+        // `true` = deliberately finished with (Let go). `false` = discarded.
+        $('btn-letgo').addEventListener('click', () => finishThought(true));
+        $('btn-delete').addEventListener('click', () => finishThought(false));
         function isDescendant(candidate, ofThought) {
             if (!ofThought.children) return false;
             for (const c of ofThought.children) {
@@ -5423,7 +5486,7 @@
             detailEdit.value = openThoughtObj.thought.full;
             detailCard.classList.add('editing');
             setUIFocus(true);
-            $('btn-edit').textContent = 'Cancel';
+            const el = $('btn-edit').querySelector('.tool-label'); if (el) el.textContent = 'Cancel';
             // Pre-position the sheet where the keyboard will land BEFORE
             // focusing (iOS won't pan the page), then track it live.
             let kbH = 340;
@@ -5443,7 +5506,7 @@
             // transform immediately made it flash at the top of the screen.
             setTimeout(() => { if (!editSheet.classList.contains('open')) editSheet.style.transform = ''; }, 220);
             detailEdit.blur();
-            $('btn-edit').textContent = 'Edit';
+            const el2 = $('btn-edit').querySelector('.tool-label'); if (el2) el2.textContent = 'Edit';
             if (!save || !openThoughtObj) return;
 
             const newText = detailEdit.value.trim();
@@ -5716,7 +5779,7 @@
             if (!filtered.length) {
                 scroll.appendChild(makeEmptyState(
                     q ? 'search' : 'calm',
-                    q ? ('No released thoughts match "' + query + '"') : 'Nothing released yet \u2014 what you let go of will show up here.'
+                    q ? ('Nothing here matches "' + query + '"') : 'Nothing here yet \u2014 what you let go of or delete shows up here.'
                 ));
                 return;
             }
@@ -5724,7 +5787,7 @@
                 const topId = entry.thought && entry.thought.id;
                 const parentLabel = (entry.thought && entry.thought.summary) || 'Untitled';
                 const doneStamp = entry.thought && entry.thought.doneAt;
-                const rowMeta = (doneStamp ? '\u2713 Done ' : 'Let go ') + timeAgo(doneStamp || entry.releasedAt);
+                const rowMeta = (doneStamp ? 'Let go ' : 'Deleted ') + timeAgo(doneStamp || entry.releasedAt);
                 const item = makeArchiveRow(topId, topId, parentLabel, rowMeta,
                     () => {
                         if (entry.thought && restoreFromArchive(entry.thought.id)) {
@@ -5824,7 +5887,7 @@
             const dc = $('drawer-count');
             if (dc) dc.textContent = String(countAll(thoughts));
             const lifeCreated = Math.max(createdCount, countAll(thoughts));
-            drawerSub.textContent = lifeCreated + ' created · ' + releasedCount + ' released';
+            drawerSub.textContent = lifeCreated + ' created · ' + releasedCount + ' cleared';
             const dt = $('drawer-title'); if (dt) dt.textContent = 'All Thoughts';
             drawerList.innerHTML = '';
             if (thoughts.length === 0) {
