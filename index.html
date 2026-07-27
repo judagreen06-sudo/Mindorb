@@ -509,6 +509,42 @@
             100% { transform: translate(168px, -50%) scale(0.3); opacity: 0; }
         }
         .motion-reduced #onboard-illustration { display: none !important; }
+        .onboard-illo-clock {
+            position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+            width: 38px; height: 38px; border-radius: 50%;
+            border: 1.6px solid rgba(255,255,255,0.28);
+            background: radial-gradient(circle at 34% 28%, rgba(169,200,232,0.16), transparent 70%);
+        }
+        .onboard-illo-hand {
+            position: absolute; left: 50%; top: 50%;
+            width: 1.8px; height: 13px; border-radius: 2px;
+            background: rgba(255,255,255,0.85);
+            transform-origin: 50% 100%;
+            transform: translate(-50%, -100%) rotate(0deg);
+            animation: onboardHandSweep 2.6s cubic-bezier(0.5, 0, 0.3, 1) infinite;
+        }
+        @keyframes onboardHandSweep {
+            0%   { transform: translate(-50%, -100%) rotate(0deg); }
+            55%  { transform: translate(-50%, -100%) rotate(310deg); }
+            70%  { transform: translate(-50%, -100%) rotate(300deg); }
+            100% { transform: translate(-50%, -100%) rotate(300deg); }
+        }
+        .onboard-illo-mark {
+            position: absolute; left: 50%; top: 50%;
+            width: 5px; height: 5px; border-radius: 50%;
+            background: rgb(232, 193, 130);
+            transform: translate(-50%, -50%) rotate(300deg) translateY(-15px);
+            opacity: 0; animation: onboardMarkPop 2.6s ease-out infinite;
+        }
+        @keyframes onboardMarkPop {
+            0%, 50% { opacity: 0; }
+            62% { opacity: 1; box-shadow: 0 0 10px rgba(232,193,130,0.8); }
+            100% { opacity: 1; box-shadow: 0 0 4px rgba(232,193,130,0.4); }
+        }
+        .onboard-illo-caption {
+            position: absolute; left: 58px; top: 50%; transform: translateY(-50%);
+            font-size: 11.5px; font-weight: 700; color: var(--ink-dim); white-space: nowrap;
+        }
         #onboard-title {
             color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif;
             font-weight: 800; font-size: 17px; margin-bottom: 6px;
@@ -1311,6 +1347,9 @@
 
         #detail-meta { color: var(--ink-faint); font-size: 10.5px; font-weight: 600; margin-top: 4px; }
         #detail-actions { display: flex; gap: 8px; margin-top: 8px; }
+        /* Outcomes get their own row: finishing a thought is the main event
+           and shouldn't be squeezed in beside the editing tools. */
+        #detail-outcomes { display: flex; gap: 8px; margin-top: 8px; }
         .detail-btn {
             flex: 1; padding: 10px 0; border-radius: var(--r-s);
             font-family: 'Quicksand', sans-serif; font-size: 13px; font-weight: 700;
@@ -1318,10 +1357,24 @@
             transition: transform 0.12s ease, background 0.2s ease;
         }
         .detail-btn:active { transform: scale(0.96); }
-        #btn-release { background: rgba(255,255,255,0.9); color: #10141c; border-color: transparent; }
+        #btn-done {
+            flex: 1.6;
+            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(232,238,248,0.92));
+            color: #10141c; border-color: transparent;
+        }
+        #btn-release { background: rgba(255, 255, 255, 0.06); color: var(--ink-dim); }
         #btn-edit { background: rgba(255, 255, 255, 0.06); color: var(--ink); }
         #btn-move { background: rgba(255, 255, 255, 0.06); color: var(--ink); }
         #btn-untangle { background: rgba(169, 200, 232, 0.14); color: var(--ink); }
+        /* The deadline line: quiet normally, warm once it actually matters. */
+        #detail-due {
+            display: none; margin-top: 9px; align-items: center; gap: 7px;
+            font-size: 12.5px; font-weight: 700; color: var(--ink-dim);
+        }
+        #detail-due.show { display: flex; }
+        #detail-due.due-soon { color: rgb(232, 193, 130); }
+        #detail-due.overdue { color: rgb(232, 154, 138); }
+        #detail-due svg { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.9; }
         #untangle-out {
             display: none; margin-top: 10px; padding: 11px 13px; border-radius: 14px;
             background: rgba(169, 200, 232, 0.08); border: 1px solid rgba(169, 200, 232, 0.18);
@@ -1376,6 +1429,44 @@
         }
         .untangle-send:active { transform: scale(0.92); }
         .untangle-send svg { width: 14px; height: 14px; stroke: #10141c; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+        #feedback-sheet {
+            position: fixed; inset: 0; z-index: 999000;
+            background: rgba(6, 9, 18, 0.62); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top, 0px) + 22px) 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+            opacity: 0; pointer-events: none; transform: scale(0.96);
+            transition: opacity 0.24s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #feedback-sheet.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+        .motion-reduced #feedback-sheet { transition-duration: 0.12s !important; }
+        #feedback-sheet h3 { color: var(--ink); font-size: 17px; font-weight: 800; margin: 4px 4px 4px; font-family: 'Baloo 2', 'Quicksand', sans-serif; }
+        #fb-sub { color: var(--ink-dim); font-size: 12.5px; font-weight: 600; margin: 0 4px 12px; line-height: 1.45; }
+        #fb-text {
+            flex: 1; min-height: 120px; resize: none; width: 100%; box-sizing: border-box;
+            padding: 13px 14px; border-radius: var(--r-m);
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: var(--ink); font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 600;
+            line-height: 1.5; outline: none;
+        }
+        #fb-text::placeholder { color: var(--ink-faint); }
+        #fb-include {
+            display: flex; align-items: center; gap: 9px; margin: 12px 4px 0;
+            color: var(--ink-dim); font-size: 12.5px; font-weight: 600; cursor: pointer;
+        }
+        #fb-include input { width: 16px; height: 16px; accent-color: #5b8def; }
+        #fb-status { min-height: 17px; margin: 8px 4px 0; font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
+        #fb-status.error { color: rgb(232, 154, 138); }
+        #fb-status.ok { color: rgb(157, 196, 168); }
+        #fb-actions { display: flex; gap: 8px; margin-top: 12px; }
+        #fb-cancel, #fb-send {
+            flex: 1; padding: 13px 0; border-radius: var(--r-pill);
+            font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
+            transition: transform 0.12s ease;
+        }
+        #fb-cancel { background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--ink); }
+        #fb-send { flex: 1.5; background: rgba(235,240,248,0.94); border: none; color: #10141f; }
+        #fb-send:disabled { opacity: 0.5; }
+        #fb-cancel:active, #fb-send:active { transform: scale(0.97); }
         #move-picker {
             position: fixed; inset: 0; z-index: 60;
             background: rgba(6, 9, 18, 0.6); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
@@ -1623,14 +1714,15 @@
                     <rect x="96" y="30" width="50" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
                     <rect x="156" y="30" width="42" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
                     <rect x="208" y="30" width="62" height="24" rx="12" fill="rgba(235,240,248,0.9)"/>
-                    <text x="58" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Untangle</text>
+                    <text x="58" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Unpack</text>
                     <text x="121" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Move</text>
                     <text x="177" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Edit</text>
-                    <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Release</text>
+                    <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Done</text>
                 </svg>
-                <h3>The four actions</h3>
-                <p><b>Untangle</b> splits a long messy thought into separate bubbles. <b>Move</b> refiles it anywhere. <b>Edit</b> rewords it. <b>Release</b> lets it go — done, gone from your galaxy for good.</p>
-                <p>Releasing is the point: this isn't a list that grows forever. Finish things and watch them leave.</p>
+                <h3>Finishing a thought</h3>
+                <p><b>Done</b> is for things you actually finished. <b>Let go</b> is for things that stopped mattering. Both clear the bubble — but Mindorb remembers which was which, so your Old Bubbles show what you accomplished, not just what you deleted.</p>
+                <p><b>Unpack</b> talks a tangled thought through with you and splits it into separate bubbles. <b>Move</b> refiles it anywhere. <b>Edit</b> rewords it.</p>
+                <p>Clearing things out is the point: this isn't a list that grows forever.</p>
             </div>
             <div class="howto-section">
                 <svg viewBox="0 0 300 84">
@@ -1778,13 +1870,13 @@
                     <span class="settings-row-main">How to Use Mindorb</span>
                     <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
                 </button>
-                <a href="mailto:hello@mindorb.app?subject=Mindorb%20Feedback" id="feedback-open-btn" class="settings-row settings-row-nav">
+                <button id="feedback-open-btn" class="settings-row settings-row-nav">
                     <span class="settings-row-icon">
                         <svg viewBox="0 0 24 24"><path d="M4 4h16v14H4z"/><path d="M4 6l8 6 8-6"/></svg>
                     </span>
                     <span class="settings-row-main">Send Feedback</span>
                     <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-                </a>
+                </button>
             </div>
             <div class="settings-section">
                 <div class="settings-section-title">About</div>
@@ -1848,6 +1940,21 @@
         <button id="mp-cancel">Cancel</button>
     </div>
 
+    <div id="feedback-sheet">
+        <h3>Send Feedback</h3>
+        <div id="fb-sub">What’s working, what isn’t, what you wish it did.</div>
+        <textarea id="fb-text" maxlength="2000" placeholder="Type anything…"></textarea>
+        <label id="fb-include">
+            <input type="checkbox" id="fb-include-input" checked>
+            <span>Include app version &amp; galaxy size</span>
+        </label>
+        <div id="fb-status"></div>
+        <div id="fb-actions">
+            <button id="fb-cancel">Cancel</button>
+            <button id="fb-send">Send</button>
+        </div>
+    </div>
+
     <div id="auth-sheet">
         <div id="auth-card" class="glass ui-block">
             <button id="auth-close" aria-label="Close">
@@ -1877,12 +1984,16 @@
         <div id="detail-full"></div>
         <div id="detail-answer"></div>
         <div id="detail-meta"></div>
+        <div id="detail-due"></div>
         <textarea id="detail-edit" maxlength="500"></textarea>
         <div id="detail-actions">
-            <button class="detail-btn" id="btn-untangle">Untangle</button>
+            <button class="detail-btn" id="btn-untangle">Unpack</button>
             <button class="detail-btn" id="btn-move">Move</button>
             <button class="detail-btn" id="btn-edit">Edit</button>
-            <button class="detail-btn" id="btn-release">Release</button>
+        </div>
+        <div id="detail-outcomes">
+            <button class="detail-btn" id="btn-release">Let go</button>
+            <button class="detail-btn" id="btn-done">Done</button>
         </div>
     </div>
 
@@ -2401,6 +2512,10 @@
             return { x: cx, y: cy };
         }
 
+        // Measured once per onboarding step (not per frame — bounds() runs
+        // for every bubble every frame, and getBoundingClientRect forces
+        // layout). Null whenever the coach card isn't on screen.
+        let onboardCardClearance = null;
         function bounds() {
             const a = VW / VH;
             const sidePx = 10;
@@ -2408,12 +2523,18 @@
             //  - top: status bar + the breadcrumb trail when dived in
             //  - bottom: the dock (always), or the detail card when open
             const dived = navStack.length > 0;
-            const topPx = 74 + (dived ? 44 : 0);          // trail clearance
+            let topPx = 74 + (dived ? 44 : 0);            // trail clearance
             const dockPx = 84;                            // dock clearance
             // Card sits on the bottom with the dock lifted above it — bubbles
             // clear the full stack (card height + dock) when a bubble is open.
             const cardPx = detailCardOpen ? 84 + Math.min(VH * 0.30, 240) : 0;
-            const bottomPx = Math.max(dockPx, cardPx);
+            let bottomPx = Math.max(dockPx, cardPx);
+            // The onboarding coach card is telling a first-time user to tap a
+            // specific bubble; that bubble must never hide underneath it.
+            if (onboardCardClearance) {
+                if (onboardCardClearance.top) topPx = Math.max(topPx, onboardCardClearance.top);
+                if (onboardCardClearance.bottom) bottomPx = Math.max(bottomPx, onboardCardClearance.bottom);
+            }
             return {
                 xMax: (a * (1 - (2 * sidePx) / VW)) / posScale(),
                 yTop: (1 - (2 * topPx) / VH) / posScale(),
@@ -2527,6 +2648,41 @@
                 }
             });
         }
+        // A bubble on screen must genuinely live where it's being shown.
+        // Data edits (restores, moves, undo, sync merges) can leave a bubble
+        // rendered at a level it no longer belongs to — the tree is right,
+        // the scene is stale, and only a reload fixed it. Rather than patch
+        // each path that can cause that, this verifies the invariant
+        // continuously so any drift self-corrects on its own.
+        function reconcileSceneWithTree() {
+            // Mid-transition, objects are legitimately in odd intermediate
+            // states (morphing between levels) — judging them now would
+            // delete perfectly valid bubbles.
+            if (transitioning) return;
+            for (const o of objects) {
+                if (o.role !== 'thought') continue;
+                if (o.removed || o.popState || o.transient || o.anim) continue;
+                if (!o.thought) continue;
+                const p = o.parentThought || null;
+                let livesHere;
+                if (p) {
+                    // Its displayed parent must still exist in the tree AND
+                    // still actually contain it.
+                    livesHere = !!findThoughtById(p.id) && (p.children || []).indexOf(o.thought) > -1;
+                } else {
+                    livesHere = thoughts.indexOf(o.thought) > -1;
+                }
+                if (livesHere) continue;
+                // Escapee: fade it out the same way a moved-away bubble goes.
+                o.removed = true;
+                if (o.el) {
+                    o.el.style.transition = 'opacity 0.35s';
+                    o.el.style.opacity = '0';
+                    const el = o.el;
+                    setTimeout(() => { if (el && el.parentNode) el.remove(); }, 380);
+                }
+            }
+        }
         // Keeps what's ON SCREEN in sync with what EXISTS at this level.
         // Any thought without a bubble gets one (newest first) until the
         // level is full. This is what makes popped bubbles get replaced by
@@ -2582,19 +2738,126 @@
         }
 
         /* =========================================================
-           URGENCY — client-side heuristic, 0 (calm) .. 1 (urgent).
-           scoreUrgency() is the seam where a real AI call slots in.
+           WHEN — pulling a real deadline out of ordinary speech.
+           The app always HEARD "tomorrow" and "by Friday"; until now
+           it had nowhere to put it, so every thought floated forever
+           with no sense of time. parseWhen() turns that language into
+           an actual timestamp, which is what lets the galaxy answer
+           "what's on my plate today?" and what drives urgency.
+           Entirely local: no network, works offline, instant.
            ========================================================= */
-        const URGENT_STRONG = /\b(urgent|asap|emergency|immediately|right now|deadline|overdue|due|late|forgot|crisis)\b/i;
-        const URGENT_TIME = /\b(now|today|tonight|tomorrow|this (morning|afternoon|evening|week)|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|tonight|tomorrow))\b/i;
-        const URGENT_PRESSURE = /\b(need to|have to|must|can'?t forget|don'?t forget|running out|stressed|worried|anxious|scared|nervous|panic)\b/i;
-        function scoreUrgency(text) {
-            let score = 0.12;
-            if (URGENT_STRONG.test(text)) score += 0.45;
-            if (URGENT_TIME.test(text)) score += 0.25;
-            if (URGENT_PRESSURE.test(text)) score += 0.22;
-            score += Math.min((text.match(/!/g) || []).length * 0.08, 0.16);
-            return Math.min(score, 1.0);
+        const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const DEFAULT_HOUR = 9;     // a day with no stated time means "morning"
+        const EVENING_HOUR = 19;    // "tonight" / "this evening"
+
+        function atHour(d, h, m) {
+            const x = new Date(d);
+            x.setHours(h, m || 0, 0, 0);
+            return x;
+        }
+        // Pulls an explicit clock time ("at 3", "3pm", "at 15:30") if present.
+        function extractClock(text) {
+            const m = text.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
+                   || text.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/);
+            if (!m) return null;
+            let h = parseInt(m[1], 10);
+            const min = m[2] ? parseInt(m[2], 10) : 0;
+            const ap = (m[3] || '').toLowerCase();
+            if (h > 23 || min > 59) return null;
+            if (ap === 'pm' && h < 12) h += 12;
+            if (ap === 'am' && h === 12) h = 0;
+            // A bare "at 3" almost always means the afternoon, not 3am.
+            if (!ap && h >= 1 && h <= 7) h += 12;
+            return { h, m: min };
+        }
+        // Returns { at: Date, hadTime: bool } or null when nothing time-like
+        // was said. `now` is injectable so this is deterministically testable.
+        function parseWhen(text, now) {
+            if (!text) return null;
+            const t = String(text).toLowerCase();
+            now = now ? new Date(now) : new Date();
+            const clock = extractClock(t);
+            const withClock = (d, fallbackHour) => clock
+                ? { at: atHour(d, clock.h, clock.m), hadTime: true }
+                : { at: atHour(d, fallbackHour), hadTime: false };
+
+            const dayFrom = (n) => { const d = new Date(now); d.setDate(d.getDate() + n); return d; };
+
+            // Explicit relative offsets: "in 3 days", "in two weeks".
+            const WORD_NUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+            const rel = t.match(/\bin\s+(\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten)\s+(minute|hour|day|week|month)s?\b/);
+            if (rel) {
+                const n = /^\d+$/.test(rel[1]) ? parseInt(rel[1], 10) : (WORD_NUM[rel[1]] || 1);
+                const unit = rel[2];
+                const d = new Date(now);
+                if (unit === 'minute') { d.setMinutes(d.getMinutes() + n); return { at: d, hadTime: true }; }
+                if (unit === 'hour')   { d.setHours(d.getHours() + n);     return { at: d, hadTime: true }; }
+                if (unit === 'day')    return withClock(dayFrom(n), DEFAULT_HOUR);
+                if (unit === 'week')   return withClock(dayFrom(n * 7), DEFAULT_HOUR);
+                if (unit === 'month')  { const x = new Date(now); x.setMonth(x.getMonth() + n); return withClock(x, DEFAULT_HOUR); }
+            }
+
+            if (/\bright now\b|\bimmediately\b/.test(t)) return { at: new Date(now), hadTime: true };
+            if (/\btonight\b|\bthis evening\b/.test(t)) return withClock(now, EVENING_HOUR);
+            if (/\bthis (morning|afternoon)\b/.test(t)) return withClock(now, /morning/.test(t) ? DEFAULT_HOUR : 14);
+            if (/\btoday\b/.test(t)) return withClock(now, clock ? DEFAULT_HOUR : EVENING_HOUR);
+            if (/\btomorrow\b/.test(t)) return withClock(dayFrom(1), DEFAULT_HOUR);
+            if (/\bday after tomorrow\b/.test(t)) return withClock(dayFrom(2), DEFAULT_HOUR);
+
+            // Weekday names, with "next" pushing a full week out.
+            const wd = t.match(/\b(?:(next|this)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+            if (wd) {
+                const target = WEEKDAYS.indexOf(wd[2]);
+                let delta = (target - now.getDay() + 7) % 7;
+                if (delta === 0) delta = 7;                 // "friday" on a Friday means the next one
+                // "next Monday" and "Monday" both resolve to the next
+                // occurrence — the reading every mainstream calendar uses.
+                return withClock(dayFrom(delta), DEFAULT_HOUR);
+            }
+
+            // Loose horizons — better than nothing, and honest about it:
+            // "this week" lands on the coming weekend, not an exact day.
+            if (/\bnext week\b/.test(t)) return withClock(dayFrom(7), DEFAULT_HOUR);
+            if (/\bthis week(end)?\b/.test(t)) {
+                const toSat = (6 - now.getDay() + 7) % 7 || 7;
+                return withClock(dayFrom(toSat), DEFAULT_HOUR);
+            }
+            if (/\bnext month\b/.test(t)) { const x = new Date(now); x.setMonth(x.getMonth() + 1); return withClock(x, DEFAULT_HOUR); }
+            return null;
+        }
+        // Human phrasing for a deadline, relative to now.
+        function whenLabel(ts, now) {
+            if (!ts) return '';
+            now = now ? new Date(now) : new Date();
+            const d = new Date(ts);
+            const startOf = (x) => { const y = new Date(x); y.setHours(0, 0, 0, 0); return y; };
+            const days = Math.round((startOf(d) - startOf(now)) / 86400000);
+            const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+            if (d < now) return days === 0 ? 'Overdue today' : 'Overdue';
+            if (days === 0) return 'Today · ' + time;
+            if (days === 1) return 'Tomorrow · ' + time;
+            if (days > 1 && days < 7) return d.toLocaleDateString(undefined, { weekday: 'long' }) + ' · ' + time;
+            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+        /* =========================================================
+           URGENCY — now driven by a real deadline instead of
+           guessing at feelings from keywords. A thought is urgent
+           because it is actually due, not because it contains the
+           word "stressed". Language is only a weak fallback for
+           thoughts with no date at all.
+           ========================================================= */
+        const URGENT_STRONG = /\b(urgent|asap|emergency|immediately|right now|deadline|overdue|crisis)\b/i;
+        function scoreUrgency(text, dueAt, now) {
+            now = now || Date.now();
+            if (dueAt) {
+                const hoursOut = (dueAt - now) / 3600000;
+                if (hoursOut <= 0) return 1.0;            // overdue
+                if (hoursOut <= 24) return 0.9;           // today/tonight
+                if (hoursOut <= 72) return 0.7;           // next couple of days
+                if (hoursOut <= 24 * 7) return 0.45;      // this week
+                return 0.25;                              // on the horizon
+            }
+            return URGENT_STRONG.test(text || '') ? 0.7 : 0.12;
         }
         function urgencyColorCss(u) {
             // Binary flag model: calm thoughts are neutral, flagged ones warm.
@@ -2668,7 +2931,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-22y';
+        const BUILD_TAG = '2026-07-23b';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -3101,11 +3364,11 @@
         const ONBOARD_KEY = 'mindorb-onboard-done';
         let onboardStep = -1; // -1 = inactive
         const ONBOARD_STEPS = [
-            { title: 'Welcome to Mindorb', body: 'This is your mind as a galaxy. Everything you say becomes a bubble — and the bubbles organize themselves.', pos: 'bottom', btn: 'Next', interactive: false },
-            { title: 'Say what\u2019s on your mind', body: 'Tap the big bubble (or the mic) and just talk — a task, an idea, anything. Watch it become a bubble.', pos: 'top', btn: null, interactive: true, pulse: true },
-            { title: 'Tap your bubble', body: 'Every bubble is a little world. Tap the one you just made to go inside it.', pos: 'top', btn: null, interactive: true },
-            { title: 'Release what\u2019s done', body: 'When a thought is finished with, open it and press Release \u2014 it leaves your galaxy for good.', pos: 'top', btn: 'Next', interactive: false },
-            { title: 'Your galaxy awaits', body: 'One more thing \u2014 got notes somewhere else? The + in All Thoughts turns any wall of text into organized bubbles, instantly.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
+            { title: 'You never file anything', body: 'Say what\u2019s on your mind and Mindorb works out what it\u2019s about, then files it for you. No folders. No tags. No deciding where things go.', pos: 'bottom', btn: 'Next', interactive: false, illo: 'flow' },
+            { title: 'Try it \u2014 just talk', body: 'Tap the big bubble and say something that\u2019s actually on your mind right now. A task, a worry, a half-formed idea.', pos: 'top', btn: null, interactive: true, pulse: true },
+            { title: 'Go inside it', body: 'Every bubble holds more. Tap the one you just made \u2014 anything related you say later gathers in here on its own.', pos: 'top', btn: null, interactive: true },
+            { title: 'It hears \u201Ctomorrow\u201D', body: 'Mention a time \u2014 \u201Ctonight\u201D, \u201Cby Friday\u201D \u2014 and it becomes a real deadline automatically. Finished something? Press Done. Stopped mattering? Let go.', pos: 'top', btn: 'Next', interactive: false, illo: 'clock' },
+            { title: 'Bring the rest of your brain', body: 'Got notes scattered somewhere else? The + in All Thoughts turns a whole wall of text into organized bubbles in one go.', pos: 'bottom', btn: 'Explore', interactive: false, closing: true },
         ];
         function onboardEligible() {
             try {
@@ -3126,7 +3389,8 @@
             const illo = document.getElementById('onboard-illustration');
             if (illo) {
                 illo.innerHTML = '';
-                if (i === 0) {
+                illo.classList.remove('on');
+                if (s.illo === 'flow') {
                     illo.classList.add('on');
                     const words = ['I need to', 'call mom', 'tomorrow'];
                     words.forEach((w, wi) => {
@@ -3139,8 +3403,21 @@
                     const bubble = document.createElement('div');
                     bubble.className = 'onboard-illo-bubble';
                     illo.appendChild(bubble);
-                } else {
-                    illo.classList.remove('on');
+                } else if (s.illo === 'clock') {
+                    illo.classList.add('on');
+                    const face = document.createElement('div');
+                    face.className = 'onboard-illo-clock';
+                    const hand = document.createElement('div');
+                    hand.className = 'onboard-illo-hand';
+                    face.appendChild(hand);
+                    const mark = document.createElement('div');
+                    mark.className = 'onboard-illo-mark';
+                    face.appendChild(mark);
+                    illo.appendChild(face);
+                    const cap = document.createElement('div');
+                    cap.className = 'onboard-illo-caption';
+                    cap.textContent = '\u201Ctomorrow\u201D \u2192 a real deadline';
+                    illo.appendChild(cap);
                 }
             }
             const bodyEl = document.getElementById('onboard-body');
@@ -3175,6 +3452,15 @@
             if (skipBtn) skipBtn.style.display = (i === 0) ? 'none' : 'block';
             card.classList.add('show');
             playGlassSweep(card);
+            // Measure the card once it has actually laid out, so the physics
+            // bounds can keep bubbles from hiding underneath it.
+            requestAnimationFrame(() => {
+                const r = card.getBoundingClientRect();
+                if (!r.height) { onboardCardClearance = null; return; }
+                onboardCardClearance = card.classList.contains('bottom')
+                    ? { top: 0, bottom: Math.max(0, VH - r.top) + 14 }
+                    : { top: Math.max(0, r.bottom) + 14, bottom: 0 };
+            });
         }
         function onboardAdvance() {
             const next = onboardStep + 1;
@@ -3182,10 +3468,12 @@
             // Brief dip between cards so it reads as a new beat, not a swap.
             const card = document.getElementById('onboard-card');
             card.classList.remove('show');
+            onboardCardClearance = null;
             setTimeout(() => onboardShowStep(next), 340);
         }
         function onboardFinish(viaExplore) {
             onboardStep = -1;
+            onboardCardClearance = null; // bubbles get the full screen back
             try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
             const card = document.getElementById('onboard-card');
             const pulse = document.getElementById('onboard-pulse');
@@ -3382,6 +3670,12 @@
             if (exportBtn) exportBtn.addEventListener('click', exportUserData);
             const deleteAccountBtn = document.getElementById('delete-account-btn');
             if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', confirmDeleteAccount);
+            const fbOpen = document.getElementById('feedback-open-btn');
+            if (fbOpen) fbOpen.addEventListener('click', openFeedbackSheet);
+            const fbCancel = document.getElementById('fb-cancel');
+            if (fbCancel) fbCancel.addEventListener('click', closeFeedbackSheet);
+            const fbSend = document.getElementById('fb-send');
+            if (fbSend) fbSend.addEventListener('click', sendFeedback);
         });
 
         let thoughts = [];
@@ -3408,8 +3702,36 @@
                     createdCount = data.createdCount || 0;
                     releasedArchive = Array.isArray(data.releasedArchive) ? data.releasedArchive : [];
                     sanitizeTree();
+                    migrateWhenFields();
                 }
             } catch (e) { /* fresh session */ }
+        }
+        // Thoughts captured before deadlines existed still have their original
+        // words — so read a date out of them once, and the feature works on the
+        // galaxy you already have instead of only on new captures. The
+        // `whenScanned` flag means this runs exactly once per thought: if you
+        // later clear a date deliberately, it stays cleared.
+        function migrateWhenFields() {
+            let touched = 0;
+            const visit = (list) => {
+                for (const t of (list || [])) {
+                    if (!t) continue;
+                    if (t.doneAt === undefined) t.doneAt = null;
+                    if (!t.whenScanned) {
+                        t.whenScanned = true;
+                        if (t.dueAt === undefined || t.dueAt === null) {
+                            const w = parseWhen(t.full || t.summary || '', t.createdAt || Date.now());
+                            if (w) { t.dueAt = w.at.getTime(); t.dueHadTime = !!w.hadTime; touched++; }
+                            else t.dueAt = null;
+                        }
+                        t.urgency = scoreUrgency(t.full || t.summary || '', t.dueAt);
+                    }
+                    visit(t.children);
+                }
+            };
+            visit(thoughts);
+            for (const e of (releasedArchive || [])) if (e && e.thought) visit([e.thought]);
+            if (touched) { try { saveState(); } catch (err) {} }
         }
         // Heal any structural corruption in saved data: a bubble must exist in
         // exactly ONE place. Duplicates (same id in two spots) keep their first
@@ -3554,6 +3876,12 @@
                 el.style.fontSize = `${lo.toFixed(2)}px`;
             }
             el.style.transform = savedTransform;
+            // Remember the exact pixel radius this label was sized against.
+            // The render loop scales the label by (currentBubblePx / this),
+            // so the text stays locked to the bubble even if restR later
+            // changes without a refit, or if the fit happened under a
+            // different camera distance than the one now being rendered.
+            el._fitPxRadius = screenRadiusPx;
         }
         function makeTextEl(phrase, screenRadiusPx) {
             const el = document.createElement('div');
@@ -3912,16 +4240,33 @@
             const settingsPage = document.getElementById('settings-page');
             if (settingsPage) settingsPage.classList.remove('open');
             try { if (typeof drawerOpen !== 'undefined' && drawerOpen) closeDrawer(); } catch (e) {}
-            try { if (typeof transitioning !== 'undefined' && !transitioning) flyHome(); } catch (e) {}
+            // Returning home matters more than the timing of it: if a
+            // transition happens to be in flight right now, retry shortly
+            // rather than silently skipping and stranding the user at a
+            // level whose contents just changed underneath them.
+            try {
+                if (typeof transitioning !== 'undefined' && !transitioning) flyHome();
+                else setTimeout(() => { try { if (!transitioning) flyHome(); } catch (e) {} }, 420);
+            } catch (e) {}
         }
-        function releaseThought(obj) {
+        // Stamp a whole family as completed. Recorded on the thought itself
+        // (not just the archive entry) so "I finished this" survives release,
+        // restore, export and cloud sync — a discarded thought and a
+        // completed one should never look identical after the fact.
+        function markFamilyDone(thought, ts) {
+            if (!thought) return;
+            thought.doneAt = ts;
+            for (const k of (thought.children || [])) markFamilyDone(k, ts);
+        }
+        function releaseThought(obj, completed) {
             if (obj.popState || obj.anim) return;
+            if (completed) markFamilyDone(obj.thought, Date.now());
             obj.popState = 'rupturing';
             obj.popStartTime = performance.now();
             obj.popFromR = obj.r; // rupture collapses from the (possibly swollen) current size
             stopHoldTone(true);
             playPop(radiusToPx(obj.r) * 2);
-            buzz([14, 30, 8]);
+            buzz(completed ? [10, 24, 10, 24, 16] : [14, 30, 8]);
             if (obj.el) { obj.el.style.transition = 'opacity 0.07s linear'; obj.el.style.opacity = '0'; }
             spawnRuptureFX(jsToPixelX(obj.x), jsToPixelY(obj.y), radiusToPx(obj.r));
             if (obj.parentThought) {
@@ -4231,6 +4576,29 @@
             ansEl.classList.remove('has-answer');
 
             detailMeta.textContent = `Captured ${timeAgo(thought.createdAt)}`;
+            // Deadline line: only present when the thought actually has one.
+            const dueEl = $('detail-due');
+            if (dueEl) {
+                dueEl.classList.remove('show', 'due-soon', 'overdue');
+                dueEl.textContent = '';
+                if (thought.dueAt) {
+                    const ns = 'http://www.w3.org/2000/svg';
+                    const svg = document.createElementNS(ns, 'svg');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    const circle = document.createElementNS(ns, 'circle');
+                    circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '9');
+                    const hands = document.createElementNS(ns, 'path');
+                    hands.setAttribute('d', 'M12 7v5l3 2');
+                    hands.setAttribute('stroke-linecap', 'round');
+                    svg.appendChild(circle); svg.appendChild(hands);
+                    dueEl.appendChild(svg);
+                    dueEl.appendChild(document.createTextNode(whenLabel(thought.dueAt)));
+                    const hoursOut = (thought.dueAt - Date.now()) / 3600000;
+                    if (hoursOut <= 0) dueEl.classList.add('overdue');
+                    else if (hoursOut <= 24) dueEl.classList.add('due-soon');
+                    dueEl.classList.add('show');
+                }
+            }
             const showUrg = true;
             detailUrgencyText.textContent = showUrg ? urgencyLabel(thought.urgency) : 'Held';
             const c = showUrg ? urgencyColorCss(thought.urgency) : 'rgba(157,196,168,0.9)';
@@ -4243,7 +4611,7 @@
             if (!wasAlreadyOpen) playGlassSweep(detailCard);
             try {
                 if ((thought.full || '').length > 120 && !(thought.children && thought.children.length)) {
-                    showContextualHint('untangle', 'Long, messy thought? Untangle breaks it into separate bubbles.');
+                    showContextualHint('untangle', 'Tangled thought? Unpack talks it through and splits it up.');
                 }
             } catch (e) {}
             $('undo-toast').classList.add('raised');
@@ -4265,18 +4633,21 @@
         }
         let detailCardOpen = false;
 
-        $('btn-release').addEventListener('click', () => {
+        function finishThought(completed) {
             if (detailCard.classList.contains('editing')) { exitEditMode(true); return; }
             if (!openThoughtObj) return;
-            // If Release is pressed shortly after diving into this bubble,
+            // If the outcome is pressed shortly after diving into this bubble,
             // its "open-incoming"→"open" settle animation may still be
             // in-flight — releaseThought()'s own guard (`obj.anim` truthy)
             // would otherwise silently no-op, leaving the thought un-deleted
-            // even though the user explicitly asked to release it.
+            // even though the user explicitly asked to finish with it.
             if (openThoughtObj.anim) openThoughtObj.anim = null;
-            releaseThought(openThoughtObj);
+            releaseThought(openThoughtObj, completed);
             closeThought(true);
-        });
+            if (completed) showVoiceStatus('\u2713 Done', { autoHideMs: 1400 });
+        }
+        $('btn-done').addEventListener('click', () => finishThought(true));
+        $('btn-release').addEventListener('click', () => finishThought(false));
         function isDescendant(candidate, ofThought) {
             if (!ofThought.children) return false;
             for (const c of ofThought.children) {
@@ -4298,14 +4669,19 @@
             (function walk(list, path) {
                 for (const t of (list || [])) {
                     const when = t.createdAt || t.touchedAt || now;
-                    out.push({
+                    const row = {
                         id: t.id,
                         s: t.summary,
                         full: t.full || t.summary || '',
                         p: path || '',
                         days: Math.max(0, Math.round((now - when) / 86400000)),
                         imp: t.importance || 0
-                    });
+                    };
+                    // Days until the deadline (negative = already overdue).
+                    // Only present when there IS one, so undated thoughts
+                    // cost nothing in the prompt.
+                    if (t.dueAt) row.du = Math.round((t.dueAt - now) / 86400000);
+                    out.push(row);
                     walk(t.children, path ? path + ' > ' + t.summary : t.summary);
                 }
             })(thoughts, '');
@@ -4350,10 +4726,14 @@
         const TITLE_LIMIT = 400;   // …plus this many as titles
         function galaxyIndex(limit, query) {
             const all = flattenAll();
-            const detail = (t) => ({
-                id: t.id, s: t.s, p: t.p, days: t.days,
-                d: (t.full && t.full !== t.s) ? String(t.full).slice(0, 180) : ''
-            });
+            const detail = (t) => {
+                const o = {
+                    id: t.id, s: t.s, p: t.p, days: t.days,
+                    d: (t.full && t.full !== t.s) ? String(t.full).slice(0, 180) : ''
+                };
+                if (typeof t.du === 'number') o.du = t.du;
+                return o;
+            };
             if (all.length <= FULL_LIMIT || !query) {
                 return all.sort((a, b) => a.days - b.days).slice(0, limit || 220).map(detail);
             }
@@ -4362,7 +4742,11 @@
             const topIds = new Set(top.map(t => t.id));
             const rest = ranked.slice(TOP_DETAIL).filter(t => !topIds.has(t.id))
                 .sort((a, b) => a.days - b.days).slice(0, TITLE_LIMIT)
-                .map(t => ({ id: t.id, s: t.s, p: t.p, days: t.days, d: '' }));
+                .map(t => {
+                    const o = { id: t.id, s: t.s, p: t.p, days: t.days, d: '' };
+                    if (typeof t.du === 'number') o.du = t.du;
+                    return o;
+                });
             return top.map(detail).concat(rest);
         }
         // Renders AI text where [[id]] marks a referenced bubble: those become
@@ -4935,6 +5319,18 @@
                 }
                 t.touchedAt = t.createdAt;
                 t.imported = true;
+                // makeThought read any date relative to NOW, but the line
+                // above may have backdated this note by weeks. A note written
+                // a month ago saying "call mom tomorrow" means the day after
+                // it was WRITTEN — long past — not tomorrow from today.
+                // Re-read it against the real authored date.
+                const importWhen = parseWhen(full, t.createdAt);
+                t.dueAt = importWhen ? importWhen.at.getTime() : null;
+                t.dueHadTime = importWhen ? !!importWhen.hadTime : false;
+                t.whenScanned = true;   // migration must not re-scan this later
+                // A real deadline outranks the AI's urgency guess: something
+                // genuinely overdue shouldn't read as calm.
+                if (t.dueAt) t.urgency = scoreUrgency(full, t.dueAt);
                 created.push(t);
                 // Resolve the parent: another imported item, an existing
                 // bubble, or root. Guarded against bad indexes and cycles.
@@ -5003,7 +5399,13 @@
             // pieces the AI already generated for this thought.
             th.summary = summarizeSpeech(newText);
             th.short = null;
-            th.urgency = scoreUrgency(newText);
+            // Re-read the deadline from the new wording. Adding "tomorrow" to
+            // an existing thought should actually schedule it. If the new text
+            // says nothing time-like, any date already set is left alone
+            // rather than silently wiped by an unrelated edit.
+            const reWhen = parseWhen(newText);
+            if (reWhen) { th.dueAt = reWhen.at.getTime(); th.dueHadTime = !!reWhen.hadTime; }
+            th.urgency = scoreUrgency(newText, th.dueAt);
             th.type = guessType(newText);
             saveState();
             showDetailCard(th);
@@ -5057,7 +5459,14 @@
                 const meta = document.createElement('div');
                 meta.className = 'item-meta';
                 const kidCount = (th.children || []).length;
-                meta.textContent = timeAgo(th.createdAt) + (kidCount > 0 ? ' · ' + kidCount + ' inside' : '');
+                const dueBit = th.dueAt ? ' · ' + whenLabel(th.dueAt) : '';
+                meta.textContent = timeAgo(th.createdAt) + dueBit + (kidCount > 0 ? ' · ' + kidCount + ' inside' : '');
+                if (th.dueAt) {
+                    const hrs = (th.dueAt - Date.now()) / 3600000;
+                    if (hrs <= 0) meta.style.color = 'rgb(232, 154, 138)';
+                    else if (hrs <= 24) meta.style.color = 'rgb(232, 193, 130)';
+                    else meta.style.color = '';
+                } else meta.style.color = '';
                 main.appendChild(meta);
             }
             item.appendChild(dot); item.appendChild(main);
@@ -5257,7 +5666,9 @@
             for (const entry of filtered) {
                 const topId = entry.thought && entry.thought.id;
                 const parentLabel = (entry.thought && entry.thought.summary) || 'Untitled';
-                const item = makeArchiveRow(topId, topId, parentLabel, 'Released ' + timeAgo(entry.releasedAt),
+                const doneStamp = entry.thought && entry.thought.doneAt;
+                const rowMeta = (doneStamp ? '\u2713 Done ' : 'Let go ') + timeAgo(doneStamp || entry.releasedAt);
+                const item = makeArchiveRow(topId, topId, parentLabel, rowMeta,
                     () => {
                         if (entry.thought && restoreFromArchive(entry.thought.id)) {
                             showVoiceStatus('Restored to your galaxy', { autoHideMs: 2000 });
@@ -5709,6 +6120,72 @@
         // v2 talks to the ROUTER worker — it files thoughts into the tree.
         // (Set this to your deployed worker-v2.js URL.)
         const ROUTER_URL = "https://thoughts-router.judagreen06.workers.dev";
+        // ===== IN-APP FEEDBACK =====
+        // Deliberately does NOT hand off to an email client: leaving the app
+        // to compose a mail is where almost everyone abandons. Anything typed
+        // here is also kept locally, so feedback is never silently lost if
+        // the network is down or the worker route isn't live yet.
+        const FEEDBACK_LOCAL_KEY = 'mindorb-feedback-outbox';
+        function openFeedbackSheet() {
+            const sheet = document.getElementById('feedback-sheet');
+            if (!sheet) return;
+            document.getElementById('fb-text').value = '';
+            const st = document.getElementById('fb-status');
+            st.textContent = ''; st.className = '';
+            document.getElementById('fb-send').disabled = false;
+            document.getElementById('settings-page').classList.remove('open');
+            sheet.classList.add('open');
+            try { playGlassSweep(sheet); } catch (e) {}
+            setTimeout(() => { try { document.getElementById('fb-text').focus(); } catch (e) {} }, 260);
+        }
+        function closeFeedbackSheet() {
+            const sheet = document.getElementById('feedback-sheet');
+            if (sheet) sheet.classList.remove('open');
+        }
+        function stashFeedbackLocally(payload) {
+            try {
+                const prev = JSON.parse(localStorage.getItem(FEEDBACK_LOCAL_KEY) || '[]');
+                prev.push(payload);
+                localStorage.setItem(FEEDBACK_LOCAL_KEY, JSON.stringify(prev.slice(-20)));
+            } catch (e) {}
+        }
+        async function sendFeedback() {
+            const textEl = document.getElementById('fb-text');
+            const st = document.getElementById('fb-status');
+            const sendBtn = document.getElementById('fb-send');
+            const body = (textEl.value || '').trim();
+            if (!body) { st.className = 'error'; st.textContent = 'Write something first.'; return; }
+            const includeCtx = document.getElementById('fb-include-input').checked;
+            const payload = {
+                mode: 'feedback',
+                text: body,
+                at: new Date().toISOString(),
+                context: includeCtx ? {
+                    build: BUILD_TAG,
+                    thoughts: countAll(thoughts),
+                    released: releasedCount,
+                    ua: navigator.userAgent
+                } : null
+            };
+            stashFeedbackLocally(payload);   // saved before we even try the network
+            sendBtn.disabled = true;
+            st.className = ''; st.textContent = 'Sending…';
+            try {
+                const resp = await fetchWithTimeout(ROUTER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }, 12000);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                st.className = 'ok'; st.textContent = 'Thank you — sent.';
+                setTimeout(closeFeedbackSheet, 900);
+            } catch (e) {
+                // Honest about what happened, and clear that it wasn't lost.
+                st.className = 'error';
+                st.textContent = "Couldn't reach the server — your note is saved and will be here next time.";
+                sendBtn.disabled = false;
+            }
+        }
 
         // Flatten the whole tree into {id, label, path} for the router so it
         // can decide where a new thought belongs.
@@ -6125,14 +6602,20 @@
         function bumpCreated() { createdCount = Math.max(createdCount + 1, countAll(thoughts) + 1); }
         function makeThought(label, full) {
             bumpCreated();
+            const text = full || label;
+            const when = parseWhen(text);
+            const dueAt = when ? when.at.getTime() : null;
             return {
                 id: Date.now() + '-' + Math.floor(Math.random() * 1e6),
                 summary: summarizeSpeech(label || full),
                 short: '',
-                full: full || label,
-                urgency: scoreUrgency(full || label),
-                importance: guessImportance(full || label),
-                type: guessType(full || label),
+                full: text,
+                dueAt,                       // real deadline, or null
+                dueHadTime: when ? !!when.hadTime : false,
+                doneAt: null,                // set when COMPLETED (vs discarded)
+                urgency: scoreUrgency(text, dueAt),
+                importance: guessImportance(text),
+                type: guessType(text),
                 createdAt: Date.now(),
                 children: [],
                 parentId: null,
@@ -7865,6 +8348,13 @@
             sfx(); // unlock audio inside the user gesture
             const hit = findHit(clientX, clientY);
             if (!hit) {
+                // Tapping outside dismisses ONE layer at a time, outermost
+                // first — never the whole stack in a single tap.
+                const mp = document.getElementById('move-picker');
+                if (mp && mp.classList.contains('open')) {
+                    mp.classList.remove('open');
+                    return;
+                }
                 const uo = document.getElementById('untangle-out');
                 if (uo && uo.classList.contains('show')) {
                     // Tapping outside while Untangle's results are showing
@@ -8130,10 +8620,10 @@
                 retier(null);
                 if (openThoughtObj) {
                     retier(openThoughtObj.thought);
-                    if (openThoughtObj.el) fitTextToCircle(openThoughtObj.el, openThoughtObj.thought.summary, radiusToPx(openThoughtObj.restR));
+                    if (openThoughtObj.el) fitTextToCircle(openThoughtObj.el, openThoughtObj.thought.summary, radiusToPxBase(openThoughtObj.restR));
                 }
                 for (const o of objects) {
-                    if (o.role === 'thought' && o.el) fitTextToCircle(o.el, labelFor(o), radiusToPx(o.restR || o.r));
+                    if (o.role === 'thought' && o.el) fitTextToCircle(o.el, labelFor(o), radiusToPxBase(o.restR || o.r));
                 }
             });
         }
@@ -8155,6 +8645,7 @@
             // lasts 4s — force-clear it if one ever sticks.
             if (now - lastFloaterSync > 1100) {
                 lastFloaterSync = now;
+                reconcileSceneWithTree();
                 syncFloaters();
             }
             if (transitioning) {
@@ -8406,7 +8897,16 @@
                 const px = jsToPixelX(o.dispX);
                 const py = jsToPixelY(o.dispY);
                 const restR = o.restR || o.rTarget || o.r || 0.001;
-                const radiusRatio = Math.min(Math.max(o.r / restR, 0), 1.6);
+                // Scale the label against the radius it was genuinely fitted
+                // at (in the same pixel space we're rendering in now), so the
+                // text can never drift out of sync with the bubble — whatever
+                // resized the bubble, and whatever camera was active at fit
+                // time. Falls back to the old restR ratio only if a label
+                // somehow predates this bookkeeping.
+                const fitPx = o.el._fitPxRadius;
+                const radiusRatio = (fitPx > 0)
+                    ? Math.min(Math.max(radiusToPx(o.r) / fitPx, 0), 1.6)
+                    : Math.min(Math.max(o.r / restR, 0), 1.6);
 
                 // Position + centering + scale all live in one transform:
                 // a single compositor-only write per label per frame — no
