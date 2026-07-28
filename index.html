@@ -1820,6 +1820,24 @@
         #send-status { min-height: 18px; text-align: center; color: var(--ink-dim); font-size: 12.5px; font-weight: 700; margin-top: 6px; }
         #send-status.ok { color: rgb(157,196,168); }
         #send-status.bad { color: rgb(232,154,138); }
+        #send-search { display: flex; gap: 8px; margin-top: 12px; }
+        #send-field {
+            flex: 1; display: flex; align-items: center; gap: 3px; padding: 0 14px;
+            border-radius: var(--r-pill); background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.12); color: var(--ink-faint);
+            font-family: 'Quicksand',sans-serif; font-size: 15px; font-weight: 700;
+        }
+        #send-input {
+            flex: 1; min-width: 0; padding: 12px 0; background: none; border: none; outline: none;
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 14.5px; font-weight: 700;
+        }
+        #send-input::placeholder { color: var(--ink-faint); font-weight: 600; font-size: 13px; }
+        #send-find {
+            flex: 0 0 auto; padding: 12px 20px; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: rgba(235,240,248,.94); color: #10141f;
+            font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
+        #send-find:disabled { opacity: .5; }
         #send-link, #send-cancel {
             width: 100%; margin-top: 9px; padding: 13px 0; border-radius: var(--r-pill);
             cursor: pointer; font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
@@ -1827,6 +1845,112 @@
         #send-link { background: rgba(255,255,255,.07); border: 1px solid var(--glass-border); color: var(--ink); }
         #send-cancel { background: none; border: none; color: var(--ink-faint); font-size: 13px; }
         #send-link:active { transform: scale(.98); }
+        /* THE PROFILE MENU. Settings had become the junk drawer; this is the
+           front door to everything that is about YOU rather than about a
+           thought. Order is deliberate: Lists is what you touch daily,
+           Friends occasionally, Settings rarely. */
+        #menu-sheet {
+            position: fixed; inset: 0; z-index: 999640;
+            display: flex; align-items: flex-end; justify-content: center;
+            background: rgba(4,6,12,.58);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none; visibility: hidden;
+            transition: opacity .24s ease;
+        }
+        #menu-sheet.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        #menu-inner {
+            width: 100%; max-width: 460px;
+            padding: 18px 14px calc(env(safe-area-inset-bottom,0px) + 16px);
+            border-radius: 28px 28px 0 0;
+            background: linear-gradient(168deg, rgba(24,30,45,.98), rgba(13,17,26,.99));
+            border-top: 1px solid rgba(255,255,255,.13);
+            box-shadow: 0 -18px 50px rgba(0,0,0,.5);
+        }
+        #menu-you { display: flex; align-items: center; gap: 11px; padding: 4px 8px 14px; }
+        #menu-av {
+            width: 38px; height: 38px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(140deg, rgba(169,200,232,.85), rgba(157,196,168,.7));
+            color: #0d1119; font-size: 15px; font-weight: 800;
+        }
+        #menu-name { color: var(--ink); font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 16px; font-weight: 800; }
+        .menu-row {
+            width: 100%; display: flex; align-items: center; gap: 13px;
+            padding: 14px 14px; margin-bottom: 7px; border-radius: 18px; cursor: pointer;
+            background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 15px; font-weight: 700;
+            text-align: left; transition: background .16s ease, transform .12s ease;
+        }
+        .menu-row:active { transform: scale(.985); background: rgba(255,255,255,.09); }
+        .menu-ico { flex: 0 0 22px; display: inline-flex; color: var(--ink-dim); }
+        .menu-ico svg { width: 21px; height: 21px; }
+        .menu-main { flex: 1; }
+        .menu-sub { display: block; color: var(--ink-faint); font-size: 11.5px; font-weight: 600; margin-top: 2px; }
+        .menu-chev { width: 17px; height: 17px; color: var(--ink-faint); flex-shrink: 0; }
+        #menu-people-badge {
+            min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px; display: none;
+            align-items: center; justify-content: center;
+            background: rgb(232,154,138); color: #17110f;
+            font-family: 'Baloo 2',sans-serif; font-size: 11px; font-weight: 800;
+        }
+        #menu-people-badge.show { display: inline-flex; }
+        #menu-cancel {
+            width: 100%; margin-top: 6px; padding: 13px 0;
+            background: none; border: none; cursor: pointer;
+            color: var(--ink-faint); font-family: 'Quicksand',sans-serif; font-size: 13.5px; font-weight: 700;
+        }
+        /* LISTS. Tick things off, then let the whole thing go. */
+        #lists-page {
+            position: fixed; inset: 0; z-index: 64;
+            background: radial-gradient(ellipse at 50% 28%, #101a2e 0%, #080c17 58%, #04060c 100%);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top,0px) + 12px) 0 calc(env(safe-area-inset-bottom,0px) + 14px);
+            opacity: 0; pointer-events: none; visibility: hidden;
+            transition: opacity .28s ease;
+        }
+        #lists-page.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        #lists-body { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 0 16px; }
+        .cl-card {
+            padding: 15px 16px; margin-bottom: 10px; border-radius: 20px; cursor: pointer;
+            background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.09);
+        }
+        .cl-card:active { background: rgba(255,255,255,.075); }
+        .cl-card.done { opacity: .6; }
+        .cl-title { color: var(--ink); font-size: 15px; font-weight: 700; }
+        .cl-meta { color: var(--ink-faint); font-size: 12px; font-weight: 600; margin-top: 5px; }
+        .cl-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.09); margin-top: 10px; overflow: hidden; }
+        .cl-bar i { display: block; height: 100%; background: linear-gradient(90deg, rgba(169,200,232,.9), rgba(157,196,168,.9)); transition: width .3s ease; }
+        .cl-item {
+            display: flex; align-items: flex-start; gap: 11px;
+            padding: 12px 10px; border-radius: 13px; cursor: pointer;
+            transition: background .15s ease;
+        }
+        .cl-item:active { background: rgba(255,255,255,.06); }
+        .cl-box {
+            flex: 0 0 21px; width: 21px; height: 21px; margin-top: 1px; border-radius: 7px;
+            border: 1.7px solid rgba(255,255,255,.28);
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: background .16s ease, border-color .16s ease;
+        }
+        .cl-box svg { width: 13px; height: 13px; opacity: 0; transform: scale(.6);
+            transition: opacity .16s ease, transform .2s cubic-bezier(.34,1.56,.64,1);
+            fill: none; stroke: #0e1219; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+        .cl-item.done .cl-box { background: rgb(157,196,168); border-color: rgb(157,196,168); }
+        .cl-item.done .cl-box svg { opacity: 1; transform: scale(1); }
+        .cl-item.done .cl-text { opacity: .45; text-decoration: line-through; }
+        .cl-text { flex: 1; color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.45; }
+        #cl-finish {
+            margin: 18px 0 6px; width: 100%; padding: 15px 0; border-radius: var(--r-pill);
+            border: none; cursor: pointer; color: #0e1219;
+            background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
+            box-shadow: 0 8px 22px rgba(120,160,220,.24);
+            font-family: 'Quicksand',sans-serif; font-size: 14.5px; font-weight: 700;
+            animation: cardPartIn .45s cubic-bezier(.22,1,.36,1) both;
+        }
+        #cl-finish:active { transform: scale(.98); }
+        .cl-empty { padding: 40px 22px; text-align: center; color: var(--ink-faint); font-size: 13.5px; font-weight: 600; line-height: 1.6; white-space: pre-line; }
+        .cl-del { margin-top: 14px; width: 100%; padding: 12px 0; background: none; border: none;
+                  cursor: pointer; color: var(--ink-faint); font-size: 12.5px; font-weight: 700; }
         /* PEOPLE. Friends, requests and bubbles people sent you. Deliberately
            NOT in Settings: settings are things you configure once and leave,
            and this is somewhere you come back to. */
@@ -2593,7 +2717,7 @@
             <div class="howto-section">
                 <h3>What is stored</h3>
                 <p><b>On your device:</b> your thoughts, deadlines and Old Bubbles.</p>
-                <p><b>In our database, only if you sign in:</b> a copy of those, so your devices stay in step. Your email address, to sign you in. Your username, so a shared bubble can say who sent it. Any bubble you deliberately share.</p>
+                <p><b>In our database, only if you sign in:</b> a copy of those, so your devices stay in step. Your email address, to sign you in. Your username, so a shared bubble can say who sent it. Any bubble you deliberately share or send. Bubbles other people send you, until you add or discard them. Your friends, friend requests and anyone you block. Your best game score, if you play. Your lists.</p>
                 <p><b>Never stored:</b> anything you type while signed out.</p>
             </div>
             <div class="howto-section">
@@ -2604,7 +2728,8 @@
             </div>
             <div class="howto-section">
                 <h3>Sharing a bubble</h3>
-                <p>A share is a snapshot saved with a random link. Anyone holding that link can open it once they are signed in. The link is unguessable, but it is not a password, so treat it like any link you send. Editing the original afterwards does not change what you already sent.</p>
+                <p>A share is a snapshot, either saved with a random link or addressed to someone in the app. Anyone holding a link can open it once signed in; the link is unguessable but is not a password, so treat it like any link you send. Editing the original afterwards does not change what you already sent.</p>
+                <p>Anyone can send you a bubble by username. Blocking them stops it, and that is enforced by the database rather than the interface.</p>
             </div>
             <div class="howto-section">
                 <h3>What we never do</h3>
@@ -2613,7 +2738,7 @@
             <div class="howto-section">
                 <h3>Your control</h3>
                 <p><b>Export Your Data</b> gives you the whole lot as a file. <b>Delete Account</b> permanently removes your account and its synced data. <b>Delete</b> on a bubble moves it to Old Bubbles; Delete Forever there removes it for good. Using the app signed out syncs nothing at all.</p>
-                <p>Deleting your account removes your synced thoughts, profile and username, and stops any links you shared. Copies other people already added to their own galaxies are theirs and stay with them.</p>
+                <p>Deleting removes everything other people can see straight away: shared bubbles, friends, your leaderboard score. You are signed out and this device is wiped. Your own synced thoughts are held for <b>7 days</b> so a mistaken tap can be undone, then permanently deleted, and signing in during that window offers to restore the account. Copies other people already added to their own galaxies are theirs and stay with them.</p>
             </div>
             <div class="howto-section">
                 <h3>Children</h3>
@@ -2640,88 +2765,49 @@
         </div>
         <div id="howto-scroll">
             <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <circle cx="150" cy="42" r="30" fill="none" stroke="#A9C8E8" stroke-width="1.6" opacity="0.9"/>
-                    <circle cx="150" cy="42" r="30" fill="rgba(169,200,232,0.06)"/>
-                    <circle cx="160" cy="32" r="3.5" fill="#fff" opacity="0.9"/>
-                    <path d="M60 42 q 10 -14 20 0 q 10 14 20 0 q 10 -14 20 0" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
-                    <path d="M240 42 q -10 -14 -20 0 q -10 14 -20 0" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                <h3>Speak your mind</h3>
-                <p>Tap the big bubble (or the mic in the dock) and just talk, a task, an idea, a worry, anything. Stop talking and it captures itself.</p>
-                <p>Say several things in one breath and they become separate bubbles automatically.</p>
+                <h3>Say it, don't file it</h3>
+                <p>Tap the big bubble and talk. Mindorb works out what it's about and puts it where it belongs. No folders, no tags, no deciding.</p>
+                <p>Prefer to type? The keyboard button in the dock does the same thing.</p>
             </div>
             <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <circle cx="110" cy="42" r="26" fill="none" stroke="#9DC4A8" stroke-width="1.5" opacity="0.9"/>
-                    <circle cx="185" cy="28" r="13" fill="none" stroke="#E8C182" stroke-width="1.3" opacity="0.85"/>
-                    <circle cx="200" cy="60" r="10" fill="none" stroke="#E89A8A" stroke-width="1.3" opacity="0.85"/>
-                    <path d="M138 38 q 18 -10 34 -8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="3 4"/>
-                    <path d="M136 50 q 26 10 54 8" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="3 4"/>
-                </svg>
-                <h3>It organizes itself</h3>
-                <p>Every thought files itself into the right bubble, related things cluster together, new topics start new bubbles. You never sort anything by hand.</p>
-                <p>Disagree with where something landed? Open it and use Move.</p>
+                <h3>It hears deadlines</h3>
+                <p>Say "tonight", "by Friday", "in three days" and it becomes a real deadline. Overdue things drift to the front of your galaxy on their own, and the app tells you when something is due when you open it.</p>
+                <p>Say "every Tuesday" or "monthly" and it repeats. Letting go of a repeating thought moves it to its next occurrence instead of filing it away.</p>
             </div>
             <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <circle cx="150" cy="42" r="34" fill="none" stroke="#A9C8E8" stroke-width="1.6" opacity="0.9"/>
-                    <circle cx="138" cy="36" r="9" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
-                    <circle cx="166" cy="50" r="7" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.2"/>
-                    <circle cx="160" cy="28" r="5" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.1"/>
-                </svg>
-                <h3>Every bubble is a world</h3>
-                <p>Tap any bubble to dive inside it. Speak in there to add thoughts inside that topic. Bubbles inside bubbles, as deep as your mind goes.</p>
-                <p>The trail at the top shows where you are, tap it or the home button to fly back out.</p>
+                <h3>Let go, or delete</h3>
+                <p><b>Let go</b> is for things you finished. <b>Delete</b> is for things that shouldn't have been there. Both are recoverable from Old Bubbles, and both tell you which one happened.</p>
             </div>
             <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <rect x="30" y="30" width="56" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-                    <rect x="96" y="30" width="50" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-                    <rect x="156" y="30" width="42" height="24" rx="12" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-                    <rect x="208" y="30" width="62" height="24" rx="12" fill="rgba(235,240,248,0.9)"/>
-                    <text x="58" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Unpack</text>
-                    <text x="121" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Move</text>
-                    <text x="177" y="46" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="sans-serif">Edit</text>
-                    <text x="239" y="46" text-anchor="middle" fill="#10141f" font-size="10" font-weight="700" font-family="sans-serif">Let go</text>
-                </svg>
-                <h3>Finishing a thought</h3>
-                <p><b>Let go</b> is the everyday one: you’re finished with it, so it leaves your galaxy. <b>Delete</b> is for things that shouldn’t have been there at all. Both land in Old Bubbles where you can bring them back, but Mindorb remembers which was which.</p>
-                <p><b>Unpack</b> talks a tangled thought through with you and splits it into separate bubbles. <b>Move</b> refiles it anywhere. <b>Edit</b> rewords it.</p>
-                <p>Clearing things out is the point: this isn't a list that grows forever.</p>
-            </div>
-            <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <rect x="60" y="22" width="180" height="18" rx="9" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
-                    <circle cx="72" cy="31" r="4" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.4"/>
-                    <line x1="75" y1="34" x2="79" y2="38" stroke="rgba(255,255,255,0.5)" stroke-width="1.4" stroke-linecap="round"/>
-                    <rect x="60" y="48" width="180" height="10" rx="5" fill="rgba(255,255,255,0.05)"/>
-                    <rect x="60" y="62" width="140" height="10" rx="5" fill="rgba(255,255,255,0.05)"/>
-                </svg>
-                <h3>Find anything</h3>
-                <p>The list button in the dock opens All Thoughts, your whole galaxy as a scrollable tree, with search at the top. Tap any row to fly straight to that bubble.</p>
-            </div>
-            <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <circle cx="150" cy="40" r="24" fill="none" stroke="#A9C8E8" stroke-width="1.5" opacity="0.9"/>
-                    <text x="150" y="45" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="14" font-family="sans-serif">?</text>
-                    <path d="M108 62 q 42 18 84 0" fill="none" stroke="rgba(169,200,232,0.5)" stroke-width="1.4" stroke-dasharray="4 4"/>
-                </svg>
                 <h3>Ask your galaxy</h3>
-                <p>Instead of adding a thought, ask a question out loud, "what did I say about the trip?", "what should I focus on?", and it answers from everything you've captured.</p>
+                <p>Ask out loud: "what's urgent", "what do I need from the shop", "what was that thing about the grill". It answers from what you actually wrote down.</p>
+                <p>When the answer is really a list, you can keep it as one.</p>
             </div>
             <div class="howto-section">
-                <svg viewBox="0 0 300 84">
-                    <rect x="70" y="20" width="70" height="44" rx="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
-                    <line x1="80" y1="32" x2="130" y2="32" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="80" y1="42" x2="120" y2="42" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="80" y1="52" x2="126" y2="52" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
-                    <path d="M150 42 h 40" stroke="rgba(169,200,232,0.6)" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M184 36 l 8 6 l -8 6" fill="none" stroke="rgba(169,200,232,0.6)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="222" cy="42" r="16" fill="none" stroke="#9DC4A8" stroke-width="1.5" opacity="0.9"/>
-                </svg>
-                <h3>Bring your old notes</h3>
-                <p>Paste a brain dump, a notes-app export, or any wall of text via the + button in All Thoughts, it gets untangled into organized bubbles automatically.</p>
+                <h3>Lists</h3>
+                <p>Lists live behind your avatar, top right. They're separate from bubbles on purpose: a list is something you tick through and finish, a bubble is something you keep.</p>
+                <p>Tick everything off and it offers to let go of the bubbles the list came from, so clearing the list clears your galaxy too.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Getting things in from elsewhere</h3>
+                <p>The + in All Thoughts takes a whole wall of text and untangles it into organised bubbles in one go. It can also read a photo of your handwritten notes.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Sharing</h3>
+                <p>Share sends a bubble either straight to a friend inside the app, or as a link for anyone who isn't on it. A shared bubble arrives as a card and says who it's from.</p>
+                <p>Friends live behind your avatar too. Adding someone is a request they accept, and only accepted friends can send you bubbles.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Going deeper</h3>
+                <p>Tap a bubble to open it. Anything you say while it's open goes inside it. <b>Unpack</b> asks the AI to break a tangled thought into smaller ones.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Signed out vs signed in</h3>
+                <p>Signed out, everything stays on this device. Signing in syncs across your devices and is what makes sharing and friends work.</p>
+            </div>
+            <div class="howto-section">
+                <h3>A quiet minute</h3>
+                <p>There's a bubble-popping game in Settings, with a leaderboard you can share with friends. Hazard bubbles are the red ones: leave those alone.</p>
             </div>
         </div>
     </div>
@@ -2876,6 +2962,13 @@
                     <span class="settings-row-main">Send Feedback</span>
                     <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
                 </button>
+                <button id="support-open-btn" class="settings-row settings-row-nav">
+                    <span class="settings-row-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a3 3 0 1 1 3.6 3.6c-.6.2-.8.7-.8 1.3v.3"/><path d="M12 17.4v.1"/></svg>
+                    </span>
+                    <span class="settings-row-main">Contact Support</span>
+                    <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                </button>
             </div>
             <div class="settings-section">
                 <div class="settings-section-title">About</div>
@@ -2960,6 +3053,43 @@
         <button id="mp-cancel">Cancel</button>
     </div>
 
+    <div id="menu-sheet" class="ui-block">
+        <div id="menu-inner">
+            <div id="menu-you">
+                <span id="menu-av"></span>
+                <span id="menu-name"></span>
+            </div>
+            <button class="menu-row" id="menu-lists">
+                <span class="menu-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5l2 2 3-3M4 13.5l2 2 3-3M4 20l2 2 3-3M12 7h8M12 14h8M12 21h8"/></svg></span>
+                <span class="menu-main">Lists<span class="menu-sub" id="menu-lists-sub"></span></span>
+                <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="menu-row" id="menu-people">
+                <span class="menu-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 19a6 6 0 0 1 12 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M17.5 19a6 6 0 0 0-1.6-4.1"/></svg></span>
+                <span class="menu-main">Friends<span class="menu-sub" id="menu-people-sub"></span></span>
+                <span id="menu-people-badge"></span>
+                <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="menu-row" id="menu-settings">
+                <span class="menu-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2L5.6 5.6"/></svg></span>
+                <span class="menu-main">Settings</span>
+                <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button id="menu-cancel">Close</button>
+        </div>
+    </div>
+
+    <div id="lists-page" class="ui-block">
+        <div id="howto-head">
+            <button class="page-back-btn" id="lists-close" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <h2 id="lists-title">Lists</h2>
+            <span class="page-head-spacer"></span>
+        </div>
+        <div id="lists-body"></div>
+    </div>
+
     <button id="people-btn" class="ui-block" aria-label="People">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></svg>
         <span id="people-badge"></span>
@@ -2970,6 +3100,14 @@
             <h3 id="send-title">Send this bubble</h3>
             <div id="send-list"></div>
             <div id="send-status"></div>
+            <div id="send-search">
+                <div id="send-field">
+                    <span>@</span>
+                    <input id="send-input" type="text" maxlength="20" placeholder="send to a username"
+                           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                </div>
+                <button id="send-find">Send</button>
+            </div>
             <button id="send-link">Copy a link instead</button>
             <button id="send-cancel">Cancel</button>
         </div>
@@ -4223,7 +4361,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25e';
+        const BUILD_TAG = '2026-07-25j';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4438,6 +4576,17 @@
             }, 420);
         }
         async function saveUsername() {
+            // The 7-day limit is enforced by a database trigger, so the check
+            // here is only to explain it BEFORE you type a name you cannot
+            // have yet. The server is what actually holds the line.
+            try {
+                const { data: days } = await sb.rpc('username_cooldown_days');
+                if (typeof days === 'number' && days > 0) {
+                    setUnState('You can change your username again in ' + days +
+                               (days === 1 ? ' day.' : ' days.'), 'bad');
+                    return;
+                }
+            } catch (e) {}
             const name = $('un-input').value.trim();
             if (!USERNAME_RE.test(name) || !sb || !currentUser) return;
             const btn = $('un-save');
@@ -4902,6 +5051,14 @@
                 if (b.x > w - b.r) { b.x = w - b.r; b.vx = -Math.abs(b.vx) * 0.7; }
                 // Drifted off the top — quietly reappear from below.
                 if (b.y < -b.r * 1.5) {
+                    // A hazard escaping is you playing WELL: leaving it alone
+                    // is the whole point of it. Punishing that made the correct
+                    // move feel like a mistake. It just leaves.
+                    if (b.kind === 'hazard') {
+                        Object.assign(b, pgSpawn(w, h, true));
+                        pgDrawBubble(ctx, b, now);
+                        continue;
+                    }
                     // It escaped. A run that can END is what makes a score
                     // worth comparing on a leaderboard at all.
                     if (!pgOver) {
@@ -5117,9 +5274,8 @@
                 if (!ids.length) {
                     const e = document.createElement('div');
                     e.className = 'pp-empty';
-                    e.textContent = 'No friends yet. A link works for anyone.';
+                    e.textContent = 'No friends yet. Send to a username below, or use a link.';
                     list.appendChild(e);
-                    return;
                 }
                 const { data: profs } = await sb.from('profiles').select('user_id, username').in('user_id', ids);
                 (profs || []).forEach(p => {
@@ -5265,6 +5421,8 @@
             const sheet = $('share-arrival');
             if (!sheet) return;
             arrivedShareToken = token;
+            // A redirect wipes memory, so park it somewhere that survives one.
+            try { sessionStorage.setItem('mindorb-pending-share', token); } catch (e) {}
             // Know the answer before painting. Waiting a moment beats showing
             // the wrong state and correcting it a frame later.
             try { await Promise.race([authReady, new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
@@ -5349,6 +5507,7 @@
         }
         function closeSharedBubble() {
             arrivedShareToken = null;   // dismissed on purpose
+            try { sessionStorage.removeItem('mindorb-pending-share'); } catch (e) {}
             stopShareBubble();
             const sheet = $('share-arrival');
             if (sheet) {
@@ -5440,10 +5599,11 @@
         function alreadyAdopted(token) {
             const rootId = adoptedShares()[token];
             if (!rootId) return false;
-            // Still counts only while the bubble it made is actually there.
+            // Only while the bubble is actually IN YOUR GALAXY. Being in Old
+            // Bubbles used to count, so deleting a shared bubble left you
+            // unable to accept it again, which is the opposite of what
+            // deleting it should mean.
             if (findThoughtById(rootId)) return true;
-            const inArchive = (releasedArchive || []).some(e => e && e.thought && e.thought.id === rootId);
-            if (inArchive) return true;
             try {
                 const all = adoptedShares();
                 delete all[token];
@@ -5559,13 +5719,18 @@
             const av = document.createElement('span');
             av.className = 'lb-av'; av.textContent = (name || '?')[0].toUpperCase();
             const n = document.createElement('span');
-            n.className = 'lb-name'; n.textContent = (isMe ? 'You' : '@' + name);
+            n.className = 'lb-name'; n.textContent = (isMe ? 'You' : name);
             const s = document.createElement('span');
             s.className = 'lb-score'; s.textContent = score;
             row.append(r, av, n, s);
             return row;
         }
+        // Switching tabs fires a new load while the previous one is still
+        // awaiting. Both clear the list, then both append when they resolve,
+        // which is why every other tap showed everyone twice.
+        let lbRequest = 0;
         async function loadLeaderboard() {
+            const myRequest = ++lbRequest;
             const list = $('lb-list'), status = $('lb-status');
             list.innerHTML = '';
             status.className = '';
@@ -5625,6 +5790,8 @@
                     const prev = bestBy.get(key);
                     if (!prev || (row.best || 0) > (prev.best || 0)) bestBy.set(key, row);
                 }
+                // Superseded by a newer tab press? Do not write.
+                if (myRequest !== lbRequest) return;
                 [...bestBy.values()]
                     .sort((a, b) => (b.best || 0) - (a.best || 0))
                     .slice(0, 50)
@@ -5934,7 +6101,7 @@
             av.textContent = (name || '?')[0].toUpperCase();
             const nm = document.createElement('span');
             nm.className = 'pp-name';
-            const b = document.createElement('b'); b.textContent = '@' + name;
+            const b = document.createElement('b'); b.textContent = name;
             nm.appendChild(b);
             if (sub) { const sp = document.createElement('span'); sp.textContent = sub; nm.appendChild(sp); }
             const act = document.createElement('span');
@@ -6041,7 +6208,9 @@
             inboxCache.forEach(item => {
                 const clean = sanitizeSharedPayload(item.payload);
                 const title = clean ? clean.summary : 'A bubble';
-                body.appendChild(ppRow(item.from_username || 'someone', title, [
+                const known = friendCache.some(f => f.status === 'accepted');
+                body.appendChild(ppRow(item.from_username || 'someone',
+                    title + (item.from_is_friend === false ? '  \u00b7  not in your friends' : ''), [
                     { label: 'Discard', onClick: () => discardInbox(item.id) },
                     { label: 'Add', primary: true, onClick: () => adoptFromInbox(item) }
                 ]));
@@ -6142,8 +6311,177 @@
                     badge.textContent = n > 9 ? '9+' : String(n);
                     badge.classList.toggle('show', n > 0);
                 }
+                const mb = $('menu-people-badge');
+                if (mb) {
+                    mb.textContent = n > 9 ? '9+' : String(n);
+                    mb.classList.toggle('show', n > 0);
+                }
+                const ps = $('menu-people-sub');
+                if (ps) ps.textContent = n > 0
+                    ? (n + (n === 1 ? ' thing waiting' : ' things waiting'))
+                    : 'friends and shared bubbles';
                 if (dot) dot.classList.toggle('show', (unread || []).length > 0);
             } catch (e) {}
+        }
+        // ===== LISTS =====
+        // A list is a working surface: you tick through it and then it is over.
+        // That is the opposite of a thought, which you keep. Keeping them apart
+        // is the whole point.
+        let openListId = null;
+        function makeChecklist(title, items, fromThoughtIds) {
+            const list = {
+                id: 'cl-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 9999),
+                title: (title || 'List').trim().slice(0, 80) || 'List',
+                items: (items || []).filter(t => t && String(t).trim())
+                        .slice(0, 60).map(t => ({ text: String(t).trim().slice(0, 160), done: false })),
+                createdAt: Date.now(),
+                doneAt: null,
+                fromThoughtIds: Array.isArray(fromThoughtIds) ? fromThoughtIds.slice(0, 60) : []
+            };
+            checklists.unshift(list);
+            saveState();
+            return list;
+        }
+        function listProgress(l) {
+            const total = (l.items || []).length;
+            const done = (l.items || []).filter(i => i.done).length;
+            return { done, total, complete: total > 0 && done === total };
+        }
+        function openLists() {
+            const p = $('lists-page');
+            if (!p) return;
+            openListId = null;
+            p.classList.add('open');
+            renderLists();
+        }
+        function closeLists() {
+            const p = $('lists-page');
+            if (!p) return;
+            if (openListId) { openListId = null; renderLists(); return; }  // back to the index first
+            p.classList.remove('open');
+        }
+        function renderLists() {
+            const body = $('lists-body'), title = $('lists-title');
+            if (!body) return;
+            body.innerHTML = '';
+            if (openListId) { renderOneList(body, title); return; }
+            title.textContent = 'Lists';
+            if (!checklists.length) {
+                const e = document.createElement('div');
+                e.className = 'cl-empty';
+                e.textContent = 'No lists yet.\n\nAsk something like "what do I need from the shop" or "what\u2019s urgent today" and you can keep the answer as a list.';
+                body.appendChild(e);
+                return;
+            }
+            checklists.forEach(l => {
+                const p = listProgress(l);
+                const card = document.createElement('div');
+                card.className = 'cl-card' + (p.complete ? ' done' : '');
+                const t = document.createElement('div');
+                t.className = 'cl-title'; t.textContent = l.title;
+                const m = document.createElement('div');
+                m.className = 'cl-meta';
+                m.textContent = p.total
+                    ? (p.done + ' of ' + p.total + (p.complete ? ' \u00b7 finished' : ' done'))
+                    : 'empty';
+                const bar = document.createElement('div');
+                bar.className = 'cl-bar';
+                const fill = document.createElement('i');
+                fill.style.width = (p.total ? Math.round(p.done / p.total * 100) : 0) + '%';
+                bar.appendChild(fill);
+                card.append(t, m, bar);
+                card.addEventListener('click', () => { openListId = l.id; renderLists(); });
+                body.appendChild(card);
+            });
+        }
+        function renderOneList(body, title) {
+            const l = checklists.find(x => x.id === openListId);
+            if (!l) { openListId = null; renderLists(); return; }
+            title.textContent = l.title;
+            l.items.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = 'cl-item' + (item.done ? ' done' : '');
+                const box = document.createElement('span');
+                box.className = 'cl-box';
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M5 13l4 4L19 7');
+                svg.appendChild(path); box.appendChild(svg);
+                const txt = document.createElement('span');
+                txt.className = 'cl-text'; txt.textContent = item.text;
+                row.append(box, txt);
+                row.addEventListener('click', () => {
+                    item.done = !item.done;
+                    buzz([8]);
+                    saveState();
+                    renderLists();
+                });
+                body.appendChild(row);
+            });
+            const p = listProgress(l);
+            if (p.complete) {
+                // The payoff. Clearing a list should also clear what it came
+                // from, otherwise the bubbles sit there looking undone forever.
+                const fin = document.createElement('button');
+                fin.id = 'cl-finish';
+                const related = (l.fromThoughtIds || []).filter(id => findThoughtById(id)).length;
+                fin.textContent = related
+                    ? ('All done. Let go of ' + related + (related === 1 ? ' bubble' : ' bubbles') + '?')
+                    : 'All done. Clear this list?';
+                fin.addEventListener('click', () => finishList(l));
+                body.appendChild(fin);
+            }
+            const del = document.createElement('button');
+            del.className = 'cl-del';
+            del.textContent = 'Delete this list';
+            del.addEventListener('click', () => {
+                checklists = checklists.filter(x => x.id !== l.id);
+                openListId = null;
+                saveState();
+                renderLists();
+            });
+            body.appendChild(del);
+        }
+        function finishList(l) {
+            let released = 0;
+            (l.fromThoughtIds || []).forEach(id => {
+                const found = removeFromTreeWithContext(id);
+                if (!found) return;
+                const stamp = Date.now();
+                (function mark(t) { if (!t) return; t.doneAt = stamp; (t.children || []).forEach(mark); })(found.thought);
+                archiveThought(found.thought, found.parentThought ? found.parentThought.id : null);
+                releasedCount++;
+                released++;
+            });
+            l.doneAt = Date.now();
+            checklists = checklists.filter(x => x.id !== l.id);
+            openListId = null;
+            saveState();
+            try { reconcileSceneWithTree(); syncFloaters(); updateDrawerUI(); } catch (e) {}
+            renderLists();
+            buzz([12, 26, 12, 30]);
+            showVoiceStatus(released
+                ? ('Done. ' + released + (released === 1 ? ' bubble' : ' bubbles') + ' let go.')
+                : 'List cleared.', { autoHideMs: 2600 });
+        }
+        function openMenu() {
+            const s = $('menu-sheet');
+            if (!s) return;
+            const name = currentUsername || (currentUser ? 'You' : 'Not signed in');
+            $('menu-av').textContent = (currentUsername || 'Y')[0].toUpperCase();
+            $('menu-name').textContent = name;
+            const ls = $('menu-lists-sub');
+            const active = checklists.filter(l => !listProgress(l).complete).length;
+            ls.textContent = checklists.length
+                ? (active ? active + ' unfinished' : 'all finished')
+                : 'nothing yet';
+            s.classList.add('open');
+            refreshPeopleBadge();
+        }
+        function closeMenu() {
+            const s = $('menu-sheet');
+            if (s) s.classList.remove('open');
         }
         function updateAccountRow() {
             const status = document.getElementById('account-status');
@@ -6171,6 +6509,37 @@
                 if (dangerSection) dangerSection.style.display = 'none';
             }
         }
+        // Nobody should appear as nameless. If someone has not chosen a handle,
+        // give them a real one: User + 4 digits, checked for collisions, and
+        // freed again the moment they pick something of their own.
+        async function ensureUsername() {
+            if (!sb || !currentUser || currentUsername) return;
+            for (let attempt = 0; attempt < 6; attempt++) {
+                // Widen to 5 digits if 4-digit space is getting crowded.
+                const digits = attempt < 4 ? 4 : 5;
+                const n = Math.floor(Math.random() * Math.pow(10, digits))
+                            .toString().padStart(digits, '0');
+                const candidate = 'User' + n;
+                try {
+                    const { data: taken } = await sb.from('profiles')
+                        .select('user_id').ilike('username', candidate).maybeSingle();
+                    if (taken) continue;
+                    const { error } = await sb.from('profiles').upsert(
+                        { user_id: currentUser.id, username: candidate },
+                        { onConflict: 'user_id' });
+                if (error && String(error.message || '').includes('USERNAME_COOLDOWN')) {
+                    const d = String(error.message).split(':').pop().trim();
+                    setUnState('You can change your username again in ' + d +
+                               (d === '1' ? ' day.' : ' days.'), 'bad');
+                    return;
+                }
+                    if (error) continue;      // someone took it in between
+                    currentUsername = candidate;
+                    updateAccountRow();
+                    return;
+                } catch (e) { return; }
+            }
+        }
         async function fetchUsername() {
             if (!sb || !currentUser) return;
             try {
@@ -6178,6 +6547,7 @@
                 currentUsername = data ? data.username : null;
                 updateAccountRow();
             } catch (e) {}
+                try { await ensureUsername(); } catch (e) {}
         }
         // Downloads everything — every thought, every archived one, and the
         // lifetime counters — as a single JSON file. This is the actual
@@ -6190,6 +6560,7 @@
                 mindorbBuild: BUILD_TAG,
                 thoughts: thoughts,
                 releasedArchive: releasedArchive,
+                checklists: checklists,
                 releasedCount: releasedCount,
                 createdCount: createdCount,
             };
@@ -6219,6 +6590,31 @@
                 { cancelLabel: 'Cancel', confirmLabel: 'Delete Account', danger: true }
             );
         }
+        // Signing in during the 7-day window is the natural moment to ask.
+        function offerAccountRestore(daysLeft) {
+            const msg = daysLeft > 0
+                ? ('This account is scheduled for deletion in ' + daysLeft +
+                   (daysLeft === 1 ? ' day' : ' days') + '.')
+                : 'This account is scheduled for deletion.';
+            showVoiceStatus(msg + ' Tap to restore it.', { autoHideMs: 9000, tapToAct: true });
+            const status = document.getElementById('voice-status');
+            if (!status) return;
+            const restore = async () => {
+                status.removeEventListener('click', restore);
+                try {
+                    const { data: ok } = await sb.rpc('restore_my_account');
+                    if (ok === false) {
+                        showVoiceStatus('That window has passed.', { error: true, autoHideMs: 3000 });
+                        return;
+                    }
+                    showVoiceStatus('Welcome back. Your account is restored.', { autoHideMs: 3000 });
+                    pullAndMerge(); fetchUsername();
+                } catch (e) {
+                    showVoiceStatus("Couldn't restore it right now.", { error: true, autoHideMs: 3000 });
+                }
+            };
+            status.addEventListener('click', restore);
+        }
         async function deleteAccountForever() {
             if (!sb || !currentUser) return;
             try {
@@ -6228,8 +6624,18 @@
                     return;
                 }
                 document.getElementById('settings-page').classList.remove('open');
-                showVoiceStatus('Account deleted', { autoHideMs: 2000 });
-                setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 900);
+                // The server call was the ONLY thing happening before: the
+                // session token stayed in storage so you were still signed in
+                // after the reload, and every thought was still on the device
+                // because they live in localStorage. Deleting has to clear
+                // both, or "Account deleted" is simply untrue.
+                try { await sb.auth.signOut(); } catch (e) {}
+                try { await signOutAndClear(); } catch (e) {}
+                currentUser = null;
+                currentUsername = null;
+                showVoiceStatus('Account deleted. You have 7 days to change your mind.',
+                                { autoHideMs: 4000 });
+                setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 1600);
             } catch (e) {
                 showVoiceStatus('Couldn\u2019t reach the server, check your connection', { error: true, autoHideMs: 3000 });
             }
@@ -6322,7 +6728,14 @@
                 try {
                     const { error } = await sb.auth.signInWithOAuth({
                         provider: 'google',
-                        options: { redirectTo: window.location.origin + window.location.pathname },
+                        options: {
+                            // KEEP the share token. pathname alone strips
+                            // "?b=TOKEN", so signing in from a shared link
+                            // dropped the bubble you came for and landed you
+                            // on an empty galaxy.
+                            redirectTo: window.location.origin + window.location.pathname +
+                                (arrivedShareToken ? ('?' + SHARE_PARAM + '=' + arrivedShareToken) : '')
+                        },
                     });
                     // On success the browser navigates away to Google immediately;
                     // this only runs if the request itself failed to start.
@@ -6413,10 +6826,23 @@
                         }
                     }
                 });
-                authReady = sb.auth.getSession().then(({ data }) => {
+                authReady = sb.auth.getSession().then(async ({ data }) => {
                     currentUser = data.session ? data.session.user : null;
                     updateAccountRow();
-                    if (currentUser) { pullAndMerge(); fetchUsername(); }
+                    if (currentUser) {
+                        // If this account is inside its deletion window, say so
+                        // and offer the way back before syncing anything.
+                        try {
+                            const { data: st } = await sb.rpc('my_account_state');
+                            const row = Array.isArray(st) ? st[0] : st;
+                            if (row && row.deleted_at) {
+                                const days = Math.max(0, Math.ceil(row.days_left || 0));
+                                offerAccountRestore(days);
+                                return;
+                            }
+                        } catch (e) {}
+                        pullAndMerge(); fetchUsername();
+                    }
                 }).catch(() => {});
                 // A tab left open never re-syncs on its own otherwise — it
                 // only ever pulled once, at boot. Without this, a release
@@ -6862,7 +7288,14 @@
             // A share link opens straight into the arrival screen.
             try {
                 const tok = new URL(location.href).searchParams.get(SHARE_PARAM);
-                if (tok && /^[a-z0-9]{6,24}$/i.test(tok)) setTimeout(() => openSharedBubble(tok), 900);
+                let shareTok = tok;
+                if (!shareTok) {
+                    // Came back from a sign-in redirect that dropped the query.
+                    try { shareTok = sessionStorage.getItem('mindorb-pending-share'); } catch (e) {}
+                }
+                if (shareTok && /^[a-z0-9]{6,24}$/i.test(shareTok)) {
+                    setTimeout(() => openSharedBubble(shareTok), 900);
+                }
             } catch (e) {}
             const lbCloseBtn = document.getElementById('lb-close');
             if (lbCloseBtn) lbCloseBtn.addEventListener('click', closeLeaderboard);
@@ -6890,6 +7323,15 @@
             if (pgBoard) pgBoard.addEventListener('click', openLeaderboard);
             const lbOpenBtn = document.getElementById('pg-trophy');
             if (lbOpenBtn) lbOpenBtn.addEventListener('click', openLeaderboard);
+            const supportOpen = document.getElementById('support-open-btn');
+            if (supportOpen) supportOpen.addEventListener('click', () => {
+                fbKind = 'support';
+                openFeedbackSheet();
+                const t = document.getElementById('fb-title');
+                if (t) t.textContent = 'Contact support';
+                const ta = document.getElementById('fb-text');
+                if (ta) ta.placeholder = "Tell us what went wrong and we'll get back to you.";
+            });
             const privacyRow = document.getElementById('privacy-row');
             if (privacyRow) privacyRow.addEventListener('click', () => {
                 // Rendered INSIDE the app. Both a relative link and
@@ -6951,9 +7393,14 @@
         let thoughts = [];
         let releasedCount = 0;
         let releasedArchive = []; // { thought, parentId, releasedAt } — permanent, never pruned
+        // CHECKLISTS. Deliberately NOT bubbles. A shopping list is a working
+        // surface you tick through and then throw away; a thought is something
+        // you keep. Turning lists into bubbles put disposable things into the
+        // place meant for durable ones, which is why it felt wrong.
+        let checklists = [];  // { id, title, items:[{text,done}], createdAt, doneAt, fromThoughtIds }
         let warnedStorage = false;
         function saveState() {
-            try { localStorage.setItem(STORE_KEY, JSON.stringify({ thoughts, releasedCount, createdCount, releasedArchive })); }
+            try { localStorage.setItem(STORE_KEY, JSON.stringify({ thoughts, releasedCount, createdCount, releasedArchive, checklists })); }
             catch (e) {
                 if (!warnedStorage) {
                     warnedStorage = true;
@@ -6971,6 +7418,7 @@
                     releasedCount = data.releasedCount || 0;
                     createdCount = data.createdCount || 0;
                     releasedArchive = Array.isArray(data.releasedArchive) ? data.releasedArchive : [];
+                    checklists = Array.isArray(data.checklists) ? data.checklists : [];
                     sanitizeTree();
                     migrateWhenFields();
                 }
@@ -9370,6 +9818,12 @@
         }
         function updateDrawerUI() {
             try { syncEmptyHint(); } catch (e) {}
+            // Rebuilding the whole list costs ~17ms with a few hundred
+            // thoughts, and this is called on every change AND every sweep.
+            // When the drawer is shut nobody can see the result, so do the
+            // cheap part (the dock badge and the counters) and stop. The list
+            // is rebuilt on open anyway.
+            const drawerVisible = drawerEl && drawerEl.classList.contains('open');
             drawerRowIndex = 0; // fresh stagger sequence each render pass
             // The dock's index button carries a live badge of the CURRENT
             // total thought count. Placed first, before any early return
@@ -9385,6 +9839,12 @@
             // Everything ever made is at least what's live plus what's gone.
             const lifeCreated = Math.max(createdCount, countAll(thoughts) + releasedCount);
             if (lifeCreated > createdCount) createdCount = lifeCreated;
+            // Counters and badge are done; the rest is list DOM.
+            if (!drawerVisible) {
+                const subEl = $('drawer-sub');
+                if (subEl) subEl.textContent = createdCount + ' created \u00b7 ' + releasedCount + ' cleared';
+                return;
+            }
             tweenStat(drawerSub, lifeCreated, releasedCount);
             const dt = $('drawer-title'); if (dt) dt.textContent = 'All Thoughts';
             drawerList.innerHTML = '';
@@ -9684,6 +10144,31 @@
         if (friendsInputEl) friendsInputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); friendsInputEl.blur(); addFriendFromPage(); }
         });
+        const sendFind = $('send-find');
+        const sendInput = $('send-input');
+        const sendByName = async () => {
+            const who = (sendInput.value || '').trim().replace(/^@/, '');
+            const status = $('send-status');
+            if (!who || !sendingThought) return;
+            if (currentUsername && who.toLowerCase() === currentUsername.toLowerCase()) {
+                status.className = 'bad'; status.textContent = "That's you."; return;
+            }
+            sendFind.disabled = true;
+            status.className = ''; status.textContent = 'Looking\u2026';
+            try {
+                const { data } = await sb.from('profiles')
+                    .select('user_id, username').ilike('username', who).maybeSingle();
+                if (!data) { status.className = 'bad'; status.textContent = 'No one goes by ' + who + '.'; return; }
+                await sendToFriend(data.user_id, data.username || who);
+                sendInput.value = '';
+            } catch (e) {
+                status.className = 'bad'; status.textContent = "Couldn't send that.";
+            } finally { sendFind.disabled = false; }
+        };
+        if (sendFind) sendFind.addEventListener('click', sendByName);
+        if (sendInput) sendInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); sendInput.blur(); sendByName(); }
+        });
         const sendLink = $('send-link');
         if (sendLink) sendLink.addEventListener('click', shareViaLink);
         const sendCancel = $('send-cancel');
@@ -9693,7 +10178,24 @@
             if (e.target === sendSheetEl) closeSendSheet();
         });
         const peopleBtn = $('people-btn');
-        if (peopleBtn) peopleBtn.addEventListener('click', openPeople);
+        if (peopleBtn) peopleBtn.addEventListener('click', openMenu);
+        const menuSheetEl = $('menu-sheet');
+        if (menuSheetEl) menuSheetEl.addEventListener('click', (e) => {
+            if (e.target === menuSheetEl) closeMenu();
+        });
+        const menuCancel = $('menu-cancel');
+        if (menuCancel) menuCancel.addEventListener('click', closeMenu);
+        const menuLists = $('menu-lists');
+        if (menuLists) menuLists.addEventListener('click', () => { closeMenu(); openLists(); });
+        const menuPeople = $('menu-people');
+        if (menuPeople) menuPeople.addEventListener('click', () => { closeMenu(); openPeople(); });
+        const menuSettings = $('menu-settings');
+        if (menuSettings) menuSettings.addEventListener('click', () => {
+            closeMenu();
+            document.getElementById('settings-page').classList.add('open');
+        });
+        const listsClose = $('lists-close');
+        if (listsClose) listsClose.addEventListener('click', closeLists);
         const peopleClose = $('people-close');
         if (peopleClose) peopleClose.addEventListener('click', closePeople);
         document.querySelectorAll('.people-tab').forEach(tab => {
@@ -9933,11 +10435,28 @@
                 localStorage.setItem(FEEDBACK_LOCAL_KEY, JSON.stringify(prev.slice(-20)));
             } catch (e) {}
         }
+        let fbKind = 'feedback';
         async function sendFeedback() {
+            // Also write it somewhere we can actually read and reply to. The
+            // Worker log alone was write-only, which is no good for support.
+            const _persist = async (kind, text) => {
+                if (!sb) return;
+                try {
+                    await sb.from('feedback').insert({
+                        user_id: currentUser ? currentUser.id : null,
+                        username: currentUsername || null,
+                        email: currentUser ? (currentUser.email || null) : null,
+                        kind, message: text,
+                        build: BUILD_TAG,
+                        user_agent: (navigator.userAgent || '').slice(0, 300)
+                    });
+                } catch (e) {}
+            };
             const textEl = document.getElementById('fb-text');
             const st = document.getElementById('fb-status');
             const sendBtn = document.getElementById('fb-send');
             const body = (textEl.value || '').trim();
+            if (body) { try { _persist(fbKind || 'feedback', body); } catch (e) {} }
             if (!body) { st.className = 'error'; st.textContent = 'Write something first.'; return; }
             const includeCtx = document.getElementById('fb-include-input').checked;
             const payload = {
@@ -10454,6 +10973,24 @@
             const unit = rep.every + (n > 1 ? 's' : '');
             return n === 1 ? ('Every ' + rep.every) : ('Every ' + n + ' ' + unit);
         }
+        // A stray mic event can produce a timestamp, a filler word or bare
+        // punctuation. Those became real bubbles ("00:00" was the common one).
+        // Deliberately narrow: a genuinely short thought like "gym", "$16" or
+        // "call mom" must still get through.
+        const FILLER_ONLY = /^(uh|um|umm|hmm|ah|ahh|er|erm|mm|mhm|huh|eh|oh|ok|okay)$/i;
+        function looksMeaningless(text) {
+            const t = String(text || '').trim();
+            if (!t) return true;
+            // Nothing but punctuation, symbols or whitespace.
+            if (!/[a-z0-9]/i.test(t)) return true;
+            // A clock reading and nothing else: 00:00, 0:00, 12:34:56.
+            if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(t)) return true;
+            // A run of zeros, or a lone digit or two with no other content.
+            if (/^0+$/.test(t)) return true;
+            // One filler noise.
+            if (FILLER_ONLY.test(t)) return true;
+            return false;
+        }
         function makeThought(label, full) {
             bumpCreated();
             const text = full || label;
@@ -10715,6 +11252,12 @@
             }
             const full = (fullText || '').trim();
             if (!full) return;
+            // Spamming the mic without speaking produced bubbles named "00:00"
+            // and the like. Nothing meaningful was said, so nothing is filed.
+            if (looksMeaningless(full)) {
+                showVoiceStatus("Didn't catch that", { autoHideMs: 1600 });
+                return;
+            }
             const thought = makeThought(full, full);
             // If a specific bubble is open, you're filing manually there;
             // otherwise it lands at root and the router decides.
@@ -11007,6 +11550,50 @@
         // "what did I say about that business idea last winter". The AI gets
         // a dated index of everything and answers with tappable references.
         let recallBusy = false;
+        // Builds the answer from real deadlines rather than asking the model.
+        // The app HOLDS every date, so a round trip would be slower and less
+        // accurate than simply reading them. Returns true if it handled it.
+        function answerWhatsDueLocally(q) {
+            const now = Date.now();
+            const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
+            const wantsToday = /\b(today|now|urgent|right now)\b/i.test(q);
+            const overdue = [], today = [], soon = [];
+            (function walk(list) {
+                for (const t of (list || [])) {
+                    if (t && typeof t.dueAt === 'number' && isFinite(t.dueAt) && !t.doneAt) {
+                        if (t.dueAt < now) overdue.push(t);
+                        else if (t.dueAt <= endOfDay.getTime()) today.push(t);
+                        else if (t.dueAt <= now + 7 * 86400000) soon.push(t);
+                    }
+                    walk(t && t.children);
+                }
+            })(thoughts);
+            const picked = wantsToday ? overdue.concat(today) : overdue.concat(today, soon);
+            if (!picked.length) {
+                showRecallCard(q,
+                    (overdue.length + today.length + soon.length) === 0
+                        ? 'Nothing has a deadline on it right now.'
+                        : 'Nothing due today.',
+                    null, { format: 'prose', items: [], sources: [], refs: [], conflicts: [], missing: '' });
+                return true;
+            }
+            picked.sort((a, b) => a.dueAt - b.dueAt);
+            const items = picked.slice(0, 25).map(t => {
+                const when = t.dueAt < now ? 'overdue' : whenLabel(t.dueAt).toLowerCase();
+                return t.summary + '  \u00b7  ' + when;
+            });
+            const parts = [];
+            if (overdue.length) parts.push(overdue.length + ' overdue');
+            if (today.length) parts.push(today.length + ' due today');
+            if (!wantsToday && soon.length) parts.push(soon.length + ' this week');
+            showRecallCard(q, parts.join(', ') + '.', null, {
+                format: 'checklist',
+                items,
+                sources: picked.slice(0, 25).map(t => ({ id: t.id })),
+                refs: [], conflicts: [], missing: ''
+            });
+            return true;
+        }
         async function askRecall(question) {
             if (!ROUTER_URL || recallBusy) return;
             recallBusy = true;
@@ -11340,24 +11927,23 @@
                 const save = document.createElement('button');
                 save.className = 'ra-save';
                 save.textContent = exFmt === 'checklist'
-                    ? 'Keep this as a checklist bubble'
-                    : 'Keep these steps as bubbles';
+                    ? 'Keep as a list'
+                    : 'Keep these steps as a list';
                 save.addEventListener('click', () => {
                     save.disabled = true;
-                    // WHERE it goes: under the bubble the answer came from.
-                    // Filing it at the top level meant asking about Costco
-                    // produced a stray list nowhere near your Costco bubble.
+                    // A LIST, not bubbles. A shopping list is a working surface
+                    // you tick through and throw away; a bubble is something you
+                    // keep. Putting the disposable thing in the durable place is
+                    // what made this feel wrong.
                     const srcs = (extras || {}).sources || [];
+                    const sourceIds = srcs.map(s => s && s.id).filter(id => id && findThoughtById(id));
                     let host = null;
                     for (const s of srcs) {
                         const t = findThoughtById(s.id);
                         if (t) { host = t; break; }
                     }
-                    // WHAT it is called. makeThought() runs the SPEECH
-                    // summariser, which strips a question down to keywords:
-                    // "what do I need to get from Costco?" became the
-                    // nonsense "What Need Get". Name it from its subject
-                    // instead and say plainly that it is a checklist.
+                    // Name it from its subject. makeThought's speech summariser
+                    // turned "what do I need from Costco?" into "What Need Get".
                     const subject = host
                         ? host.summary.replace(/\s*(run|list|tasks?|checklist)$/i, '').trim()
                         : (question || '').replace(/\?+$/, '')
@@ -11370,21 +11956,9 @@
                         : '';
                     const label = (niceSubject ? niceSubject + ' ' : '') +
                                   (exFmt === 'steps' ? 'Steps' : 'Checklist');
-                    const parent = makeThought(label, answer || question || label);
-                    parent.summary = label;   // keep the readable name
-                    parent.routed = true;
-                    fileThought(parent, host ? host.id : null);
-                    exItems.forEach((txt, i) => {
-                        const kid = makeThought(txt, txt);
-                        kid.routed = true;
-                        fileThought(kid, parent.id);
-                    });
-                    saveState();
-                    updateDrawerUI();
-                    save.textContent = host
-                        ? ('Saved into ' + host.summary)
-                        : 'Saved to your galaxy';
-                    try { markHomecoming(parent.id); } catch (e) {}
+                    makeChecklist(label, exItems, sourceIds);
+                    save.textContent = 'Saved to Lists';
+                    showVoiceStatus('Saved to Lists', { autoHideMs: 2200 });
                 });
                 aEl.appendChild(save);
             }
@@ -11484,6 +12058,9 @@
                 /^\s*(am i|are there)\s+.*\b(behind|overdue|late)\b/i
             ];
             if (WORKLOAD_PATTERNS.some(re => re.test(q))) {
+                // The app holds every deadline, so answer this itself: instant,
+                // exact, and it works with no connection.
+                if (answerWhatsDueLocally(q)) return true;
                 askRecall(q);
                 return true;
             }
@@ -12071,7 +12648,7 @@
                         const want = kbCovered > 80 ? (vv.offsetTop + vv.height) : window.innerHeight - 16;
                         const r = editSheet.getBoundingClientRect();
                         const diff = r.bottom - want;
-                        if (Math.abs(diff) > 2) editSheet.style.transform = 'translateY(' + Math.round(y - diff) + 'px)';
+                        if (Math.abs(diff) > 6) editSheet.style.transform = 'translateY(' + Math.round(y - diff) + 'px)';
                     });
                 }
                 if (kbCovered > 80) {
@@ -12084,7 +12661,11 @@
                         const want = vv.offsetTop + vv.height;
                         const r = textEntry.getBoundingClientRect();
                         const diff = r.bottom - want;
-                        if (Math.abs(diff) > 2) textEntry.style.transform = 'translateY(' + Math.round(y - diff) + 'px)';
+                        // Only correct a MEANINGFUL error. At a 2px tolerance
+                        // sub-pixel rounding fired this almost every time, and
+                        // because transform is not transitioned the correction
+                        // lands as a visible snap: that was the bounce.
+                        if (Math.abs(diff) > 6) textEntry.style.transform = 'translateY(' + Math.round(y - diff) + 'px)';
                     });
                 } else {
                     // Keyboard dismissed while the bar is open: rest at the
@@ -12458,6 +13039,7 @@
            INPUT — tap vs hold, ignoring UI chrome
            ========================================================= */
         let lastCenterTapAt = 0;
+        let lastRawTapAt = 0;   // when the tap physically happened
         const CHARGE_DELAY_MS = 380;   // longer than a natural tap, shorter than intent
         const RITUAL_MS = 1500;        // the full breath: swell, warm, rupture
         let pressState = null;
@@ -12625,8 +13207,9 @@
                     showDetailCard(ps.obj.thought);
                     return;
                 }
-                const nowT = performance.now();
-                const isDoubleTap = nowT - lastCenterTapAt < 350;
+                // Compare when the taps HAPPENED, not when they were handled.
+                const nowT = lastRawTapAt || performance.now();
+                const isDoubleTap = nowT - lastCenterTapAt < 420;
                 lastCenterTapAt = nowT;
                 if (isDoubleTap) {
                     // Double-tap the big bubble = type instead of speak. If
@@ -12657,6 +13240,12 @@
 
         window.addEventListener('touchstart', (e) => {
             usingTouch = true;
+            // Record the moment the tap ACTUALLY happened. Starting the mic
+            // causes a lag spike, and measuring at the end of processing made
+            // a genuinely quick second tap look slow, so double-tap-to-type
+            // silently failed exactly when the mic had just started.
+            lastRawTapAt = (typeof e.timeStamp === 'number' && e.timeStamp > 0)
+                ? e.timeStamp : performance.now();
             if (eventOnUI(e)) return;
             if (e.touches.length) pressStart(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
@@ -12693,7 +13282,11 @@
             }
         });
         window.addEventListener('pagehide', () => { if (isListening) finalizeListeningNow(); });
-        window.addEventListener('mousedown', (e) => { if (!usingTouch && !eventOnUI(e)) pressStart(e.clientX, e.clientY); });
+        window.addEventListener('mousedown', (e) => {
+            lastRawTapAt = (typeof e.timeStamp === 'number' && e.timeStamp > 0)
+                ? e.timeStamp : performance.now();
+            if (!usingTouch && !eventOnUI(e)) pressStart(e.clientX, e.clientY);
+        });
         window.addEventListener('mouseup', (e) => { if (!usingTouch) { if (!eventOnUI(e)) pressEnd(); else pressCancel(); } });
         window.addEventListener('mousemove', (e) => {
             if (!usingTouch && pressState) {
