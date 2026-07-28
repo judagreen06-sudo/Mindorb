@@ -1794,6 +1794,145 @@
            A card sitting on the galaxy, not a screen that replaces it. The
            bubble inside is drawn by the SAME shader as everything else, on its
            own small canvas, so it is the real thing rather than a lookalike. */
+        /* SEND. Two ways out on purpose: straight to a friend inside the app,
+           or a link for anyone who isn't on it. */
+        #send-sheet {
+            position: fixed; inset: 0; z-index: 999680;
+            display: flex; align-items: flex-end; justify-content: center;
+            background: rgba(4,6,12,.6);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none; visibility: hidden;
+            transition: opacity .26s ease;
+        }
+        #send-sheet.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        #send-inner {
+            width: 100%; max-width: 460px;
+            padding: 22px 18px calc(env(safe-area-inset-bottom,0px) + 18px);
+            border-radius: 28px 28px 0 0;
+            background: linear-gradient(168deg, rgba(24,30,45,.98), rgba(13,17,26,.99));
+            border-top: 1px solid rgba(255,255,255,.13);
+            box-shadow: 0 -18px 50px rgba(0,0,0,.5);
+            transform: translateY(16px); transition: transform .3s cubic-bezier(.22,1,.36,1);
+        }
+        #send-sheet.open #send-inner { transform: none; }
+        #send-title { margin: 0 0 14px; color: var(--ink); font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 16px; font-weight: 800; text-align: center; }
+        #send-list { max-height: 42vh; overflow-y: auto; }
+        #send-status { min-height: 18px; text-align: center; color: var(--ink-dim); font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+        #send-status.ok { color: rgb(157,196,168); }
+        #send-status.bad { color: rgb(232,154,138); }
+        #send-link, #send-cancel {
+            width: 100%; margin-top: 9px; padding: 13px 0; border-radius: var(--r-pill);
+            cursor: pointer; font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
+        #send-link { background: rgba(255,255,255,.07); border: 1px solid var(--glass-border); color: var(--ink); }
+        #send-cancel { background: none; border: none; color: var(--ink-faint); font-size: 13px; }
+        #send-link:active { transform: scale(.98); }
+        /* PEOPLE. Friends, requests and bubbles people sent you. Deliberately
+           NOT in Settings: settings are things you configure once and leave,
+           and this is somewhere you come back to. */
+        #people-btn {
+            position: fixed; z-index: 12;
+            top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px;
+            width: 40px; height: 40px; border-radius: 50%; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.06); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            color: var(--ink-dim); cursor: pointer;
+            opacity: 1;
+            /* No opacity transition. body.launching starts this at 0, and the
+               transition back to 1 can stall while the renderer spins up,
+               leaving the button invisible but still tappable. Same trap the
+               share card fell into. Transform still animates. */
+            transition: transform .12s ease;
+        }
+        #people-btn svg { width: 20px; height: 20px; }
+        #people-btn:active { transform: scale(.92); }
+        #people-badge {
+            position: absolute; top: -2px; right: -2px; min-width: 17px; height: 17px;
+            border-radius: 9px; padding: 0 4px; display: none;
+            align-items: center; justify-content: center;
+            background: rgb(232,154,138); color: #17110f;
+            font-family: 'Baloo 2',sans-serif; font-size: 10.5px; font-weight: 800;
+            border: 1.5px solid #0a0e17;
+        }
+        #people-badge.show { display: inline-flex; }
+        body.launching #people-btn, body.onboarding #people-btn,
+        body.dived #people-btn, body.drawer-open #people-btn,
+        body.typing-open #people-btn, body.answering #people-btn {
+            opacity: 0 !important; pointer-events: none !important;
+        }
+        #people-sheet {
+            position: fixed; inset: 0; z-index: 999650;
+            background: radial-gradient(ellipse at 50% 28%, #101a2e 0%, #080c17 58%, #04060c 100%);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top,0px) + 12px) 0 calc(env(safe-area-inset-bottom,0px) + 14px);
+            opacity: 0; pointer-events: none; visibility: hidden;
+            transition: opacity .28s ease;
+        }
+        #people-sheet.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        #people-head { display: flex; align-items: center; gap: 10px; padding: 4px 14px 10px; flex-shrink: 0; }
+        #people-head h2 { flex: 1; margin: 0; color: var(--ink); font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 17px; font-weight: 800; }
+        #people-tabs { display: flex; gap: 6px; padding: 0 14px 10px; flex-shrink: 0; }
+        .people-tab {
+            flex: 1; padding: 10px 0; border-radius: var(--r-pill); cursor: pointer; position: relative;
+            background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10);
+            color: var(--ink-dim); font-family: 'Quicksand',sans-serif; font-size: 13.5px; font-weight: 700;
+            transition: background .18s ease, color .18s ease;
+        }
+        .people-tab.active {
+            background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.07));
+            color: var(--ink); border-color: rgba(255,255,255,.2);
+        }
+        #inbox-dot {
+            display: none; width: 7px; height: 7px; border-radius: 50%;
+            background: rgb(232,154,138); margin-left: 6px; vertical-align: middle;
+        }
+        #inbox-dot.show { display: inline-block; }
+        #people-body { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 0 14px; }
+        .pp-row {
+            display: flex; align-items: center; gap: 11px;
+            padding: 12px 14px; margin-bottom: 7px; border-radius: 16px;
+            background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08);
+        }
+        .pp-av {
+            flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(140deg, rgba(169,200,232,.85), rgba(157,196,168,.7));
+            color: #0d1119; font-size: 14px; font-weight: 800;
+        }
+        .pp-name { flex: 1; min-width: 0; }
+        .pp-name b { display: block; color: var(--ink); font-size: 14.5px; font-weight: 700; }
+        .pp-name span { display: block; color: var(--ink-faint); font-size: 11.5px; font-weight: 600; margin-top: 2px; }
+        .pp-act { display: flex; gap: 6px; flex-shrink: 0; }
+        .pp-btn {
+            padding: 8px 13px; border-radius: var(--r-pill); cursor: pointer;
+            font-family: 'Quicksand',sans-serif; font-size: 12.5px; font-weight: 700;
+            background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); color: var(--ink);
+        }
+        .pp-btn.primary { background: rgba(235,240,248,.94); border: none; color: #10141f; }
+        .pp-btn:active { transform: scale(.96); }
+        .pp-empty { padding: 34px 20px; text-align: center; color: var(--ink-faint); font-size: 13px; font-weight: 600; line-height: 1.5; }
+        #people-status { flex-shrink: 0; padding: 8px 18px 0; min-height: 18px; color: var(--ink-dim); font-size: 12.5px; font-weight: 700; text-align: center; }
+        #people-status.bad { color: rgb(232,154,138); }
+        #people-status.ok { color: rgb(157,196,168); }
+        #people-addwrap { flex-shrink: 0; display: flex; gap: 8px; padding: 10px 14px 0; }
+        #people-addfield {
+            flex: 1; display: flex; align-items: center; gap: 3px; padding: 0 14px;
+            border-radius: var(--r-pill); background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.12); color: var(--ink-faint);
+            font-family: 'Quicksand',sans-serif; font-size: 15px; font-weight: 700;
+        }
+        #people-addinput {
+            flex: 1; min-width: 0; padding: 12px 0; background: none; border: none; outline: none;
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 14.5px; font-weight: 700;
+        }
+        #people-addinput::placeholder { color: var(--ink-faint); font-weight: 600; font-size: 13px; }
+        #people-addbtn {
+            flex: 0 0 auto; padding: 12px 20px; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: rgba(235,240,248,.94); color: #10141f;
+            font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
+        #people-addbtn:disabled { opacity: .5; }
         #share-arrival {
             position: fixed; inset: 0; z-index: 999500;
             display: flex; align-items: center; justify-content: center;
@@ -1803,8 +1942,9 @@
             opacity: 0; pointer-events: none;
         }
         #share-arrival.open { opacity: 1; pointer-events: auto; }
+        #sa-card > *:not(#sa-canvas) { position: relative; z-index: 1; }
         #sa-card {
-            position: relative; width: 100%; max-width: 328px;
+            position: relative; overflow: hidden; width: 100%; max-width: 328px;
             display: flex; flex-direction: column; align-items: center;
             padding: 26px 22px 22px; border-radius: 30px; text-align: center;
             /* The same sky the shader draws, so the bubble's canvas has no
@@ -1830,14 +1970,21 @@
         /* The bubble. Its own canvas, running the app's own shader. */
         /* Full card width and no border radius: the canvas edge is invisible
            because it is painting the same sky the card is. */
-        #sa-bubble {
-            position: relative; width: calc(100% + 44px); margin: -8px -22px 10px;
-            height: 214px;
+        /* The canvas IS the card's background: absolutely filling it, clipped
+           by the card's own rounded corners. Previously it was a square block
+           inside a rounded card, which is what left that hard corner. */
+        #sa-canvas {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            display: block; z-index: 0; border-radius: inherit;
         }
-        #sa-canvas { width: 100%; height: 100%; display: block; }
+        #sa-bubble {
+            position: relative; z-index: 1;
+            width: 100%; height: 168px; margin-bottom: 10px;
+            pointer-events: none;
+        }
         /* The label sits over the bubble exactly as it does in the galaxy. */
         #sa-label {
-            position: absolute; inset: 0;
+            position: absolute; inset: 0; z-index: 2;
             display: flex; align-items: center; justify-content: center;
             padding: 0 24px; text-align: center; pointer-events: none;
             color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
@@ -1882,6 +2029,19 @@
             box-shadow: 0 8px 22px rgba(120,160,220,.24), inset 0 1px 0 rgba(255,255,255,.85);
         }
         #sa-dismiss:active, #sa-add:active, #sa-signin:active { transform: scale(.97); }
+        /* Someone sharing a bubble with you is the most natural moment to add
+           them, so offer it here instead of making you go find the username
+           field in the leaderboard. */
+        #sa-addfriend {
+            display: none; margin-top: 14px; padding: 9px 16px;
+            border-radius: var(--r-pill); cursor: pointer;
+            background: rgba(169,200,232,.12); border: 1px solid rgba(169,200,232,.26);
+            color: var(--ink); font-family: 'Quicksand',sans-serif;
+            font-size: 12.5px; font-weight: 700;
+            transition: transform .12s ease, opacity .2s ease;
+        }
+        #sa-addfriend:active { transform: scale(.97); }
+        #sa-addfriend:disabled { opacity: .55; }
         #sa-add:disabled { opacity: .5; }
         #popgame-sheet {
             position: fixed; inset: 0; z-index: 999600; isolation: isolate;
@@ -1982,6 +2142,59 @@
             flex-shrink: 0; text-align: center; padding: 2px 24px 0;
             color: var(--ink-faint); font-size: 11.5px; font-weight: 700;
         }
+        #friends-page {
+            position: fixed; inset: 0; z-index: 64;
+            display: flex; flex-direction: column;
+            background: radial-gradient(ellipse at 50% 28%, #101a2e 0%, #080c17 58%, #04060c 100%);
+            padding: calc(env(safe-area-inset-top,0px) + 12px) 0 calc(env(safe-area-inset-bottom,0px) + 14px);
+            opacity: 0; pointer-events: none; transform: scale(0.98);
+            transition: opacity .28s ease, transform .28s ease;
+        }
+        #friends-page.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+        #friends-addrow { display: flex; gap: 8px; padding: 6px 16px 0; flex-shrink: 0; }
+        #friends-field {
+            flex: 1; display: flex; align-items: center; gap: 3px; padding: 0 14px;
+            border-radius: var(--r-pill); background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.12); color: var(--ink-faint);
+            font-family: 'Quicksand',sans-serif; font-size: 15px; font-weight: 700;
+        }
+        #friends-input {
+            flex: 1; min-width: 0; padding: 12px 0; background: none; border: none; outline: none;
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 14.5px; font-weight: 700;
+        }
+        #friends-input::placeholder { color: var(--ink-faint); font-weight: 600; font-size: 13px; }
+        #friends-add {
+            flex: 0 0 auto; padding: 12px 20px; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: rgba(235,240,248,.94); color: #10141f;
+            font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
+        #friends-add:disabled { opacity: .5; }
+        #friends-add:active { transform: scale(.97); }
+        #friends-status { padding: 10px 18px 0; min-height: 18px; text-align: center;
+                          font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
+        #friends-status.bad { color: rgb(232,154,138); }
+        #friends-status.ok { color: rgb(157,196,168); }
+        #friends-list { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 16px 0; }
+        .fr-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px; margin-bottom: 8px; border-radius: 16px;
+            background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08);
+        }
+        .fr-av {
+            flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(140deg, rgba(169,200,232,.85), rgba(157,196,168,.7));
+            color: #0d1119; font-size: 14px; font-weight: 800;
+        }
+        .fr-name { flex: 1; color: var(--ink); font-size: 15px; font-weight: 700; }
+        .fr-remove {
+            flex: 0 0 auto; padding: 8px 14px; border-radius: var(--r-pill); cursor: pointer;
+            background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+            color: var(--ink-dim); font-family: 'Quicksand',sans-serif; font-size: 12.5px; font-weight: 700;
+        }
+        .fr-remove:active { background: rgba(232,154,138,.16); color: rgb(232,154,138); }
+        #friends-empty { text-align: center; color: var(--ink-faint); font-size: 13.5px;
+                         font-weight: 600; line-height: 1.5; padding: 34px 30px; }
         #lb-sheet {
             position: fixed; inset: 0; z-index: 999700;
             background: radial-gradient(ellipse at 50% 28%, #101a2e 0%, #080c17 58%, #04060c 100%);
@@ -2038,6 +2251,12 @@
         #lb-status { flex-shrink: 0; padding: 8px 18px 0; min-height: 18px; color: var(--ink-dim); font-size: 12.5px; font-weight: 700; text-align: center; }
         #lb-status.bad { color: rgb(232,154,138); }
         #lb-status.ok { color: rgb(157,196,168); }
+        .lb-setname {
+            padding: 9px 16px; border-radius: var(--r-pill); cursor: pointer;
+            background: rgba(169,200,232,.14); border: 1px solid rgba(169,200,232,.3);
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 12.5px; font-weight: 700;
+        }
+        .lb-setname:active { transform: scale(.97); }
         #lb-addwrap { flex-shrink: 0; display: flex; gap: 8px; padding: 10px 14px 0; }
         #lb-addfield {
             flex: 1; display: flex; align-items: center; gap: 3px; padding: 0 14px;
@@ -2553,6 +2772,16 @@
             </div>
             <div class="settings-section">
                 <div class="settings-section-title">Your Data</div>
+                <button id="friends-open-btn" class="settings-row settings-row-nav">
+                    <span class="settings-row-icon">
+                        <svg viewBox="0 0 24 24"><path d="M16 19v-1.6a3.4 3.4 0 0 0-3.4-3.4H6.4A3.4 3.4 0 0 0 3 17.4V19"/><circle cx="9.5" cy="7.5" r="3.2"/><path d="M21 19v-1.6a3.4 3.4 0 0 0-2.6-3.3M16.2 4.7a3.4 3.4 0 0 1 0 6.1"/></svg>
+                    </span>
+                    <span class="settings-row-main">
+                        <span>Friends</span>
+                        <span class="settings-row-sub">People you share bubbles and scores with</span>
+                    </span>
+                    <svg class="settings-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                </button>
                 <button id="archive-open-btn" class="settings-row settings-row-nav">
                     <span class="settings-row-icon">
                         <svg viewBox="0 0 24 24"><path d="M3 7l1.5-3h15L21 7"/><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M10 12h4"/></svg>
@@ -2723,12 +2952,49 @@
         <button id="mp-cancel">Cancel</button>
     </div>
 
+    <button id="people-btn" class="ui-block" aria-label="People">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></svg>
+        <span id="people-badge"></span>
+    </button>
+
+    <div id="send-sheet" class="ui-block">
+        <div id="send-inner">
+            <h3 id="send-title">Send this bubble</h3>
+            <div id="send-list"></div>
+            <div id="send-status"></div>
+            <button id="send-link">Copy a link instead</button>
+            <button id="send-cancel">Cancel</button>
+        </div>
+    </div>
+
+    <div id="people-sheet" class="ui-block">
+        <div id="people-head">
+            <button class="page-back-btn" id="people-close" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <h2>People</h2>
+            <span class="page-head-spacer"></span>
+        </div>
+        <div id="people-tabs">
+            <button class="people-tab active" data-tab="friends">Friends</button>
+            <button class="people-tab" data-tab="inbox">Sent to you<span id="inbox-dot"></span></button>
+        </div>
+        <div id="people-body"></div>
+        <div id="people-status"></div>
+        <div id="people-addwrap">
+            <div id="people-addfield">
+                <span>@</span>
+                <input id="people-addinput" type="text" maxlength="20" placeholder="add a friend by username"
+                       autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            </div>
+            <button id="people-addbtn">Add</button>
+        </div>
+    </div>
+
     <div id="share-arrival" class="ui-block">
         <div id="sa-card">
-            <div id="sa-bubble">
-                <canvas id="sa-canvas"></canvas>
-                <div id="sa-label"></div>
-            </div>
+            <canvas id="sa-canvas"></canvas>
+            <div id="sa-bubble"><div id="sa-label"></div></div>
             <div id="sa-title"></div>
             <div id="sa-kids"></div>
             <div id="sa-status"></div>
@@ -2737,6 +3003,7 @@
                 <button id="sa-add">View</button>
             </div>
             <button id="sa-signin">Sign in to see it</button>
+            <button id="sa-addfriend"></button>
         </div>
     </div>
 
@@ -2772,6 +3039,26 @@
         </div>
         <div id="pg-hint">Pop them before they float away. Chain pops for a combo.</div>
         <div id="pg-best"></div>
+    </div>
+
+    <div id="friends-page" class="ui-block">
+        <div id="howto-head">
+            <button class="page-back-btn" id="friends-close" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <h2>Friends</h2>
+            <span class="page-head-spacer"></span>
+        </div>
+        <div id="friends-addrow">
+            <div id="friends-field">
+                <span>@</span>
+                <input id="friends-input" type="text" maxlength="20" placeholder="add by username"
+                       autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            </div>
+            <button id="friends-add">Add</button>
+        </div>
+        <div id="friends-status"></div>
+        <div id="friends-list"></div>
     </div>
 
     <div id="lb-sheet" class="ui-block">
@@ -3720,8 +4007,26 @@
         }
         // Returns { at: Date, hadTime: bool } or null when nothing time-like
         // was said. `now` is injectable so this is deterministically testable.
+        // "I just filled up my propane TODAY and it cost me $16" is a record of
+        // something that already happened, not a task due today. Treating the
+        // time word as a deadline made it turn overdue and start demanding
+        // attention days later about a thing that was already done.
+        const PAST_VERBS = /\b(was|were|had|did|went|came|paid|bought|got|filled|refilled|topped|finished|completed|called|texted|emailed|saw|met|made|took|cost|spent|ate|drank|sent|fixed|cleaned|washed|booked|ordered|returned)\b/i;
+        const TASK_MARKERS = /\b(need to|needs to|have to|has to|must|should|remember to|remind me|todo|to-do)\b|\bdon'?t forget\b|\bby \b|\bbefore \b|\bdue\b/i;
+        function looksAlreadyDone(text) {
+            if (!text) return false;
+            const t = String(text).toLowerCase();
+            // An explicit instruction always wins: "I need to refill the
+            // propane today" is a real deadline even though "refill" is a
+            // past-tense-looking verb.
+            if (TASK_MARKERS.test(t)) return false;
+            if (/\bago\b/.test(t)) return true;
+            return PAST_VERBS.test(t);
+        }
         function parseWhen(text, now) {
             if (!text) return null;
+            // Something that already happened has no deadline.
+            if (looksAlreadyDone(text)) return null;
             const t = String(text).toLowerCase();
             now = now ? new Date(now) : new Date();
             const clock = extractClock(t);
@@ -3902,7 +4207,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-24j';
+        const BUILD_TAG = '2026-07-25a';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4158,6 +4463,7 @@
         let pgRaf = null, pgBubbles = [], pgBits = [], pgLast = 0, pgSeeded = false;
         let pgScore = 0, pgCombo = 0, pgLastPop = 0, pgPopped = 0, pgMissed = 0;
         let pgLives = 3, pgWave = 1, pgOver = false, pgStart = 0;
+        let pgFrenzy = 0, pgFrenzyCharge = 0;
         const PG_LIVES = 3;
         let pgFloaters = [];
         const PG_BEST_KEY = 'mindorb-pop-best';
@@ -4228,41 +4534,70 @@
         // real streak means something.
         const PG_CHEERS = ['Nice', 'Good one', 'Sharp', 'On a roll', 'Beautiful',
                            'Unreal', 'Untouchable', 'Ridiculous'];
+        // A spoken line with the praise text. Uses the device's own voice, so
+        // there is nothing to download and it works offline. Deliberately
+        // rate-limited: a voice on every pop would be unbearable.
+        let lastSpokeAt = 0;
+        function speakPraise(text) {
+            if (!text) return;
+            if (!soundEnabled) return;
+            const now = performance.now();
+            if (now - lastSpokeAt < 1600) return;   // never talk over itself
+            lastSpokeAt = now;
+            try {
+                if (!('speechSynthesis' in window)) return;
+                const u = new SpeechSynthesisUtterance(text);
+                u.rate = 1.08; u.pitch = 1.15; u.volume = 0.55;
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
+        }
         function pgCheer(combo) {
             if (combo < 4) return null;
             const i = Math.min(combo - 4, PG_CHEERS.length - 1);
             return PG_CHEERS[i];
         }
         function pgSpawn(w, h, atBottom) {
-            // Every wave the bubbles get smaller and faster, so a long run
-            // stops being comfortable and starts demanding real accuracy.
             const wave = pgWave;
-            // Steeper on both axes. The old curve flattened out after a few
-            // waves, so a run stopped demanding anything new: bubbles stayed
-            // catchable and the only limit was patience.
             const shrink = Math.max(0.30, 1 - (wave - 1) * 0.11);
             const rise = 1 + (wave - 1) * 0.30;
-            // Floor the size at something a thumb can actually hit. Past this
-            // point the difficulty comes from SPEED, not from targets too
-            // small to aim at, which is frustrating rather than hard.
             const MIN_TAP_R = 19;
             const r = Math.max(MIN_TAP_R, (22 + Math.random() * 28) * shrink);
-            const golden = Math.random() < Math.min(0.04 + wave * 0.006, 0.10);
+
+            // WHAT KIND OF BUBBLE. This is where the decisions come from: if
+            // every bubble is identical the game is pure reflex, and tapping
+            // everything as fast as possible is always right. Three kinds
+            // means every tap is a judgement instead.
+            const roll = Math.random();
+            let kind = 'normal';
+            // Hazards arrive from wave 2 and get commoner. Popping one costs a
+            // life, so you have to LOOK before you tap.
+            const hazardChance = wave < 2 ? 0 : Math.min(0.07 + (wave - 2) * 0.012, 0.18);
+            // Ripe ones swell and are worth far more the longer you leave
+            // them, but they rise faster the riper they get. Greed vs safety.
+            const ripeChance = wave < 3 ? 0 : Math.min(0.06 + (wave - 3) * 0.008, 0.14);
+            const goldChance = Math.min(0.04 + wave * 0.005, 0.09);
+            if (roll < hazardChance) kind = 'hazard';
+            else if (roll < hazardChance + ripeChance) kind = 'ripe';
+            else if (roll < hazardChance + ripeChance + goldChance) kind = 'golden';
+
+            const golden = kind === 'golden';
             return {
                 x: r + Math.random() * Math.max(1, w - r * 2),
                 y: atBottom ? (h + r + Math.random() * h * 0.35) : (r + Math.random() * Math.max(1, h - r * 2)),
                 r: golden ? r * 0.8 : r,
-                // Buoyancy: a real bubble accelerates as it rises, and the
-                // bigger it is the faster it goes.
+                baseR: golden ? r * 0.8 : r,
                 vy: -(10 + Math.random() * 12) * rise * (0.7 + r / 60),
                 vx: (Math.random() - 0.5) * 10,
-                // Its own gentle sway, independent of everything else.
                 swayAmp: 8 + Math.random() * 22,
                 swayFreq: 0.6 + Math.random() * 0.9,
                 swayPhase: Math.random() * Math.PI * 2,
-                tint: PG_TINTS[(Math.random() * PG_TINTS.length) | 0],
+                tint: kind === 'hazard' ? [232, 96, 110]
+                    : kind === 'ripe' ? [150, 232, 170]
+                    : PG_TINTS[(Math.random() * PG_TINTS.length) | 0],
                 hue: Math.random() * Math.PI * 2,
-                golden,
+                kind, golden,
+                ripeness: 0,
                 phase: Math.random() * Math.PI * 2,
                 born: performance.now()
             };
@@ -4298,28 +4633,67 @@
         }
         function pgPop(b) {
             const now = performance.now();
-            // Chaining pops quickly builds a combo — that's the skill, and
-            // the reason to keep going rather than tap idly.
-            // The window to chain narrows every wave, so keeping a combo
-            // alive stays a real skill instead of settling into a rhythm.
+            // A hazard is the one thing you should NOT have tapped. It breaks
+            // the combo and costs a life, which is what makes every other tap
+            // a decision rather than a reflex.
+            if (b.kind === 'hazard') {
+                pgCombo = 0;
+                pgLives--;
+                pgFrenzyCharge = 0;
+                buzz([40, 60, 40]);
+                try { playRecordedPop(b.r * 2, 0.62) || playPop(b.r * 2); } catch (e) {}
+                pgFloaters.push({ x: b.x, y: b.y, life: 1.2, text: 'Ouch', bad: true, combo: 2 });
+                for (let i = 0; i < 18; i++) {
+                    const a = (i / 18) * Math.PI * 2 + Math.random() * 0.5;
+                    const sp = 90 + Math.random() * 200;
+                    pgBits.push({ x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                                  r: 1.6 + Math.random() * 2.6, life: 1, tint: [232, 96, 110] });
+                }
+                pgSyncHud();
+                if (pgLives <= 0) { pgGameOver(); return; }
+                return;
+            }
+
             const comboWindow = Math.max(400, 900 - (pgWave - 1) * 50);
             if (now - pgLastPop < comboWindow) pgCombo = Math.min(pgCombo + 1, 9);
             else pgCombo = 1;
             pgLastPop = now;
-            const base = b.golden ? 50 : Math.round(28 - b.r * 0.28);   // smaller = worth more
-            const gained = Math.max(4, base) * pgCombo;
+
+            let base = Math.max(4, Math.round(28 - b.baseR * 0.28));
+            if (b.golden) base = 50;
+            // A ripe bubble pays for the nerve to leave it alone. Left to the
+            // last moment it is worth several times a normal one, but it is
+            // also climbing away from you the whole time.
+            if (b.kind === 'ripe') base = Math.round(base * (1 + b.ripeness * 3.2));
+            const gained = base * pgCombo * (pgFrenzy > 0 ? 2 : 1);
             pgScore += gained;
             pgPopped++;
+
+            // Frenzy: chaining fills a meter, and filling it buys a short
+            // window where everything is worth double. Sustained skill pays
+            // more than isolated good taps.
+            if (pgFrenzy <= 0) {
+                pgFrenzyCharge = Math.min(1, pgFrenzyCharge + (pgCombo >= 3 ? 0.09 : 0.045));
+                if (pgFrenzyCharge >= 1) {
+                    pgFrenzy = 6000;
+                    pgFrenzyCharge = 0;
+                    pgFloaters.push({ x: b.x, y: b.y - b.r - 30, life: 1.8, text: 'FRENZY', golden: true, combo: 5 });
+                    try { playComboTone(9); } catch (e) {}
+                    buzz([12, 24, 12, 24, 12, 40]);
+                    speakPraise('Frenzy');
+                }
+            }
+
             pgFloaters.push({ x: b.x, y: b.y, life: 1,
-                              text: '+' + gained, golden: b.golden, combo: pgCombo });
-            try { playBubblePop(b.r * 2, b.golden); } catch (e) {}
-            // A rising note per combo step, so getting better sounds like it.
+                              text: '+' + gained, golden: b.golden || b.kind === 'ripe', combo: pgCombo });
+            try { playBubblePop(b.r * 2, b.golden || b.kind === 'ripe'); } catch (e) {}
             if (pgCombo > 1) { try { playComboTone(pgCombo - 1); } catch (e) {} }
             buzz(b.golden ? [10, 20, 10, 20, 14] : [12, 18, 6]);
             const cheer = pgCheer(pgCombo);
             if (cheer) {
                 pgFloaters.push({ x: b.x, y: b.y - b.r - 18, life: 1.25,
                                   text: cheer, golden: true, combo: 4 });
+                speakPraise(cheer);
             }
             const reduced = document.documentElement.classList.contains('motion-reduced');
             const n = reduced ? 6 : (b.golden ? 26 : 16);
@@ -4344,6 +4718,10 @@
                 }
             }
             const wv = $('pg-wave'); if (wv) wv.textContent = 'Wave ' + pgWave;
+            const sc = $('pg-score-val');
+            if (sc) sc.style.color = pgFrenzy > 0 ? 'rgb(255,214,140)' : '';
+            const cEl2 = $('pg-combo');
+            if (cEl2 && pgFrenzy > 0) { cEl2.textContent = '2x FRENZY'; cEl2.classList.add('on'); }
             const cEl = $('pg-combo');
             if (cEl) {
                 if (pgCombo > 1) { cEl.textContent = '\u00d7' + pgCombo; cEl.classList.add('on'); }
@@ -4417,6 +4795,38 @@
             ctx.beginPath(); ctx.arc(bx, by, r * 0.26, 0, Math.PI * 2);
             ctx.fillStyle = b2; ctx.fill();
 
+            // A hazard has to be unmistakable at a glance. You are punished
+            // for tapping it, so it must never be a guess: red rim, dark core,
+            // and a spiked outline nothing else has.
+            if (b.kind === 'hazard') {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(240,110,124,0.95)';
+                ctx.lineWidth = Math.max(2, r * 0.07);
+                ctx.beginPath();
+                const spikes = 12;
+                for (let i = 0; i <= spikes * 2; i++) {
+                    const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+                    const rr = r * (i % 2 === 0 ? 1.10 : 0.90);
+                    const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x, y, r * 0.34, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(240,110,124,' + (0.42 + 0.2 * Math.sin(t * 0.008)).toFixed(2) + ')';
+                ctx.fill();
+                ctx.restore();
+            }
+            // A ripe one shows HOW ripe, so the greed decision is informed
+            // rather than a gamble.
+            if (b.kind === 'ripe') {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(150,232,170,0.9)';
+                ctx.lineWidth = Math.max(2, r * 0.06);
+                ctx.beginPath();
+                ctx.arc(x, y, r * 1.14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (b.ripeness || 0));
+                ctx.stroke();
+                ctx.restore();
+            }
             // A golden one is worth chasing — mark it clearly.
             if (b.golden) {
                 ctx.beginPath(); ctx.arc(x, y, r * 0.30, 0, Math.PI * 2);
@@ -4451,8 +4861,20 @@
             while (pgBubbles.length < target) pgBubbles.push(pgSpawn(w, h, pgSeeded));
             pgSeeded = true;
 
+            if (pgFrenzy > 0) {
+                pgFrenzy = Math.max(0, pgFrenzy - dt * 1000);
+                if (pgFrenzy === 0) pgSyncHud();
+            }
             const tSec = now / 1000;
             for (const b of pgBubbles) {
+                // Ripe bubbles swell and climb faster the longer you leave
+                // them. The longer you hold your nerve the more they pay, and
+                // the more likely they are to get away.
+                if (b.kind === 'ripe' && b.ripeness < 1) {
+                    b.ripeness = Math.min(1, b.ripeness + dt * 0.30);
+                    b.r = b.baseR * (1 + b.ripeness * 0.55);
+                    b.vy -= dt * 9 * b.ripeness;
+                }
                 // Buoyancy: it keeps accelerating upward, like a real bubble.
                 b.vy -= 5 * dt;
                 // Its own sway, which is what stops a field of bubbles looking
@@ -4494,7 +4916,8 @@
                 ctx.globalAlpha = Math.max(0, f.life);
                 ctx.font = '800 ' + (f.combo > 2 ? 20 : 16) + "px 'Baloo 2', sans-serif";
                 ctx.textAlign = 'center';
-                ctx.fillStyle = f.golden ? 'rgb(255,214,140)'
+                ctx.fillStyle = f.bad ? 'rgb(240,110,124)'
+                              : f.golden ? 'rgb(255,214,140)'
                               : (f.combo > 2 ? 'rgb(232,193,130)' : 'rgba(255,255,255,0.92)');
                 ctx.fillText(f.text, f.x, f.y);
                 ctx.restore();
@@ -4537,6 +4960,7 @@
             pgBubbles = []; pgBits = []; pgFloaters = []; pgSeeded = false; pgLast = 0;
             pgScore = 0; pgCombo = 0; pgPopped = 0; pgMissed = 0; pgLastPop = 0;
             pgLives = PG_LIVES; pgWave = 1; pgOver = false; pgStart = performance.now();
+            pgFrenzy = 0; pgFrenzyCharge = 0;
             pgSyncHud();
             if (!pgRaf) pgRaf = requestAnimationFrame(pgFrame);
         }
@@ -4573,6 +4997,7 @@
             // as Play again rather than repeating it: the two had drifted, and
             // opening after losing left you stuck on the game-over screen with
             // no lives and no way to play.
+            loadPopSound();
             pgRestart();
         }
         function closePopGame() {
@@ -4645,6 +5070,8 @@
                 return !!ok;
             } catch (e) { return false; }
         }
+        // Share opens a choice: send it to a friend inside the app, or make a
+        // link for anyone who is not on it. The link path is unchanged.
         async function shareCurrentThought() {
             if (!openThoughtObj || !openThoughtObj.thought) return;
             const th = openThoughtObj.thought;
@@ -4653,6 +5080,69 @@
                 try { openAuthSheet && openAuthSheet(); } catch (e) {}
                 return;
             }
+            openSendSheet(th);
+        }
+        let sendingThought = null;
+        async function openSendSheet(th) {
+            sendingThought = th;
+            const sheet = $('send-sheet'), list = $('send-list'), status = $('send-status');
+            if (!sheet) return shareViaLink();
+            status.textContent = ''; status.className = '';
+            list.innerHTML = '';
+            sheet.classList.add('open');
+            try {
+                const { data: mine } = await sb.from('friends')
+                    .select('friend_id, status').eq('user_id', currentUser.id).eq('status', 'accepted');
+                const ids = (mine || []).map(f => f.friend_id);
+                if (!ids.length) {
+                    const e = document.createElement('div');
+                    e.className = 'pp-empty';
+                    e.textContent = 'No friends yet. A link works for anyone.';
+                    list.appendChild(e);
+                    return;
+                }
+                const { data: profs } = await sb.from('profiles').select('user_id, username').in('user_id', ids);
+                (profs || []).forEach(p => {
+                    list.appendChild(ppRow(p.username || 'someone', null, [
+                        { label: 'Send', primary: true, onClick: () => sendToFriend(p.user_id, p.username) }
+                    ]));
+                });
+            } catch (e) {
+                status.className = 'bad';
+                status.textContent = "Couldn't load your friends.";
+            }
+        }
+        function closeSendSheet() {
+            const s = $('send-sheet');
+            if (s) s.classList.remove('open');
+            sendingThought = null;
+        }
+        async function sendToFriend(toId, name) {
+            if (!sendingThought) return;
+            const status = $('send-status');
+            status.className = ''; status.textContent = 'Sending\u2026';
+            try {
+                const payload = shareableSubtree(sendingThought, 0);
+                const { error } = await sb.from('sent_bubbles').insert({
+                    from_id: currentUser.id,
+                    from_username: currentUsername || null,
+                    to_id: toId,
+                    payload
+                });
+                if (error) throw new Error(error.message);
+                status.className = 'ok';
+                status.textContent = 'Sent to @' + name;
+                buzz([10, 24, 10]);
+                setTimeout(closeSendSheet, 1100);
+            } catch (e) {
+                status.className = 'bad';
+                status.textContent = "Couldn't send it. Are you still friends?";
+            }
+        }
+        async function shareViaLink() {
+            const th = sendingThought || (openThoughtObj && openThoughtObj.thought);
+            if (!th) return;
+            closeSendSheet();
             showVoiceStatus('Preparing your bubble\u2026', { autoHideMs: 4000 });
             const token = shareToken();
             try {
@@ -4734,6 +5224,17 @@
             // Signed out shows an empty bubble: you can see WHO sent it and
             // that something is waiting, but not what it says.
             $('sa-label').textContent = signedIn && payload ? (payload.summary || '') : '';
+            const af = $('sa-addfriend');
+            if (af) {
+                // Only when we know who they are, you are signed in, and it is
+                // not your own bubble coming back to you.
+                const canAdd = !!(signedIn && from &&
+                    (!currentUsername || from.toLowerCase() !== currentUsername.toLowerCase()));
+                af.style.display = canAdd ? 'inline-block' : 'none';
+                af.disabled = false;
+                if (from) af.textContent = 'Add @' + from + ' as a friend';
+                af.dataset.who = from || '';
+            }
             $('sa-actions').style.display = signedIn ? 'flex' : 'none';
             $('sa-signin').style.display = signedIn ? 'none' : 'block';
             startShareBubble();
@@ -4925,6 +5426,11 @@
             } catch (e) {}
             return false;
         }
+        function stampSharedFrom(t, from) {
+            if (!t || !from) return;
+            t.sharedFrom = String(from).slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '');
+            (t.children || []).forEach(k => stampSharedFrom(k, from));
+        }
         function addSharedToGalaxy() {
             if (!pendingShare || !pendingShare.payload) return;
             const btn = $('sa-add');
@@ -4933,6 +5439,9 @@
             const n = adoptShared(pendingShare.payload, null, 0);
             const root = thoughts.find(t => !beforeIds.has(t.id));
             if (root && pendingShare.token) rememberAdopted(pendingShare.token, root.id);
+            // Remember who sent it. Without this an adopted bubble is
+            // indistinguishable from one you wrote yourself.
+            if (root && pendingShare.from) stampSharedFrom(root, pendingShare.from);
             saveState();
             updateDrawerUI();
             $('sa-status').className = 'ok';
@@ -4987,9 +5496,19 @@
                     .select('best').eq('user_id', currentUser.id).maybeSingle();
                 const prev = data && typeof data.best === 'number' ? data.best : 0;
                 if (score <= prev) return;
+                // If the username has not loaded yet, fetch it rather than
+                // writing null: a null here is what produced "@anon" rows.
+                let name = currentUsername;
+                if (!name) {
+                    try {
+                        const { data: prof } = await sb.from('profiles')
+                            .select('username').eq('user_id', currentUser.id).maybeSingle();
+                        if (prof && prof.username) name = prof.username;
+                    } catch (e) {}
+                }
                 await sb.from('pop_scores').upsert({
                     user_id: currentUser.id,
-                    username: currentUsername || null,
+                    username: name || null,
                     best: score,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id' });
@@ -5055,10 +5574,61 @@
                     return;
                 }
                 status.textContent = '';
-                rows.forEach((r, i) => {
-                    list.appendChild(lbRow(i + 1, r.username || 'anon', r.best || 0,
-                                           r.user_id === currentUser.id));
-                });
+                // Names come from profiles, NOT from the copy stored on the
+                // score row. That copy is taken when the score is submitted,
+                // so anyone whose username had not loaded yet was saved as
+                // null and showed up forever as "@anon". Looking it up live
+                // also means changing your username updates the board.
+                try {
+                    const ids = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+                    if (ids.length) {
+                        const { data: profs } = await sb.from('profiles')
+                            .select('user_id, username').in('user_id', ids);
+                        const nameById = new Map((profs || []).map(p => [p.user_id, p.username]));
+                        for (const r of rows) {
+                            const live = nameById.get(r.user_id);
+                            if (live) r.username = live;
+                        }
+                    }
+                } catch (e) { /* fall back to whatever the row carries */ }
+                // One row per player, showing their BEST. If the table ever
+                // ends up with more than one row per person, keep the highest
+                // rather than listing every score they have ever set.
+                const bestBy = new Map();
+                for (const row of rows) {
+                    const key = row.user_id || row.username;
+                    const prev = bestBy.get(key);
+                    if (!prev || (row.best || 0) > (prev.best || 0)) bestBy.set(key, row);
+                }
+                [...bestBy.values()]
+                    .sort((a, b) => (b.best || 0) - (a.best || 0))
+                    .slice(0, 50)
+                    .forEach((r, i) => {
+                        list.appendChild(lbRow(i + 1, r.username || 'no name yet', r.best || 0,
+                                               r.user_id === currentUser.id));
+                    });
+                // Rows written before the username fallback existed still hold
+                // null, which is what shows without a name. Quietly repair your
+                // OWN row now that you have one.
+                const mine = rows.find(r => r.user_id === currentUser.id);
+                if (mine && !mine.username && currentUsername) {
+                    try {
+                        await sb.from('pop_scores')
+                            .update({ username: currentUsername })
+                            .eq('user_id', currentUser.id);
+                    } catch (e) {}
+                }
+                // And if you have no username at all, nobody can tell which row
+                // is yours, so offer to fix that rather than leaving it blank.
+                if (!currentUsername) {
+                    status.className = '';
+                    status.innerHTML = '';
+                    const b = document.createElement('button');
+                    b.className = 'lb-setname';
+                    b.textContent = 'Pick a username so others can see who you are';
+                    b.addEventListener('click', () => { closeLeaderboard(); openUsernameSheet(); });
+                    status.appendChild(b);
+                }
             } catch (e) {
                 status.className = 'bad';
                 status.textContent = "Couldn't load the leaderboard.";
@@ -5098,6 +5668,11 @@
         // and draws one bubble with it. Identical program, identical uniforms,
         // therefore an identical bubble.
         let saGL = null, saProgram = null, saU = null, saRaf = null, saStart = 0;
+        // Tuned against the rendered pixels: the bubble occupies the upper
+        // portion of the card and leaves the lower half for the text.
+        // Tuned against rendered pixels: puts the bubble at ~30% down the card
+        // at ~210px across, leaving the lower half clear for the text.
+        const SA_LIFT = 0.35, SA_RADIUS = 0.80;
         function initShareRenderer() {
             if (saGL) return true;
             const cv = $('sa-canvas');
@@ -5166,8 +5741,11 @@
             // At 0.78 the rim reached past the edge and clipped.
             // Measured: the rim lands at roughly 84px of scene radius per unit,
             // so this fills about 80% of the canvas, leaving a clean margin.
-            buf[0] = 0; buf[1] = Math.sin(t * 0.7) * 0.010;
-            buf[2] = 0.88 * wob * (h < w ? 1 : fit); buf[3] = 0;
+            // The canvas is the whole card now, so lift the bubble into the
+            // upper portion and leave the lower half for the text.
+            const lift = SA_LIFT;
+            buf[0] = 0; buf[1] = lift + Math.sin(t * 0.7) * 0.008;
+            buf[2] = SA_RADIUS * wob * (h < w ? 1 : fit); buf[3] = 0;
             fx[0] = 0; fx[1] = 0; fx[2] = 0; fx[3] = 0;
 
             gl2.uniform2f(saU.res, w, h);
@@ -5201,6 +5779,343 @@
         }
         function stopShareBubble() {
             if (saRaf) { cancelAnimationFrame(saRaf); saRaf = null; }
+        }
+        // ===== FRIENDS =====
+        // Friends live in one place, not buried in the game. The leaderboard
+        // is only the first thing that uses them; sharing and anything else
+        // that needs "people I know" reads the same list.
+        function openFriendsPage() {
+            const p = $('friends-page');
+            if (!p) return;
+            p.classList.add('open');
+            $('friends-status').textContent = '';
+            $('friends-status').className = '';
+            $('friends-input').value = '';
+            loadFriends();
+        }
+        function closeFriendsPage() {
+            const p = $('friends-page');
+            if (p) p.classList.remove('open');
+        }
+        // Returns [{ user_id, username }] for everyone you have added.
+        async function fetchFriends() {
+            if (!sb || !currentUser) return [];
+            const { data: rows, error } = await sb.from('friends')
+                .select('friend_id').eq('user_id', currentUser.id);
+            if (error) throw new Error(error.message);
+            const ids = (rows || []).map(r => r.friend_id).filter(Boolean);
+            if (!ids.length) return [];
+            const { data: profs } = await sb.from('profiles')
+                .select('user_id, username').in('user_id', ids);
+            const nameById = new Map((profs || []).map(p => [p.user_id, p.username]));
+            return ids.map(id => ({ user_id: id, username: nameById.get(id) || null }));
+        }
+        async function loadFriends() {
+            const list = $('friends-list');
+            if (!list) return;
+            list.innerHTML = '';
+            if (!currentUser || !sb) {
+                list.innerHTML = '<div id="friends-empty">Sign in to add friends.</div>';
+                return;
+            }
+            list.innerHTML = '<div id="friends-empty">Loading\u2026</div>';
+            try {
+                const friends = await fetchFriends();
+                list.innerHTML = '';
+                if (!friends.length) {
+                    list.innerHTML = '<div id="friends-empty">No friends yet.<br>' +
+                        'Add someone by their username and you\\u2019ll see each other on the leaderboard.</div>';
+                    return;
+                }
+                friends.forEach(f => {
+                    const row = document.createElement('div');
+                    row.className = 'fr-row';
+                    const av = document.createElement('span');
+                    av.className = 'fr-av';
+                    av.textContent = (f.username || '?')[0].toUpperCase();
+                    const nm = document.createElement('span');
+                    nm.className = 'fr-name';
+                    nm.textContent = f.username ? ('@' + f.username) : 'no name yet';
+                    const rm = document.createElement('button');
+                    rm.className = 'fr-remove';
+                    rm.textContent = 'Remove';
+                    rm.addEventListener('click', async () => {
+                        rm.disabled = true;
+                        try {
+                            await sb.from('friends').delete()
+                                .eq('user_id', currentUser.id).eq('friend_id', f.user_id);
+                            row.remove();
+                            if (!$('friends-list').children.length) loadFriends();
+                        } catch (e) { rm.disabled = false; }
+                    });
+                    row.append(av, nm, rm);
+                    list.appendChild(row);
+                });
+            } catch (e) {
+                list.innerHTML = '<div id="friends-empty">Couldn\\u2019t load your friends right now.</div>';
+            }
+        }
+        async function addFriendFromPage() {
+            const input = $('friends-input'), status = $('friends-status'), btn = $('friends-add');
+            const name = (input.value || '').trim().replace(/^@/, '');
+            if (!name) return;
+            if (!currentUser || !sb) { status.className = 'bad'; status.textContent = 'Sign in first.'; return; }
+            if (currentUsername && name.toLowerCase() === currentUsername.toLowerCase()) {
+                status.className = 'bad'; status.textContent = "That's you."; return;
+            }
+            btn.disabled = true;
+            status.className = ''; status.textContent = 'Looking\u2026';
+            try {
+                const { data } = await sb.from('profiles')
+                    .select('user_id').ilike('username', name).maybeSingle();
+                if (!data) { status.className = 'bad'; status.textContent = 'No one goes by @' + name + '.'; return; }
+                const { error } = await sb.from('friends')
+                    .upsert({ user_id: currentUser.id, friend_id: data.user_id },
+                            { onConflict: 'user_id,friend_id' });
+                if (error) throw new Error(error.message);
+                input.value = '';
+                status.className = 'ok'; status.textContent = 'Added @' + name;
+                loadFriends();
+            } catch (e) {
+                status.className = 'bad'; status.textContent = "Couldn't add them right now.";
+            } finally { btn.disabled = false; }
+        }
+        // ===== PEOPLE =====
+        // Friends, requests, and bubbles sent to you in-app. Kept out of
+        // Settings on purpose: settings are configured once and left alone,
+        // whereas this is somewhere you come back to.
+        let peopleTab = 'friends';
+        let inboxCache = [], requestCache = [], friendCache = [];
+        function openPeople() {
+            const s = $('people-sheet');
+            if (!s) return;
+            s.classList.add('open');
+            $('people-status').textContent = '';
+            $('people-status').className = '';
+            loadPeople();
+        }
+        function closePeople() {
+            const s = $('people-sheet');
+            if (s) s.classList.remove('open');
+        }
+        function ppRow(name, sub, actions) {
+            const row = document.createElement('div');
+            row.className = 'pp-row';
+            const av = document.createElement('span');
+            av.className = 'pp-av';
+            av.textContent = (name || '?')[0].toUpperCase();
+            const nm = document.createElement('span');
+            nm.className = 'pp-name';
+            const b = document.createElement('b'); b.textContent = '@' + name;
+            nm.appendChild(b);
+            if (sub) { const sp = document.createElement('span'); sp.textContent = sub; nm.appendChild(sp); }
+            const act = document.createElement('span');
+            act.className = 'pp-act';
+            (actions || []).forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'pp-btn' + (a.primary ? ' primary' : '');
+                btn.textContent = a.label;
+                btn.addEventListener('click', a.onClick);
+                act.appendChild(btn);
+            });
+            row.append(av, nm, act);
+            return row;
+        }
+        async function loadPeople() {
+            const body = $('people-body'), status = $('people-status');
+            body.innerHTML = '';
+            if (!currentUser || !sb) {
+                body.innerHTML = '';
+                const e = document.createElement('div');
+                e.className = 'pp-empty';
+                e.textContent = 'Sign in to add friends and receive bubbles.';
+                body.appendChild(e);
+                return;
+            }
+            status.className = ''; status.textContent = 'Loading\u2026';
+            try {
+                if (peopleTab === 'friends') {
+                    await renderFriendsTab(body);
+                } else {
+                    await renderInboxTab(body);
+                }
+                status.textContent = '';
+            } catch (e) {
+                status.className = 'bad';
+                status.textContent = "Couldn't load that right now.";
+            }
+            refreshPeopleBadge();
+        }
+        async function renderFriendsTab(body) {
+            // Requests waiting on YOU come first: they need a decision.
+            const { data: incoming } = await sb.from('friends')
+                .select('user_id, status').eq('friend_id', currentUser.id).eq('status', 'pending');
+            requestCache = incoming || [];
+            const { data: mine } = await sb.from('friends')
+                .select('friend_id, status').eq('user_id', currentUser.id);
+            friendCache = mine || [];
+            const ids = [...new Set([...(incoming || []).map(r => r.user_id),
+                                     ...(mine || []).map(r => r.friend_id)])];
+            let names = {};
+            if (ids.length) {
+                const { data: profs } = await sb.from('profiles').select('user_id, username').in('user_id', ids);
+                (profs || []).forEach(p => { names[p.user_id] = p.username; });
+            }
+            if (requestCache.length) {
+                const h = document.createElement('div');
+                h.className = 'pp-empty';
+                h.style.cssText = 'padding:6px 4px 10px;text-align:left;font-weight:800;color:var(--ink-dim)';
+                h.textContent = 'Wants to be friends';
+                body.appendChild(h);
+                requestCache.forEach(r => {
+                    const who = names[r.user_id] || 'someone';
+                    body.appendChild(ppRow(who, 'sent you a request', [
+                        { label: 'Decline', onClick: () => respondToRequest(r.user_id, false) },
+                        { label: 'Accept', primary: true, onClick: () => respondToRequest(r.user_id, true) }
+                    ]));
+                });
+            }
+            const accepted = friendCache.filter(f => f.status === 'accepted');
+            const pendingOut = friendCache.filter(f => f.status === 'pending');
+            if (accepted.length) {
+                accepted.forEach(f => {
+                    const who = names[f.friend_id] || 'someone';
+                    body.appendChild(ppRow(who, null, [
+                        { label: 'Remove', onClick: () => removeFriend(f.friend_id) }
+                    ]));
+                });
+            }
+            pendingOut.forEach(f => {
+                const who = names[f.friend_id] || 'someone';
+                body.appendChild(ppRow(who, 'request sent', []));
+            });
+            if (!accepted.length && !pendingOut.length && !requestCache.length) {
+                const e = document.createElement('div');
+                e.className = 'pp-empty';
+                e.textContent = 'No friends yet.\nAdd someone by their username below, and they can accept.';
+                e.style.whiteSpace = 'pre-line';
+                body.appendChild(e);
+            }
+        }
+        async function renderInboxTab(body) {
+            const { data } = await sb.from('sent_bubbles')
+                .select('id, from_username, payload, created_at, read_at')
+                .eq('to_id', currentUser.id).order('created_at', { ascending: false }).limit(50);
+            inboxCache = data || [];
+            if (!inboxCache.length) {
+                const e = document.createElement('div');
+                e.className = 'pp-empty';
+                e.textContent = 'Nothing yet.\nBubbles friends send you land here.';
+                e.style.whiteSpace = 'pre-line';
+                body.appendChild(e);
+                return;
+            }
+            inboxCache.forEach(item => {
+                const clean = sanitizeSharedPayload(item.payload);
+                const title = clean ? clean.summary : 'A bubble';
+                body.appendChild(ppRow(item.from_username || 'someone', title, [
+                    { label: 'Discard', onClick: () => discardInbox(item.id) },
+                    { label: 'Add', primary: true, onClick: () => adoptFromInbox(item) }
+                ]));
+            });
+            // Opening the inbox counts as reading it.
+            try {
+                const unread = inboxCache.filter(i => !i.read_at).map(i => i.id);
+                if (unread.length) {
+                    await sb.from('sent_bubbles')
+                        .update({ read_at: new Date().toISOString() }).in('id', unread);
+                }
+            } catch (e) {}
+        }
+        async function respondToRequest(fromId, accept) {
+            try {
+                if (accept) {
+                    await sb.from('friends').update({ status: 'accepted' })
+                        .eq('user_id', fromId).eq('friend_id', currentUser.id);
+                    // Friendship goes both ways once accepted, so each side can
+                    // send to the other.
+                    await sb.from('friends').upsert(
+                        { user_id: currentUser.id, friend_id: fromId, status: 'accepted' },
+                        { onConflict: 'user_id,friend_id' });
+                } else {
+                    await sb.from('friends').delete()
+                        .eq('user_id', fromId).eq('friend_id', currentUser.id);
+                }
+                buzz([10, 22, 10]);
+            } catch (e) {}
+            loadPeople();
+        }
+        async function removeFriend(friendId) {
+            try {
+                await sb.from('friends').delete()
+                    .eq('user_id', currentUser.id).eq('friend_id', friendId);
+            } catch (e) {}
+            loadPeople();
+        }
+        async function discardInbox(id) {
+            try { await sb.from('sent_bubbles').delete().eq('id', id); } catch (e) {}
+            loadPeople();
+        }
+        function adoptFromInbox(item) {
+            const clean = sanitizeSharedPayload(item.payload);
+            if (!clean) return;
+            const before = new Set(thoughts.map(t => t.id));
+            adoptShared(clean, null, 0);
+            const root = thoughts.find(t => !before.has(t.id));
+            if (root && item.from_username) stampSharedFrom(root, item.from_username);
+            saveState();
+            updateDrawerUI();
+            discardInbox(item.id);
+            $('people-status').className = 'ok';
+            $('people-status').textContent = 'Added to your galaxy';
+        }
+        async function addFriendRequest(name) {
+            const status = $('people-status'), btn = $('people-addbtn');
+            const who = (name || '').trim().replace(/^@/, '');
+            if (!who) return;
+            if (!currentUser || !sb) { status.className = 'bad'; status.textContent = 'Sign in first.'; return; }
+            if (currentUsername && who.toLowerCase() === currentUsername.toLowerCase()) {
+                status.className = 'bad'; status.textContent = "That's you."; return;
+            }
+            btn.disabled = true;
+            status.className = ''; status.textContent = 'Looking\u2026';
+            try {
+                const { data } = await sb.from('profiles')
+                    .select('user_id').ilike('username', who).maybeSingle();
+                if (!data) { status.className = 'bad'; status.textContent = 'No one goes by @' + who + '.'; return; }
+                const { error } = await sb.from('friends').upsert(
+                    { user_id: currentUser.id, friend_id: data.user_id, status: 'pending' },
+                    { onConflict: 'user_id,friend_id' });
+                if (error) throw new Error(error.message);
+                $('people-addinput').value = '';
+                status.className = 'ok';
+                status.textContent = 'Request sent to @' + who;
+                loadPeople();
+            } catch (e) {
+                status.className = 'bad'; status.textContent = "Couldn't send that request.";
+            } finally { btn.disabled = false; }
+        }
+        // The badge is the only hint that something is waiting, so keep it
+        // honest: requests to answer plus unread bubbles.
+        async function refreshPeopleBadge() {
+            const badge = $('people-badge'), dot = $('inbox-dot');
+            if (!currentUser || !sb) {
+                if (badge) badge.classList.remove('show');
+                if (dot) dot.classList.remove('show');
+                return;
+            }
+            try {
+                const { data: reqs } = await sb.from('friends')
+                    .select('user_id').eq('friend_id', currentUser.id).eq('status', 'pending');
+                const { data: unread } = await sb.from('sent_bubbles')
+                    .select('id').eq('to_id', currentUser.id).is('read_at', null);
+                const n = (reqs || []).length + (unread || []).length;
+                if (badge) {
+                    badge.textContent = n > 9 ? '9+' : String(n);
+                    badge.classList.toggle('show', n > 0);
+                }
+                if (dot) dot.classList.toggle('show', (unread || []).length > 0);
+            } catch (e) {}
         }
         function updateAccountRow() {
             const status = document.getElementById('account-status');
@@ -5885,6 +6800,27 @@
             if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', confirmDeleteAccount);
             const shareBtn = document.getElementById('btn-share');
             if (shareBtn) shareBtn.addEventListener('click', shareCurrentThought);
+            const saFriend = document.getElementById('sa-addfriend');
+            if (saFriend) saFriend.addEventListener('click', async () => {
+                const who = saFriend.dataset.who;
+                if (!who || !sb || !currentUser) return;
+                saFriend.disabled = true;
+                saFriend.textContent = 'Adding\u2026';
+                try {
+                    const { data } = await sb.from('profiles')
+                        .select('user_id').ilike('username', who).maybeSingle();
+                    if (!data) throw new Error('no such user');
+                    const { error } = await sb.from('friends')
+                        .upsert({ user_id: currentUser.id, friend_id: data.user_id },
+                                { onConflict: 'user_id,friend_id' });
+                    if (error) throw new Error(error.message);
+                    saFriend.textContent = '@' + who + ' added';
+                    buzz([10, 24, 10]);
+                } catch (e) {
+                    saFriend.textContent = "Couldn't add them";
+                    saFriend.disabled = false;
+                }
+            });
             const saAdd = document.getElementById('sa-add');
             if (saAdd) saAdd.addEventListener('click', addSharedToGalaxy);
             const saDismiss = document.getElementById('sa-dismiss');
@@ -6015,14 +6951,29 @@
         // galaxy you already have instead of only on new captures. The
         // `whenScanned` flag means this runs exactly once per thought: if you
         // later clear a date deliberately, it stays cleared.
+        // Bump this when the date parser changes in a way that should
+        // re-examine deadlines already stamped on existing thoughts.
+        const WHEN_SCAN_VERSION = 2;
         function migrateWhenFields() {
             let touched = 0;
             const visit = (list) => {
                 for (const t of (list || [])) {
                     if (!t) continue;
                     if (t.doneAt === undefined) t.doneAt = null;
+                    // Version the scan. The parser has since learned that
+                    // "I filled it up TODAY and it cost $16" is a statement
+                    // about the past, not a deadline, but thoughts captured
+                    // before that fix were stamped once and never revisited,
+                    // so they sat there permanently Overdue. Re-derive those.
+                    if (t.whenScanned && t.whenScanV !== WHEN_SCAN_VERSION && t.dueAt) {
+                        const re = parseWhen(t.full || t.summary || '', t.createdAt || Date.now());
+                        if (!re) { t.dueAt = null; t.dueHadTime = false; touched++; }
+                        t.whenScanV = WHEN_SCAN_VERSION;
+                        t.urgency = scoreUrgency(t.full || t.summary || '', t.dueAt);
+                    }
                     if (!t.whenScanned) {
                         t.whenScanned = true;
+                        t.whenScanV = WHEN_SCAN_VERSION;
                         if (t.dueAt === undefined || t.dueAt === null) {
                             const w = parseWhen(t.full || t.summary || '', t.createdAt || Date.now());
                             if (w) { t.dueAt = w.at.getTime(); t.dueHadTime = !!w.hadTime; touched++; }
@@ -6985,7 +7936,9 @@
             // v2: the card shows the thought and where it lives. No modes.
             ansEl.classList.remove('has-answer');
 
-            detailMeta.textContent = `Captured ${timeAgo(thought.createdAt)}`;
+            detailMeta.textContent = thought.sharedFrom
+                ? `Shared from @${thought.sharedFrom} \u00b7 ${timeAgo(thought.createdAt)}`
+                : `Captured ${timeAgo(thought.createdAt)}`;
             // Deadline line: only present when the thought actually has one.
             const dueEl = $('detail-due');
             if (dueEl) {
@@ -8675,6 +9628,44 @@
             dismissSigninNudge(true);
             try { openAuthSheet(); } catch (err) {}
         });
+        const friendsOpenBtn = $('friends-open-btn');
+        if (friendsOpenBtn) friendsOpenBtn.addEventListener('click', openFriendsPage);
+        const friendsCloseBtn = $('friends-close');
+        if (friendsCloseBtn) friendsCloseBtn.addEventListener('click', closeFriendsPage);
+        const friendsAddBtn = $('friends-add');
+        if (friendsAddBtn) friendsAddBtn.addEventListener('click', addFriendFromPage);
+        const friendsInputEl = $('friends-input');
+        if (friendsInputEl) friendsInputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); friendsInputEl.blur(); addFriendFromPage(); }
+        });
+        const sendLink = $('send-link');
+        if (sendLink) sendLink.addEventListener('click', shareViaLink);
+        const sendCancel = $('send-cancel');
+        if (sendCancel) sendCancel.addEventListener('click', closeSendSheet);
+        const sendSheetEl = $('send-sheet');
+        if (sendSheetEl) sendSheetEl.addEventListener('click', (e) => {
+            if (e.target === sendSheetEl) closeSendSheet();
+        });
+        const peopleBtn = $('people-btn');
+        if (peopleBtn) peopleBtn.addEventListener('click', openPeople);
+        const peopleClose = $('people-close');
+        if (peopleClose) peopleClose.addEventListener('click', closePeople);
+        document.querySelectorAll('.people-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                peopleTab = tab.dataset.tab;
+                document.querySelectorAll('.people-tab').forEach(t => t.classList.toggle('active', t === tab));
+                loadPeople();
+            });
+        });
+        const peopleAdd = $('people-addbtn');
+        if (peopleAdd) peopleAdd.addEventListener('click', () => addFriendRequest($('people-addinput').value));
+        const peopleInput = $('people-addinput');
+        if (peopleInput) peopleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); peopleInput.blur(); addFriendRequest(peopleInput.value); }
+        });
+        // Check for waiting requests and bubbles on open, then occasionally.
+        setTimeout(() => { try { refreshPeopleBadge(); } catch (e) {} }, 3000);
+        setInterval(() => { try { refreshPeopleBadge(); } catch (e) {} }, 60000);
         const dueNudgeEl = $('due-nudge');
         if (dueNudgeEl) dueNudgeEl.addEventListener('click', openDueList);
         // Only once the app has actually settled, never during launch.
@@ -9487,7 +10478,9 @@
         function applyChildFamily(parentThought, kids, depth) {
             if (!parentThought || !Array.isArray(kids) || kids.length < 2) return;
             if ((depth || 0) >= MAX_FAMILY_DEPTH) return;
-            kids.slice(0, 8).forEach((c, i) => {
+            // Matches the worker's cap. At 8 a long shopping list was
+            // trimmed on arrival even when the AI returned every item.
+            kids.slice(0, 20).forEach((c, i) => {
                 if (!c) return;
                 setTimeout(() => {
                     // The parent must still exist — the user may have released
@@ -9994,6 +10987,9 @@
                 showRecallCard(question, answer, data.confidence, {
                     format: data.format || 'prose',
                     items: Array.isArray(data.items) ? data.items : [],
+                    // The thoughts this answer actually drew on. A checklist
+                    // built from them belongs WITH them, not at the top level.
+                    sources: items,
                     verdict: verdict,
                     conflicts: data.conflicts || [],
                     missing: data.missing || '',
@@ -10284,11 +11280,36 @@
                     : 'Keep these steps as bubbles';
                 save.addEventListener('click', () => {
                     save.disabled = true;
-                    const parent = makeThought(
-                        (question || 'List').replace(/\?+$/, '').slice(0, 60),
-                        answer || question || 'List');
+                    // WHERE it goes: under the bubble the answer came from.
+                    // Filing it at the top level meant asking about Costco
+                    // produced a stray list nowhere near your Costco bubble.
+                    const srcs = (extras || {}).sources || [];
+                    let host = null;
+                    for (const s of srcs) {
+                        const t = findThoughtById(s.id);
+                        if (t) { host = t; break; }
+                    }
+                    // WHAT it is called. makeThought() runs the SPEECH
+                    // summariser, which strips a question down to keywords:
+                    // "what do I need to get from Costco?" became the
+                    // nonsense "What Need Get". Name it from its subject
+                    // instead and say plainly that it is a checklist.
+                    const subject = host
+                        ? host.summary.replace(/\s*(run|list|tasks?|checklist)$/i, '').trim()
+                        : (question || '').replace(/\?+$/, '')
+                            .replace(/^\s*(what|which|who|when|where|how|why)\b/i, '')
+                            .replace(/\b(do|does|did|can|could|should|would|i|need|to|get|buy|have|my|the|a|an|for|from|at|in|on)\b/gi, ' ')
+                            .replace(/\s+/g, ' ').trim();
+                    const niceSubject = subject
+                        ? subject.split(' ').slice(0, 3)
+                              .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                        : '';
+                    const label = (niceSubject ? niceSubject + ' ' : '') +
+                                  (exFmt === 'steps' ? 'Steps' : 'Checklist');
+                    const parent = makeThought(label, answer || question || label);
+                    parent.summary = label;   // keep the readable name
                     parent.routed = true;
-                    fileThought(parent, null);
+                    fileThought(parent, host ? host.id : null);
                     exItems.forEach((txt, i) => {
                         const kid = makeThought(txt, txt);
                         kid.routed = true;
@@ -10296,7 +11317,9 @@
                     });
                     saveState();
                     updateDrawerUI();
-                    save.textContent = 'Saved to your galaxy';
+                    save.textContent = host
+                        ? ('Saved into ' + host.summary)
+                        : 'Saved to your galaxy';
                     try { markHomecoming(parent.id); } catch (e) {}
                 });
                 aEl.appendChild(save);
@@ -11185,8 +12208,49 @@
         // right for releasing a thought but too polite when you are popping
         // dozens. This adds the hollow "thup" and the little rising tail a
         // real bubble makes when it collapses into itself.
+        // The real recorded pop, embedded so it works offline and needs no
+        // extra request. Decoded once into an AudioBuffer, then played from
+        // that buffer every time: creating an <audio> per pop would stutter
+        // badly when you are popping several a second.
+        const POP_MP3_B64 = "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qzcCJpZqSJEqhQoWbISWMtVQ1cSElISAElyVCKWUM1Go6QnkSJnFTEFNRVVVVQEAgCAABBAFACg1NpVamvbyYSYkVNhxU4k3nXWYumvmKkVrWGuGa6a9dmbWOvlVWf5xq3/Dpz0cSS1ziVf9qftpwMAkpbuUAlvhyUkcOJOjVetNR8olESOfuajnlkv/zdavZiXIZj9WSSpzDoQhJRLvmasrbNCEIzzT1rcdRrc9lbWdOXBKJ1rTvLmXByCpODU+rUkk3pqttpVEmJq31aWrXdqcmLuZ5VBEDp7zEiJFH72JJZziWvjHEUW31s1P+MdUyck8/nAIlncjACS/Ylv881H4cAgp7Zra0K3oRBUBMTeZPWCUZR4cuta70yz8+tdnF3snK1pd7JyTbu5kJiptNrmKw+2i650ZPQreZ602aXPWsue05PeZUlZWY3rJye0/paXLnpy63rQ1KoESa5fICUDY246PjL/tA8yVSzx06AJ0q2urWlxkXlZi7hWAGD5KZemBIKlxkXT0+AqMQbHamMETQxPWntW9aSQBjYZhpE9CiTQwRItih62x8tQ0suSxQoYxSFIpZjWkIZSLEyYVBEETMaji0vFUKgiTTy0OXGVSlLbjVy2Nb5f+pXm3SKP/pZr+PlcfvRJTQ0Mj//vUZN8ABMV1tckGZ7CoDragMMycF5XYmCYlmYJ2OpYcUb+R46Mj5r6lUm0v1ysWjlYfLVpie3OVpypeJLi5bAfPMuHQ5AeSE7arVrpl48k0qiSej0B5WJI8lllIWmVp6VlNggpplu2ehpRE3lb/pMZWiIdqY0SDweFlKodL5S6B4Ag8HjgKHj1h7f8ZjvGqwVRML41JmVerVhxjZoBM1sKU0VaW1oQ4vwuSkRzDS1oRzI43iFHUzK5XTvW6R+raSsuU6qcsKtdK67163PWGZicq6fWg0fbrX23V7FkjWfRrVrWv////+/b51msFOun24SuV0+rSoa41etzNthdPtxVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+        let popBuffer = null, popBufferLoading = false;
+        function loadPopSound() {
+            if (popBuffer || popBufferLoading) return;
+            const ctx = sfx(); if (!ctx) return;
+            popBufferLoading = true;
+            try {
+                const bin = atob(POP_MP3_B64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                ctx.decodeAudioData(bytes.buffer,
+                    (buf) => { popBuffer = buf; popBufferLoading = false; },
+                    () => { popBufferLoading = false; });
+            } catch (e) { popBufferLoading = false; }
+        }
+        function playRecordedPop(sizePx, rateShift) {
+            const ctx = sfx();
+            if (!ctx) return false;
+            if (!popBuffer) { loadPopSound(); return false; }
+            try {
+                const src = ctx.createBufferSource();
+                src.buffer = popBuffer;
+                // Smaller bubbles pop higher. Slight random detune so a fast
+                // run never sounds like the same sample on a loop.
+                const size = Math.min(Math.max((sizePx || 60) / 90, 0.45), 1.5);
+                src.playbackRate.value = Math.max(0.6, Math.min(1.9,
+                    (1.18 - size * 0.28) * (rateShift || 1) * (0.97 + Math.random() * 0.06)));
+                const g = ctx.createGain();
+                g.gain.value = 0.55;
+                src.connect(g).connect(ctx.destination);
+                src.start(0);
+                return true;
+            } catch (e) { return false; }
+        }
         function playBubblePop(sizePx, golden) {
             const ctx = sfx(); if (!ctx) return;
+            // The recorded pop is the real sound. The synthesised one below is
+            // only a stand-in for the first pop or two while it decodes.
+            if (playRecordedPop(sizePx, golden ? 1.22 : 1)) return;
             const t0 = ctx.currentTime;
             const size = Math.min(Math.max((sizePx || 60) / 90, 0.45), 1.5);
 
@@ -11698,6 +12762,23 @@
             stepSceneShift(now);
             if (now - lastFloaterSync > 1100) {
                 lastFloaterSync = now;
+                // ORPHANED LABELS. Every label belongs to an object. If its
+                // object is gone the label can never be updated or removed by
+                // anything else, so it just sits there painting over live
+                // bubbles until the app is restarted. Sweep them.
+                try {
+                    const live = new Set();
+                    for (const o of objects) if (o.el) live.add(o.el);
+                    const labels = fxLayer.querySelectorAll('.bubble-text');
+                    for (const el of labels) {
+                        if (live.has(el)) continue;
+                        // Give a just-created label a moment to be attached to
+                        // its object before judging it.
+                        if (!el.dataset.bornAt) { el.dataset.bornAt = String(now); continue; }
+                        if (now - (+el.dataset.bornAt) < 2500) continue;
+                        el.remove();
+                    }
+                } catch (e) {}
                 reconcileSceneWithTree();
                 syncFloaters();
                 // SAFETY NET: onboarding hides the dock, trail and drawer
