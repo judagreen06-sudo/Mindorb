@@ -1812,18 +1812,25 @@
         }
         @keyframes saTwinkle { 0%,100% { opacity: .12; } 50% { opacity: .7; } }
         .motion-reduced .sa-star { animation: none; opacity: .35; }
-        #sa-inner {
-            position: relative; width: 100%; max-width: 340px;
-            display: flex; flex-direction: column; align-items: center; text-align: center;
+        /* Absolute, not flowed. The bubble is drawn by the renderer at the
+           centre of the SCREEN, so the text has to be placed relative to that,
+           not stacked around an empty div that only pretends to be it. */
+        #sa-inner { position: absolute; inset: 0; }
+        #sa-inner > * {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 340px; text-align: center;
         }
-        #share-arrival.open #sa-inner > * {
-            animation: saPartIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-            animation-delay: var(--sad, 0s);
-        }
-        @keyframes saPartIn { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
-        .motion-reduced #share-arrival.open #sa-inner > * { animation: none; }
+        #sa-from   { top: 13%; }
+        #sa-kids   { top: 68%; }
+        #sa-status { top: 78%; }
+        #sa-actions, #sa-signin { bottom: calc(env(safe-area-inset-bottom,0px) + 42px); }
+        /* No entrance animation gating visibility here. An animation with a
+           `backwards` fill holds its elements at opacity 0 until it runs, and
+           if it stalls while the renderer is starting up you get a blank
+           screen on the one page a shared link opens onto. The bubble's own
+           float supplies the life; this content simply shows up. */
         #sa-from {
-            display: flex; align-items: center; gap: 9px; margin-bottom: 26px;
+            display: flex; align-items: center; justify-content: center; gap: 9px;
             color: var(--ink-dim); font-size: 13.5px; font-weight: 700;
         }
         #sa-avatar {
@@ -1832,13 +1839,7 @@
             background: linear-gradient(140deg, rgba(169,200,232,.9), rgba(157,196,168,.75));
             color: #0d1119; font-size: 12px; font-weight: 800;
         }
-        /* Just a reserved space now: the bubble drawn inside it is the real
-           one, rendered by the shader on the canvas below. */
-        #sa-orb {
-            position: relative; width: 232px; height: 232px;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none;
-        }
+        #sa-orb { display: none; }   /* the renderer draws the real bubble */
         #sa-orb-label {
             display: none;   /* the shader draws the real label */
             position: relative; z-index: 2;
@@ -1846,18 +1847,16 @@
             font-weight: 800; font-size: 21px; line-height: 1.25;
             text-shadow: 0 2px 18px rgba(0,0,0,.5); word-break: break-word;
         }
-        #sa-kids {
-            margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
-        }
+        #sa-kids { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 0 20px; box-sizing: border-box; }
         .sa-kid {
             padding: 5px 11px; border-radius: 999px;
             background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10);
             color: var(--ink-dim); font-size: 11.5px; font-weight: 700;
         }
-        #sa-status { min-height: 18px; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
+        #sa-status { min-height: 18px; font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
         #sa-status.bad { color: rgb(232,154,138); }
         #sa-status.ok { color: rgb(157,196,168); }
-        #sa-actions { display: flex; gap: 9px; margin-top: 20px; width: 100%; }
+        #sa-actions { display: flex; gap: 9px; padding: 0 20px; box-sizing: border-box; }
         #sa-dismiss, #sa-add, #sa-signin {
             padding: 13px 0; border-radius: var(--r-pill); cursor: pointer;
             font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 700;
@@ -1870,7 +1869,7 @@
             box-shadow: 0 8px 22px rgba(120,160,220,.22), inset 0 1px 0 rgba(255,255,255,.85);
         }
         #sa-signin {
-            display: none; width: 100%; margin-top: 20px; border: none; color: #0e1219;
+            display: none; border: none; color: #0e1219;
             background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
         }
         #sa-dismiss:active, #sa-add:active, #sa-signin:active { transform: scale(.97); }
@@ -3896,7 +3895,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-24g';
+        const BUILD_TAG = '2026-07-24h';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4751,6 +4750,13 @@
             const sheet = $('share-arrival');
             if (!sheet) return;
             sheet.classList.add('open');
+            // No fade on the container. This screen is what a shared LINK
+            // opens onto, so it is the one thing that must never fail to
+            // appear, and an opacity transition can stall while the renderer
+            // is still spinning up, leaving a blank screen. The staggered
+            // entrance of the contents below supplies the movement instead.
+            sheet.style.transition = 'none';
+            sheet.style.opacity = '1';
             $('sa-status').textContent = ''; $('sa-status').className = '';
             paintArrival(null, null, false);
             if (!sb) { $('sa-status').className = 'bad'; $('sa-status').textContent = 'Cloud is unavailable right now.'; return; }
@@ -4818,7 +4824,11 @@
         }
         function closeSharedBubble() {
             const sheet = $('share-arrival');
-            if (sheet) sheet.classList.remove('open');
+            if (sheet) {
+                sheet.style.opacity = '';
+                sheet.style.transition = '';
+                sheet.classList.remove('open');
+            }
             clearSharePreviewBubble();
             setGalaxyHiddenForShare(false);
             pendingShare = null;
@@ -5433,6 +5443,11 @@
             try {
                 if (localStorage.getItem(ONBOARD_KEY)) return false;
                 if (localStorage.getItem('thoughts-v2-seen')) return false; // existing user
+                // Someone arriving on a share link came to see a specific
+                // bubble. Running the tour over the top of it is two screens
+                // competing for the same screen. They get the tour afterwards.
+                const tok = new URL(location.href).searchParams.get(SHARE_PARAM);
+                if (tok) return false;
             } catch (e) { return false; }
             return true;
         }
