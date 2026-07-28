@@ -1068,6 +1068,9 @@
             position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
             border-radius: var(--r-xl) var(--r-xl) 0 0;
             max-height: 72dvh;
+            /* Enough room that the search field is never the only thing on
+               screen and never sits right on the keyboard's edge. */
+            min-height: 210px;
             transform: translateY(105%);
             visibility: hidden;
             transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.24, 1), visibility 0s 0.32s;
@@ -4508,7 +4511,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25n';
+        const BUILD_TAG = '2026-07-25q';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4739,7 +4742,21 @@
                 }
             } catch (e) {}
             const name = $('un-input').value.trim();
-            if (!USERNAME_RE.test(name) || !sb || !currentUser) return;
+            // Never fail silently. This returned with no message at all, so
+            // pressing Save on a name the rules reject did nothing whatsoever,
+            // which reads as "I cannot change my username".
+            if (!name) { setUnState('Type a username first.', 'bad'); return; }
+            if (!USERNAME_RE.test(name)) {
+                setUnState(name.length < 3 ? 'At least 3 characters.'
+                    : name.length > 20 ? 'At most 20 characters.'
+                    : 'Letters, numbers and underscores only.', 'bad');
+                return;
+            }
+            if (!sb || !currentUser) { setUnState('Sign in first.', 'bad'); return; }
+            if (currentUsername && name.toLowerCase() === currentUsername.toLowerCase()) {
+                setUnState("That's already your username.", 'bad');
+                return;
+            }
             const btn = $('un-save');
             btn.disabled = true;
             setUnState('Saving\u2026', '');
@@ -6259,6 +6276,36 @@
         let inboxCache = [], requestCache = [], friendCache = [];
         // The sheets I added put their input at the bottom, where the keyboard
         // lands on top of it. Lift them by however much the keyboard covers.
+        // THE DRAWER. It is anchored to the bottom and its height follows its
+        // content, so with an empty or short list it sits low and the keyboard
+        // covers it entirely, search field and all. Raise it off the bottom
+        // instead: `bottom` is free, whereas `transform` is already carrying
+        // the open/close animation.
+        function bindDrawerKeyboard() {
+            const vv = window.visualViewport;
+            const el = document.getElementById('drawer');
+            const search = document.getElementById('drawer-search');
+            if (!vv || !el || !search) return;
+            let watching = false;
+            const apply = () => {
+                if (!el.classList.contains('open')) { el.style.bottom = ''; return; }
+                const covered = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
+                el.style.bottom = covered > 80 ? (Math.round(covered) + 'px') : '';
+            };
+            search.addEventListener('focus', () => {
+                watching = true;
+                el.style.transition = 'transform 0.32s cubic-bezier(0.32,0.72,0.24,1), bottom .2s ease-out';
+                apply();
+                setTimeout(apply, 120);
+                setTimeout(apply, 320);
+            });
+            search.addEventListener('blur', () => {
+                watching = false;
+                el.style.bottom = '';
+            });
+            vv.addEventListener('resize', () => { if (watching) apply(); });
+            vv.addEventListener('scroll', () => { if (watching) apply(); });
+        }
         function bindKeyboardLift(sheetId, innerSelector) {
             const vv = window.visualViewport;
             if (!vv) return;
@@ -7772,6 +7819,7 @@
                 if (!b) {
                     b = document.createElement('div');
                     b.id = 'err-banner';
+                b.className = 'ui-block';
                     b.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0);left:0;right:0;z-index:999;background:rgba(120,20,30,0.92);color:#fff;font:600 11px/1.4 monospace;padding:8px 12px;word-break:break-all;';
                     document.body.appendChild(b);
                 }
@@ -10430,6 +10478,7 @@
             if (e.target === sendSheetEl) closeSendSheet();
         });
         // Every sheet with a text field needs this, or the keyboard hides it.
+        bindDrawerKeyboard();
         bindKeyboardLift('people-sheet', null);
         bindKeyboardLift('send-sheet', '#send-inner');
         bindKeyboardLift('username-sheet', null);
@@ -10977,6 +11026,10 @@
             if (!box) {
                 box = document.createElement('div');
                 box.id = 'move-suggest';
+                // Without this the galaxy's window-level tap handler treats a
+                // press on this dialog as a press on the sky behind it, so
+                // confirming something also acted on whatever was underneath.
+                box.className = 'ui-block';
                 box.innerHTML = '<div id="ms-text"></div><div id="ms-btns"><button id="ms-keep"></button><button id="ms-move"></button></div>';
                 document.body.appendChild(box);
             }
@@ -12080,6 +12133,7 @@
             if (!cap) {
                 cap = document.createElement('div');
                 cap.id = 'path-caption';
+            cap.style.pointerEvents = 'none';
                 document.body.appendChild(cap);
             }
             return cap;
