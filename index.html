@@ -3423,9 +3423,45 @@
         // warp/flight would otherwise bake in garbage wrapping forever.
         function radiusToPxBase(r) { return r * (2.0 / baseCameraZ) * (VH / 2); }
         function jsToPixelX(x) { const a = VW / VH; return ((x * posScale() / a) * 0.5 + 0.5) * VW; }
-        function jsToPixelY(y) { return ((-y * posScale()) * 0.5 + 0.5) * VH; }
+        // How far the whole scene slides so nothing sits under the coach card.
+        // The centre orb is pinned at the world origin, so reserving space in
+        // bounds() only ever helped the floating bubbles: the big bubble the
+        // card is TALKING ABOUT stayed put and got covered. Shifting the view
+        // moves everything together and keeps the layout coherent.
+        let _sceneShift = 0;
+        function sceneShiftTarget() {
+            if (!onboardCardClearance) return 0;
+            const top = onboardCardClearance.top || 0;
+            const bottom = onboardCardClearance.bottom || 0;
+            if (!top && !bottom) return 0;
+            // Recentre on whatever vertical space is actually left.
+            const wanted = (top + (VH - bottom)) / 2;
+            return wanted - VH / 2;
+        }
+        // A pure getter. The value is advanced ONCE PER FRAME in the render
+        // loop, not here: easing inside the getter made the speed depend on
+        // how many times per frame it happened to be called, and left the
+        // hit-testing and drawing maths disagreeing with each other.
+        function sceneShiftPx() { return _sceneShift; }
+        let _sceneShiftLast = 0;
+        function stepSceneShift(now) {
+            const target = sceneShiftTarget();
+            const reduced = document.documentElement.classList.contains('motion-reduced');
+            if (reduced) { _sceneShift = target; return; }
+            // Time-based, not per-frame. A fixed fraction per frame moves at
+            // whatever speed the device happens to render at; this settles in
+            // the same ~0.45s everywhere, and cannot stall part-way.
+            const t = (typeof now === 'number' ? now : performance.now());
+            const dt = Math.min(Math.max((t - (_sceneShiftLast || t)) / 1000, 0), 0.1);
+            _sceneShiftLast = t;
+            const k = 1 - Math.pow(0.001, dt / 0.45);   // ~99.9% of the way in 0.45s
+            _sceneShift += (target - _sceneShift) * k;
+            if (Math.abs(target - _sceneShift) < 0.4) _sceneShift = target;
+        }
+        function jsToPixelY(y) { return ((-y * posScale()) * 0.5 + 0.5) * VH + sceneShiftPx(); }
         function pixelToJs(cx, cy) {
             const a = VW / VH;
+            cy = cy - sceneShiftPx();   // undo the shift, or taps land in the wrong place
             return {
                 x: (((cx / VW) * 2 - 1) * a) / posScale(),
                 y: (-((cy / VH) * 2 - 1)) / posScale()
@@ -3447,6 +3483,7 @@
         // for every bubble every frame, and getBoundingClientRect forces
         // layout). Null whenever the coach card isn't on screen.
         let onboardCardClearance = null;
+        let onboardMeasureTimer = null;
         function bounds() {
             const a = VW / VH;
             const sidePx = 10;
@@ -3885,7 +3922,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23z';
+        const BUILD_TAG = '2026-07-24a';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -5311,15 +5348,36 @@
             if (skipBtn) skipBtn.style.display = (i === 0) ? 'none' : 'block';
             card.classList.add('show');
             playGlassSweep(card);
-            // Measure the card once it has actually laid out, so the physics
-            // bounds can keep bubbles from hiding underneath it.
-            requestAnimationFrame(() => {
+            // Measure the card once it has actually SETTLED. Measuring on the
+            // next frame caught it mid-transition and recorded the PREVIOUS
+            // card's position, so the scene shifted for the last step instead
+            // of this one, and the card ended up sitting over the bubble it
+            // was talking about. Re-measure until the size stops changing.
+            if (onboardMeasureTimer) clearInterval(onboardMeasureTimer);
+            let lastSig = '';
+            let tries = 0;
+            const measure = () => {
                 const r = card.getBoundingClientRect();
-                if (!r.height) { onboardCardClearance = null; return; }
+                if (!r.height) { onboardCardClearance = null; return false; }
+                const sig = Math.round(r.top) + 'x' + Math.round(r.height);
+                // A generous margin: touching the card is still too close for
+                // something the card is pointing at.
+                const gap = 34;
                 onboardCardClearance = card.classList.contains('bottom')
-                    ? { top: 0, bottom: Math.max(0, VH - r.top) + 14 }
-                    : { top: Math.max(0, r.bottom) + 14, bottom: 0 };
-            });
+                    ? { top: 0, bottom: Math.max(0, VH - r.top) + gap }
+                    : { top: Math.max(0, r.bottom) + gap, bottom: 0 };
+                const stable = sig === lastSig;
+                lastSig = sig;
+                return stable;
+            };
+            requestAnimationFrame(measure);
+            onboardMeasureTimer = setInterval(() => {
+                // Two identical readings in a row means the transition is done.
+                if (measure() || ++tries > 24) {
+                    clearInterval(onboardMeasureTimer);
+                    onboardMeasureTimer = null;
+                }
+            }, 60);
         }
         function onboardAdvance() {
             const next = onboardStep + 1;
@@ -11305,6 +11363,7 @@
             // Watchdog: a stranded transition flag would silently kill all
             // taps and the mic until a refresh. No transition legitimately
             // lasts 4s — force-clear it if one ever sticks.
+            stepSceneShift(now);
             if (now - lastFloaterSync > 1100) {
                 lastFloaterSync = now;
                 reconcileSceneWithTree();
