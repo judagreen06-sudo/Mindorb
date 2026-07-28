@@ -1845,6 +1845,53 @@
            scene is already rendering underneath, and the bubble you see here
            is the ACTUAL shader-drawn bubble, not a CSS imitation of one. The
            launch screen uses the same trick. */
+        /* THE RESTORE CARD. Every major app offers exactly one action when you
+           sign in during a deletion window: get your account back. None of
+           them offer to finish the deletion faster, because someone signing in
+           almost always wants their things, and an irreversible action at that
+           moment gets taken by accident. */
+        #restore-sheet {
+            position: fixed; inset: 0; z-index: 999750;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px; background: rgba(4,6,12,.72);
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            opacity: 0; pointer-events: none; visibility: hidden;
+        }
+        #restore-sheet.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        #restore-card {
+            width: 100%; max-width: 330px; padding: 28px 24px 20px;
+            border-radius: 28px; text-align: center;
+            background: linear-gradient(168deg, rgba(26,32,48,.98), rgba(14,18,28,.99));
+            border: 1px solid rgba(255,255,255,.12);
+            box-shadow: 0 30px 64px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.13);
+            animation: saCardIn .5s cubic-bezier(.22,1,.36,1) both;
+        }
+        #restore-icon {
+            width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(232,154,138,.14); border: 1px solid rgba(232,154,138,.28);
+            color: rgb(240,180,168);
+        }
+        #restore-icon svg { width: 22px; height: 22px; }
+        #restore-title {
+            margin: 0 0 8px; color: var(--ink);
+            font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 17px; font-weight: 800; line-height: 1.3;
+        }
+        #restore-body { margin: 0 0 22px; color: var(--ink-dim); font-size: 13.5px; font-weight: 600; line-height: 1.5; }
+        #restore-go {
+            width: 100%; padding: 14px 0; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%); color: #0e1219;
+            box-shadow: 0 8px 22px rgba(120,160,220,.24);
+            font-family: 'Quicksand',sans-serif; font-size: 14.5px; font-weight: 700;
+        }
+        #restore-go:active { transform: scale(.98); }
+        #restore-go:disabled { opacity: .55; }
+        #restore-later {
+            width: 100%; margin-top: 10px; padding: 11px 0;
+            background: none; border: none; cursor: pointer;
+            color: var(--ink-faint); font-family: 'Quicksand',sans-serif; font-size: 13px; font-weight: 700;
+        }
+        #restore-later:active { color: var(--ink); }
         /* THE ARRIVAL CARD.
            A card sitting on the galaxy, not a screen that replaces it. The
            bubble inside is drawn by the SAME shader as everything else, on its
@@ -3283,6 +3330,18 @@
         </div>
     </div>
 
+    <div id="restore-sheet" class="ui-block">
+        <div id="restore-card">
+            <div id="restore-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4.5h4.5"/></svg>
+            </div>
+            <h3 id="restore-title">This account is scheduled for deletion</h3>
+            <p id="restore-body"></p>
+            <button id="restore-go">Restore my account</button>
+            <button id="restore-later">Not now</button>
+        </div>
+    </div>
+
     <div id="share-arrival" class="ui-block">
         <div id="sa-card">
             <canvas id="sa-canvas"></canvas>
@@ -4511,7 +4570,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25q';
+        const BUILD_TAG = '2026-07-25r';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -6854,30 +6913,50 @@
                 { cancelLabel: 'Cancel', confirmLabel: 'Delete Account', danger: true }
             );
         }
-        // Signing in during the 7-day window is the natural moment to ask.
+        // Signing in during the window is the moment to offer this, and it
+        // deserves a real card rather than a toast you can miss. One action,
+        // deliberately: every major app offers restore and none offer to
+        // finish the deletion sooner, because an irreversible choice made at
+        // this exact moment is almost always an accident.
         function offerAccountRestore(daysLeft) {
-            const msg = daysLeft > 0
-                ? ('This account is scheduled for deletion in ' + daysLeft +
-                   (daysLeft === 1 ? ' day' : ' days') + '.')
-                : 'This account is scheduled for deletion.';
-            showVoiceStatus(msg + ' Tap to restore it.', { autoHideMs: 9000, tapToAct: true });
-            const status = document.getElementById('voice-status');
-            if (!status) return;
-            const restore = async () => {
-                status.removeEventListener('click', restore);
-                try {
-                    const { data: ok } = await sb.rpc('restore_my_account');
-                    if (ok === false) {
-                        showVoiceStatus('That window has passed.', { error: true, autoHideMs: 3000 });
-                        return;
-                    }
-                    showVoiceStatus('Welcome back. Your account is restored.', { autoHideMs: 3000 });
-                    pullAndMerge(); fetchUsername();
-                } catch (e) {
-                    showVoiceStatus("Couldn't restore it right now.", { error: true, autoHideMs: 3000 });
+            const sheet = $('restore-sheet');
+            if (!sheet) return;
+            const d = Math.max(0, Math.ceil(daysLeft || 0));
+            $('restore-body').textContent = d > 0
+                ? (d === 1
+                    ? 'One day left. Your thoughts are still here, and restoring brings everything back.'
+                    : d + ' days left. Your thoughts are still here, and restoring brings everything back.')
+                : 'Your thoughts are still here for a little longer. Restoring brings everything back.';
+            $('restore-go').disabled = false;
+            $('restore-go').textContent = 'Restore my account';
+            sheet.classList.add('open');
+        }
+        function closeRestoreSheet() {
+            const s = $('restore-sheet');
+            if (s) s.classList.remove('open');
+        }
+        async function doAccountRestore() {
+            const btn = $('restore-go');
+            btn.disabled = true;
+            btn.textContent = 'Restoring\u2026';
+            try {
+                const { data: ok, error } = await sb.rpc('restore_my_account');
+                if (error) throw new Error(error.message);
+                if (ok === false) {
+                    $('restore-body').textContent = 'That window has passed, this account is gone.';
+                    btn.textContent = 'Restore my account';
+                    btn.disabled = true;
+                    return;
                 }
-            };
-            status.addEventListener('click', restore);
+                closeRestoreSheet();
+                showVoiceStatus('Welcome back. Your account is restored.', { autoHideMs: 3000 });
+                try { pullAndMerge(); fetchUsername(); } catch (e) {}
+            } catch (e) {
+                console.error('restore failed:', e);
+                $('restore-body').textContent = String((e && e.message) || 'Something went wrong.').slice(0, 90);
+                btn.disabled = false;
+                btn.textContent = 'Try again';
+            }
         }
         async function deleteAccountForever() {
             if (!sb || !currentUser) return;
@@ -10482,6 +10561,15 @@
         bindKeyboardLift('people-sheet', null);
         bindKeyboardLift('send-sheet', '#send-inner');
         bindKeyboardLift('username-sheet', null);
+        const restoreGo = $('restore-go');
+        if (restoreGo) restoreGo.addEventListener('click', doAccountRestore);
+        const restoreLater = $('restore-later');
+        if (restoreLater) restoreLater.addEventListener('click', async () => {
+            // "Not now" signs you back out rather than dropping you into an
+            // account that is still on its way to being deleted.
+            closeRestoreSheet();
+            try { await signOutAndClear(); } catch (e) {}
+        });
         const peopleBtn = $('people-btn');
         if (peopleBtn) peopleBtn.addEventListener('click', openMenu);
         const menuSheetEl = $('menu-sheet');
