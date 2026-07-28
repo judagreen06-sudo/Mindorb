@@ -1790,87 +1790,88 @@
            scene is already rendering underneath, and the bubble you see here
            is the ACTUAL shader-drawn bubble, not a CSS imitation of one. The
            launch screen uses the same trick. */
+        /* THE ARRIVAL CARD.
+           A card sitting on the galaxy, not a screen that replaces it. The
+           bubble inside is drawn by the SAME shader as everything else, on its
+           own small canvas, so it is the real thing rather than a lookalike. */
         #share-arrival {
             position: fixed; inset: 0; z-index: 999500;
             display: flex; align-items: center; justify-content: center;
-            padding: calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+            padding: calc(env(safe-area-inset-top,0px) + 20px) 22px calc(env(safe-area-inset-bottom,0px) + 20px);
+            background: rgba(4, 6, 12, 0.55);
+            backdrop-filter: blur(3px) saturate(1.1); -webkit-backdrop-filter: blur(3px) saturate(1.1);
             opacity: 0; pointer-events: none;
-            transition: opacity 0.4s ease;
-            overflow: hidden;
-        }
-        /* A soft vignette so the text stays readable over a live galaxy,
-           without hiding the scene behind it. */
-        #share-arrival::before {
-            content: ''; position: absolute; inset: 0; pointer-events: none;
-            background: radial-gradient(ellipse at 50% 42%, rgba(4,6,12,0) 30%, rgba(4,6,12,.72) 78%, rgba(4,6,12,.92) 100%);
         }
         #share-arrival.open { opacity: 1; pointer-events: auto; }
-        #sa-stars { position: absolute; inset: 0; pointer-events: none; }
-        .sa-star {
-            position: absolute; border-radius: 50%; background: #fff;
-            animation: saTwinkle 4s ease-in-out infinite;
+        #sa-card {
+            position: relative; width: 100%; max-width: 328px;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 26px 22px 22px; border-radius: 30px; text-align: center;
+            background: linear-gradient(168deg, rgba(26,32,48,0.96), rgba(14,18,28,0.97));
+            border: 1px solid rgba(255,255,255,0.12);
+            /* Lifted off the screen: a long soft drop shadow, a faint cool
+               bloom, and a bright inner top edge, the same language the detail
+               card and dock already use. */
+            box-shadow:
+                0 34px 70px rgba(0,0,0,0.62),
+                0 10px 24px rgba(0,0,0,0.44),
+                0 0 60px rgba(120,160,220,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.14);
+            animation: saCardIn 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
         }
-        @keyframes saTwinkle { 0%,100% { opacity: .12; } 50% { opacity: .7; } }
-        .motion-reduced .sa-star { animation: none; opacity: .35; }
-        /* Absolute, not flowed. The bubble is drawn by the renderer at the
-           centre of the SCREEN, so the text has to be placed relative to that,
-           not stacked around an empty div that only pretends to be it. */
-        #sa-inner { position: absolute; inset: 0; }
-        #sa-inner > * {
-            position: absolute; left: 50%; transform: translateX(-50%);
-            width: 100%; max-width: 340px; text-align: center;
+        @keyframes saCardIn {
+            from { opacity: 0; transform: translateY(22px) scale(0.94); }
+            to   { opacity: 1; transform: none; }
         }
-        #sa-from   { top: 13%; }
-        #sa-kids   { top: 68%; }
-        #sa-status { top: 78%; }
-        #sa-actions, #sa-signin { bottom: calc(env(safe-area-inset-bottom,0px) + 42px); }
-        /* No entrance animation gating visibility here. An animation with a
-           `backwards` fill holds its elements at opacity 0 until it runs, and
-           if it stalls while the renderer is starting up you get a blank
-           screen on the one page a shared link opens onto. The bubble's own
-           float supplies the life; this content simply shows up. */
-        #sa-from {
-            display: flex; align-items: center; justify-content: center; gap: 9px;
-            color: var(--ink-dim); font-size: 13.5px; font-weight: 700;
+        .motion-reduced #sa-card { animation: none; }
+        /* The bubble. Its own canvas, running the app's own shader. */
+        #sa-bubble { position: relative; width: 186px; height: 186px; margin-bottom: 18px; }
+        #sa-canvas { width: 186px; height: 186px; display: block; border-radius: 50%; }
+        /* The label sits over the bubble exactly as it does in the galaxy. */
+        #sa-label {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 24px; text-align: center; pointer-events: none;
+            color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
+            font-weight: 800; font-size: 19px; line-height: 1.2;
+            text-shadow: 0 2px 14px rgba(0,0,0,.55);
+            word-break: break-word;
         }
-        #sa-avatar {
-            width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-            display: inline-flex; align-items: center; justify-content: center;
-            background: linear-gradient(140deg, rgba(169,200,232,.9), rgba(157,196,168,.75));
-            color: #0d1119; font-size: 12px; font-weight: 800;
+        #sa-title {
+            color: var(--ink); font-family: 'Baloo 2','Quicksand',sans-serif;
+            font-size: 17px; font-weight: 800; line-height: 1.35;
         }
-        #sa-orb { display: none; }   /* the renderer draws the real bubble */
-        #sa-orb-label {
-            display: none;   /* the shader draws the real label */
-            position: relative; z-index: 2;
-            padding: 0 32px; color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
-            font-weight: 800; font-size: 21px; line-height: 1.25;
-            text-shadow: 0 2px 18px rgba(0,0,0,.5); word-break: break-word;
+        #sa-kids {
+            display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+            margin-top: 12px;
         }
-        #sa-kids { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 0 20px; box-sizing: border-box; }
         .sa-kid {
             padding: 5px 11px; border-radius: 999px;
             background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10);
             color: var(--ink-dim); font-size: 11.5px; font-weight: 700;
         }
-        #sa-status { min-height: 18px; font-size: 12.5px; font-weight: 700; color: var(--ink-dim); }
+        #sa-status {
+            min-height: 0; margin-top: 10px;
+            font-size: 12.5px; font-weight: 700; color: var(--ink-dim);
+        }
         #sa-status.bad { color: rgb(232,154,138); }
         #sa-status.ok { color: rgb(157,196,168); }
-        #sa-actions { display: flex; gap: 9px; padding: 0 20px; box-sizing: border-box; }
+        #sa-actions { display: flex; gap: 9px; margin-top: 20px; width: 100%; }
         #sa-dismiss, #sa-add, #sa-signin {
             padding: 13px 0; border-radius: var(--r-pill); cursor: pointer;
             font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 700;
-            transition: transform .12s ease, opacity .18s ease;
+            transition: transform .12s ease;
         }
         #sa-dismiss { flex: 1; background: rgba(255,255,255,.06); border: 1px solid var(--glass-border); color: var(--ink); }
         #sa-add {
-            flex: 1.6; border: none; color: #0e1219;
+            flex: 1.5; border: none; color: #0e1219;
             background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
-            box-shadow: 0 8px 22px rgba(120,160,220,.22), inset 0 1px 0 rgba(255,255,255,.85);
+            box-shadow: 0 8px 22px rgba(120,160,220,.24), inset 0 1px 0 rgba(255,255,255,.85);
         }
         #sa-signin {
-            display: none; border: none; color: #0e1219;
+            display: none; width: 100%; margin-top: 20px; border: none; color: #0e1219;
             background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
+            box-shadow: 0 8px 22px rgba(120,160,220,.24), inset 0 1px 0 rgba(255,255,255,.85);
         }
         #sa-dismiss:active, #sa-add:active, #sa-signin:active { transform: scale(.97); }
         #sa-add:disabled { opacity: .5; }
@@ -2715,19 +2716,17 @@
     </div>
 
     <div id="share-arrival" class="ui-block">
-            <div id="sa-inner">
-            <div id="sa-from">
-                <span id="sa-avatar"></span>
-                <span id="sa-fromtext">Someone shared a bubble with you</span>
+        <div id="sa-card">
+            <div id="sa-bubble">
+                <canvas id="sa-canvas"></canvas>
+                <div id="sa-label"></div>
             </div>
-            <div id="sa-orb">
-                <div id="sa-orb-label"></div>
-            </div>
+            <div id="sa-title"></div>
             <div id="sa-kids"></div>
             <div id="sa-status"></div>
             <div id="sa-actions">
-                <button id="sa-dismiss">Just looking</button>
-                <button id="sa-add">Add to my galaxy</button>
+                <button id="sa-dismiss">Discard</button>
+                <button id="sa-add">View</button>
             </div>
             <button id="sa-signin">Sign in to see it</button>
         </div>
@@ -3895,7 +3894,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-24h';
+        const BUILD_TAG = '2026-07-24i';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4698,53 +4697,34 @@
             }
         }
         function paintArrival(payload, from, signedIn) {
-            seedArrivalStars();
-            const nameText = from ? ('@' + from + ' shared a bubble with you') : 'Someone shared a bubble with you';
-            $('sa-fromtext').textContent = signedIn ? nameText
-                : (from ? ('Sign in to see @' + from + '\u2019s bubble') : 'Sign in to see this bubble');
-            $('sa-avatar').textContent = (from ? from[0] : '?').toUpperCase();
-            $('sa-orb-label').textContent = signedIn ? (payload ? payload.summary : '') : '\u2726';
-            // Signed out shows an EMPTY bubble on purpose: you get the shape
-            // of what is waiting, but not a word of what is inside it.
-            showSharePreviewBubble(signedIn && payload ? payload.summary : ' ');
-            setGalaxyHiddenForShare(true);
+            const who = from ? ('@' + from) : 'Someone';
+            // The sender is named either way. Knowing WHO sent it is not the
+            // secret; the contents are.
+            $('sa-title').textContent = signedIn
+                ? (who + ' shared a bubble')
+                : (who + ' shared a bubble with you');
             const kids = $('sa-kids');
             kids.innerHTML = '';
             if (signedIn && payload && payload.children && payload.children.length) {
-                payload.children.slice(0, 8).forEach(k => {
+                payload.children.slice(0, 6).forEach(k => {
                     const el = document.createElement('div');
                     el.className = 'sa-kid';
                     el.textContent = k.summary;
                     kids.appendChild(el);
                 });
-                if (payload.children.length > 8) {
+                if (payload.children.length > 6) {
                     const el = document.createElement('div');
                     el.className = 'sa-kid';
-                    el.textContent = '+' + (payload.children.length - 8) + ' more';
+                    el.textContent = '+' + (payload.children.length - 6) + ' more';
                     kids.appendChild(el);
                 }
             }
+            // Signed out shows an empty bubble: you can see WHO sent it and
+            // that something is waiting, but not what it says.
+            $('sa-label').textContent = signedIn && payload ? (payload.summary || '') : '';
             $('sa-actions').style.display = signedIn ? 'flex' : 'none';
             $('sa-signin').style.display = signedIn ? 'none' : 'block';
-            // Stagger the arrival.
-            [...$('sa-inner').children].forEach((el, i) => el.style.setProperty('--sad', (i * 0.09).toFixed(2) + 's'));
-        }
-        // While a shared bubble is on stage it should be the ONLY thing in the
-        // sky. This hides the galaxy's own bubbles without destroying them, so
-        // everything is exactly where it was when the screen closes.
-        function setGalaxyHiddenForShare(hidden) {
-            for (const o of objects) {
-                if (o === sharePreview) continue;
-                if (hidden) {
-                    if (o._shareHidR === undefined) o._shareHidR = (o.rTarget !== undefined ? o.rTarget : o.r);
-                    o.rTarget = 0;
-                    if (o.el) o.el.style.opacity = '0';
-                } else if (o._shareHidR !== undefined) {
-                    o.rTarget = o._shareHidR;
-                    delete o._shareHidR;
-                    if (o.el) o.el.style.opacity = '';
-                }
-            }
+            startShareBubble();
         }
         async function openSharedBubble(token) {
             const sheet = $('share-arrival');
@@ -4783,7 +4763,7 @@
                 if (error) throw new Error(error.message);
                 if (!data) {
                     paintArrival(null, null, true);
-                    $('sa-orb-label').textContent = 'Not found';
+                    $('sa-title').textContent = 'This bubble is gone';
                     $('sa-status').className = 'bad';
                     $('sa-status').textContent = 'This link has expired or was removed.';
                     $('sa-add').style.display = 'none';
@@ -4804,7 +4784,7 @@
                 const clean = sanitizeSharedPayload(data.payload);
                 if (!clean) {
                     paintArrival(null, data.owner_username, true);
-                    $('sa-orb-label').textContent = 'Empty';
+                    $('sa-title').textContent = 'Nothing readable here';
                     $('sa-status').className = 'bad';
                     $('sa-status').textContent = "There's nothing readable in this share.";
                     $('sa-add').style.display = 'none';
@@ -4815,7 +4795,7 @@
                     ? data.owner_username.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
                 pendingShare = { token, payload: clean, from: who };
                 $('sa-add').style.display = '';
-                $('sa-dismiss').textContent = 'Just looking';
+                $('sa-dismiss').textContent = 'Discard';
                 paintArrival(clean, who, true);
             } catch (e) {
                 $('sa-status').className = 'bad';
@@ -4823,14 +4803,13 @@
             }
         }
         function closeSharedBubble() {
+            stopShareBubble();
             const sheet = $('share-arrival');
             if (sheet) {
                 sheet.style.opacity = '';
                 sheet.style.transition = '';
                 sheet.classList.remove('open');
             }
-            clearSharePreviewBubble();
-            setGalaxyHiddenForShare(false);
             pendingShare = null;
             // Clean the token out of the address bar so a refresh doesn't
             // reopen something you already dealt with.
@@ -4942,8 +4921,6 @@
                 // The preview is a stand-in, not a real thought. It has to go
                 // before the galaxy comes back or it would linger as a bubble
                 // with no thought behind it.
-                clearSharePreviewBubble();
-                setGalaxyHiddenForShare(false);
                 closeSharedBubble();
                 btn.disabled = false;
                 try { flyHome(); } catch (e) {}
@@ -5094,46 +5071,112 @@
                 status.className = 'bad'; status.textContent = "Couldn't add them right now.";
             } finally { btn.disabled = false; }
         }
-        // ===== THE REAL BUBBLE, ON THE ARRIVAL SCREEN =====
-        // The bubble here is not a CSS drawing of one. It is pushed into the
-        // actual render pipeline so the shader draws it exactly as it draws
-        // every other bubble: same iridescence, same specular, same wobble,
-        // same label fitting. The overlay above it is transparent, which is
-        // the same trick the launch screen uses.
-        let sharePreview = null;
-        function showSharePreviewBubble(summary) {
-            clearSharePreviewBubble();
-            if (!summary) return;
-            // A stand-in thought so every existing helper works unchanged.
-            const ghost = {
-                id: '__share_preview__',
-                summary: summary,
-                short: '',
-                full: summary,
-                dueAt: null, doneAt: null, repeat: null,
-                urgency: 0.12, importance: 0.5, type: 'note',
-                createdAt: Date.now(), children: [], parentId: null, routed: true
+        // ===== THE REAL BUBBLE, ON ITS OWN CANVAS =====
+        // This is not a CSS drawing of the bubble. It compiles THE SAME
+        // vertex and fragment shader the galaxy uses (vsSource / fsSource,
+        // the exact same strings) onto a second small canvas inside the card,
+        // and draws one bubble with it. Identical program, identical uniforms,
+        // therefore an identical bubble.
+        let saGL = null, saProgram = null, saU = null, saRaf = null, saStart = 0;
+        function initShareRenderer() {
+            if (saGL) return true;
+            const cv = $('sa-canvas');
+            if (!cv) return false;
+            // preserveDrawingBuffer keeps the rendered frame readable after
+            // compositing. Negligible cost on a canvas this small, and without
+            // it the card can appear blank in screenshots and on some devices.
+            const opts = { alpha: true, premultipliedAlpha: false, antialias: true,
+                           preserveDrawingBuffer: true };
+            const gl2 = cv.getContext('webgl', opts) || cv.getContext('experimental-webgl', opts);
+            if (!gl2) return false;
+            const prog = gl2.createProgram();
+            gl2.attachShader(prog, createShader(gl2, gl2.VERTEX_SHADER, vsSource));
+            gl2.attachShader(prog, createShader(gl2, gl2.FRAGMENT_SHADER, fsSource));
+            gl2.linkProgram(prog);
+            if (!gl2.getProgramParameter(prog, gl2.LINK_STATUS)) {
+                console.error(gl2.getProgramInfoLog(prog));
+                return false;
+            }
+            const buf = gl2.createBuffer();
+            gl2.bindBuffer(gl2.ARRAY_BUFFER, buf);
+            gl2.bufferData(gl2.ARRAY_BUFFER,
+                new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl2.STATIC_DRAW);
+            const loc = gl2.getAttribLocation(prog, 'position');
+            gl2.enableVertexAttribArray(loc);
+            gl2.vertexAttribPointer(loc, 2, gl2.FLOAT, false, 0, 0);
+            gl2.useProgram(prog);
+            const U2 = (n) => gl2.getUniformLocation(prog, n);
+            saGL = gl2; saProgram = prog;
+            saU = {
+                res: U2('u_resolution'), time: U2('u_time'), camZ: U2('u_camera_z'),
+                listening: U2('u_listening'), breath: U2('u_breath'), volume: U2('u_volume'),
+                bubbles: U2('u_bubbles'), fx: U2('u_fx'), count: U2('u_bubble_count'),
+                drift: U2('u_drift'), depth: U2('u_depth')
             };
-            const r = coreRadius * 1.05;
-            const el = makeTextEl(labelForThought(ghost), radiusToPxBase(r));
-            sharePreview = {
-                role: 'thought', thought: ghost, parentThought: null,
-                x: 0, y: 0, r: r, restR: r, rTarget: r,
-                dispX: 0, dispY: 0,
-                el, anim: null, popState: null,
-                // Flags the sweeps already respect, so neither the tree
-                // reconciler nor the floater refill will remove it.
-                transient: true, sharePreview: true,
-                vx: 0, vy: 0, phase: Math.random() * 6.28
-            };
-            objects.push(sharePreview);
+            return true;
         }
-        function clearSharePreviewBubble() {
-            if (!sharePreview) return;
-            const i = objects.indexOf(sharePreview);
-            if (i > -1) objects.splice(i, 1);
-            if (sharePreview.el && sharePreview.el.remove) sharePreview.el.remove();
-            sharePreview = null;
+        function drawShareBubble(now) {
+            if (!saGL) { saRaf = null; return; }
+            const cv = $('sa-canvas');
+            if (!cv) { saRaf = null; return; }
+            if (!$('share-arrival').classList.contains('open')) {
+                // Give it a few frames to open rather than quitting outright.
+                if ((now - saStart) < 1500) { saRaf = requestAnimationFrame(drawShareBubble); return; }
+                saRaf = null; return;
+            }
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const w = Math.max(1, Math.round(cv.clientWidth * dpr));
+            const h = Math.max(1, Math.round(cv.clientHeight * dpr));
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+            const gl2 = saGL;
+            gl2.viewport(0, 0, w, h);
+            gl2.clearColor(0, 0, 0, 0);
+            gl2.clear(gl2.COLOR_BUFFER_BIT);
+            gl2.useProgram(saProgram);
+
+            const t = (now - saStart) / 1000;
+            // One bubble, dead centre, gently breathing.
+            const buf = new Float32Array(MAX_BUBBLES * 4);
+            const fx = new Float32Array(MAX_BUBBLES * 4);
+            const wob = 1 + Math.sin(t * 0.9) * 0.012;
+            // Sized so the whole bubble sits inside the canvas with a margin.
+            // At 0.78 the rim reached past the edge and clipped.
+            // Measured: the rim lands at roughly 84px of scene radius per unit,
+            // so this fills about 80% of the canvas, leaving a clean margin.
+            buf[0] = 0; buf[1] = Math.sin(t * 0.7) * 0.010; buf[2] = 0.88 * wob; buf[3] = 0;
+            fx[0] = 0; fx[1] = 0; fx[2] = 0; fx[3] = 0;
+
+            gl2.uniform2f(saU.res, w, h);
+            gl2.uniform1f(saU.time, t);
+            gl2.uniform1f(saU.camZ, 2.6);
+            gl2.uniform1f(saU.listening, 0);
+            gl2.uniform1f(saU.breath, 0.5 + 0.5 * Math.sin(t * 0.8));
+            gl2.uniform1f(saU.volume, 0);
+            gl2.uniform4fv(saU.bubbles, buf);
+            gl2.uniform4fv(saU.fx, fx);
+            gl2.uniform1i(saU.count, 1);
+            gl2.uniform2f(saU.drift, 0, 0);
+            gl2.uniform1f(saU.depth, 0);
+            gl2.drawArrays(gl2.TRIANGLES, 0, 6);
+            saRaf = requestAnimationFrame(drawShareBubble);
+        }
+        function startShareBubble() {
+            if (!initShareRenderer()) return;
+            saStart = performance.now();
+            // Size it immediately. The loop used to be the only thing that
+            // resized, and it could bail on its first frame (before the sheet
+            // was marked open), leaving the canvas at its default 300x150.
+            const cv = $('sa-canvas');
+            if (cv) {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const w = Math.max(1, Math.round((cv.clientWidth || 186) * dpr));
+                const h = Math.max(1, Math.round((cv.clientHeight || 186) * dpr));
+                if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+            }
+            if (!saRaf) saRaf = requestAnimationFrame(drawShareBubble);
+        }
+        function stopShareBubble() {
+            if (saRaf) { cancelAnimationFrame(saRaf); saRaf = null; }
         }
         function updateAccountRow() {
             const status = document.getElementById('account-status');
