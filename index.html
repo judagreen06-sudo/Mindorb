@@ -4508,7 +4508,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25m';
+        const BUILD_TAG = '2026-07-25n';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4751,19 +4751,34 @@
                     // that two people can't share a name: the availability
                     // check above can be passed by two people at once, and
                     // only the database can settle who actually got it.
-                    const dup = error.code === '23505' || /duplicate|unique/i.test(error.message || '');
-                    setUnState(dup ? ('@' + name + ' was just taken, try another.')
-                                   : "Couldn't save that, check your connection.", 'bad');
+                    const msg = String(error.message || '');
+                    const dup = error.code === '23505' || /duplicate|unique/i.test(msg);
+                    // Say what actually happened. "Check your connection" is
+                    // wrong and unhelpful when the server answered clearly.
+                    let why;
+                    if (dup) {
+                        why = name + ' was just taken, try another.';
+                    } else if (msg.includes('USERNAME_COOLDOWN')) {
+                        const d = msg.split(':').pop().trim();
+                        why = 'You can change it again in ' + d + (d === '1' ? ' day.' : ' days.');
+                    } else if (/column .*username_changed_at|does not exist/i.test(msg)) {
+                        why = 'The server is out of date, the database script needs re-running.';
+                    } else {
+                        why = msg.slice(0, 80) || "Couldn't save that.";
+                    }
+                    console.error('saveUsername failed:', error);
+                    setUnState(why, 'bad');
                     btn.disabled = false;
                     return;
                 }
                 currentUsername = name;
                 updateAccountRow();
-setUnState('Saved. You can change it again in 7 days.', 'ok');
-                showVoiceStatus('You\u2019re @' + name, { autoHideMs: 1800 });
+                setUnState('Saved. You can change it again in 7 days.', 'ok');
+                showVoiceStatus('You\u2019re ' + name, { autoHideMs: 1800 });
                 setTimeout(closeUsernameSheet, 700);
             } catch (e) {
-                setUnState("Couldn't save that, check your connection.", 'bad');
+                console.error('saveUsername threw:', e);
+                setUnState(String((e && e.message) || 'Something went wrong.').slice(0, 80), 'bad');
                 btn.disabled = false;
             }
         }
@@ -5815,7 +5830,17 @@ setUnState('Saved. You can change it again in 7 days.', 'ok');
             try { saveState(); } catch (e) {}
             updateAccountRow();
             updateDrawerUI();
-            try { flyHome(); } catch (e) {}
+            // Emptying `objects` threw away the CENTRE bubble along with
+            // everything else, and flyHome only navigates: it does not build a
+            // scene. So signing out left an empty sky with nothing to speak to,
+            // still wearing the "dived" styling from wherever you were. The
+            // scene has to be rebuilt, not just navigated.
+            checklists.length = 0;
+            document.body.classList.remove('dived', 'answering', 'drawer-open');
+            try { closeThought(true); } catch (e) {}
+            try { updateTrail(); } catch (e) {}
+            try { layoutInitial(); } catch (e) {}
+            try { syncEmptyHint(); } catch (e) {}
             showVoiceStatus('Signed out, this device is clear', { autoHideMs: 2600 });
         }
         // ===== LEADERBOARD =====
@@ -6240,11 +6265,26 @@ setUnState('Saved. You can change it again in 7 days.', 'ok');
             const apply = () => {
                 const sheet = document.getElementById(sheetId);
                 if (!sheet || !sheet.classList.contains('open')) return;
-                const inner = innerSelector ? sheet.querySelector(innerSelector) : sheet;
-                if (!inner) return;
                 const covered = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
-                inner.style.transform = covered > 80 ? ('translateY(-' + Math.round(covered) + 'px)') : '';
-                inner.style.transition = 'transform .18s ease-out';
+                const lift = covered > 80 ? Math.round(covered) : 0;
+                if (innerSelector) {
+                    // A bottom sheet: slide the panel itself up.
+                    const inner = sheet.querySelector(innerSelector);
+                    if (inner) {
+                        inner.style.transition = 'transform .18s ease-out';
+                        inner.style.transform = lift ? ('translateY(-' + lift + 'px)') : '';
+                    }
+                    return;
+                }
+                // A FULL-SCREEN sheet. Transforming it moved everything,
+                // including the header, and made the sheet a containing block
+                // which scrambled the fixed children inside it. Shrink the
+                // padding instead: the layout simply has less room, which is
+                // the truth of what happened.
+                sheet.style.transition = 'padding-bottom .18s ease-out';
+                sheet.style.paddingBottom = lift
+                    ? (lift + 14) + 'px'
+                    : '';
             };
             vv.addEventListener('resize', apply);
             vv.addEventListener('scroll', apply);
@@ -13702,6 +13742,16 @@ setUnState('Saved. You can change it again in 7 days.', 'ok');
                 // paths hide the hint, and clearing everything ran through
                 // more than one of them.
                 try { syncEmptyHint(); } catch (e) {}
+                // THE CENTRE BUBBLE MUST EXIST. It is the one thing you speak
+                // to, so losing it makes the app inert with no way back. Any
+                // path that empties `objects` can strand you here, so rebuild
+                // rather than trusting every caller to remember.
+                try {
+                    if (!transitioning && !navStack.length &&
+                        !objects.some(o => !o.removed && (o.role === 'center' || o.role === 'open'))) {
+                        layoutInitial();
+                    }
+                } catch (e) {}
                 // STRANDED INSIDE A DELETED THOUGHT. If the bubble you are
                 // drilled into is gone from the tree, the drilled-in view keeps
                 // rebuilding its children while the reconciler keeps deleting
