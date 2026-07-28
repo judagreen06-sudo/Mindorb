@@ -1927,7 +1927,10 @@
             opacity: 0; pointer-events: none;
             transition: opacity 0.28s ease;
         }
-        #popgame-sheet.open { opacity: 1; pointer-events: auto; }
+        #popgame-sheet.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        /* visibility:hidden makes the whole subtree untouchable, which
+           pointer-events:none alone does not guarantee. */
+        #popgame-sheet:not(.open) { visibility: hidden; }
         #pg-head {
             display: flex; align-items: center; gap: 10px;
             padding: 4px 14px 10px; flex-shrink: 0; width: 100%;
@@ -3407,6 +3410,16 @@
             IS_MOBILE = window.innerWidth < 500;
             if (IS_MOBILE) { coreRadius = 0.34; baseCameraZ = 3.2; }
             else { coreRadius = 0.42; baseCameraZ = 2.8; }
+            // SHORT SCREENS. The bubble, its children, the dock and the detail
+            // card all want the same vertical space, and on a short phone the
+            // bubble alone was taking a third of it. Easing the camera back
+            // shrinks the whole scene a little rather than singling any one
+            // element out, which keeps the composition intact.
+            const vh = window.innerHeight || 844;
+            if (IS_MOBILE && vh < 780) {
+                const t = Math.max(0, Math.min(1, (780 - vh) / 220));   // 0 at 780px, 1 at 560px
+                baseCameraZ *= 1 + 0.16 * t;
+            }
             if (!camAnim) cameraZ = baseCameraZ;
         }
         updateResponsiveMetrics();
@@ -3430,9 +3443,19 @@
         // moves everything together and keeps the layout coherent.
         let _sceneShift = 0;
         function sceneShiftTarget() {
-            if (!onboardCardClearance) return 0;
-            const top = onboardCardClearance.top || 0;
-            const bottom = onboardCardClearance.bottom || 0;
+            let top = 0, bottom = 0;
+            if (onboardCardClearance) {
+                top = onboardCardClearance.top || 0;
+                bottom = onboardCardClearance.bottom || 0;
+            } else if (detailCardOpen) {
+                // bounds() already keeps the FLOATING bubbles above the card,
+                // but the open bubble is placed at the centre of the whole
+                // screen and grows straight down into the dock. Recentre the
+                // scene on the space that is actually free, so the open bubble
+                // and its children rise together and the layout breathes.
+                bottom = 84 + Math.min(VH * 0.30, 240);
+                top = 74 + (navStack.length > 0 ? 44 : 0);
+            }
             if (!top && !bottom) return 0;
             // Recentre on whatever vertical space is actually left.
             const wanted = (top + (VH - bottom)) / 2;
@@ -3922,7 +3945,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-24a';
+        const BUILD_TAG = '2026-07-24c';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4521,6 +4544,12 @@
         function closePopGame() {
             const sheet = $('popgame-sheet');
             if (sheet) sheet.classList.remove('open');
+            // The game-over overlay sets pointer-events:auto. A parent's
+            // pointer-events:none does NOT block a child that re-enables it,
+            // so leaving this up meant an invisible panel kept swallowing
+            // every tap on the galaxy behind it.
+            const ov = $('pg-over');
+            if (ov) ov.classList.remove('show');
             // Stop the loop outright — a game quietly running behind a closed
             // panel would drain the battery for no reason.
             if (pgRaf) { cancelAnimationFrame(pgRaf); pgRaf = null; }
@@ -5658,8 +5687,7 @@
             const pgHome = document.getElementById('pg-over-home');
             if (pgHome) pgHome.addEventListener('click', () => {
                 closePopGame();
-                try { document.getElementById('settings-page').classList.remove('open'); } catch (e) {}
-                try { flyHome(); } catch (e) {}
+                returnToGalaxy();
             });
             const pgAgain = document.getElementById('pg-over-again');
             if (pgAgain) pgAgain.addEventListener('click', pgRestart);
@@ -8455,6 +8483,27 @@
                 let n = 0; (function c(list) { for (const t of (list || [])) { n++; c(t.children); } })(thoughts);
                 if (n >= 12) showContextualHint('search', 'Galaxy getting big? Search finds any thought instantly.');
             } catch (e) {}
+        }
+        // "Back to your thoughts" has to mean the GALAXY, not whatever screen
+        // happened to be underneath. Settings keeps its sub-pages layered
+        // behind it now, and the drawer may have been open before you ever
+        // went into the game, so closing one panel just revealed another and
+        // left you looking at a list you could not interact past.
+        function returnToGalaxy() {
+            const panels = ['settings-page', 'archive-page', 'howto-page', 'privacy-page',
+                            'feedback-sheet', 'username-sheet', 'lb-sheet', 'import-sheet',
+                            'move-picker', 'share-arrival'];
+            for (const id of panels) {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('open');
+            }
+            try { closeDrawer(); } catch (e) {}
+            try { if (typeof detailCardOpen !== 'undefined' && detailCardOpen) closeThought(true); } catch (e) {}
+            try { setUIFocus(false); } catch (e) {}
+            document.body.classList.remove('answering');
+            const rc = document.getElementById('recall-card');
+            if (rc) rc.classList.remove('show');
+            try { flyHome(); } catch (e) {}
         }
         function closeDrawer() {
             setTimeout(syncFloaters, 260);
