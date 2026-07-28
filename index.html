@@ -2042,6 +2042,14 @@
         }
         #sa-addfriend:active { transform: scale(.97); }
         #sa-addfriend:disabled { opacity: .55; }
+        /* Signed out you could only sign in. Every screen needs a way out. */
+        #sa-ignore {
+            display: none; width: 100%; margin-top: 8px; padding: 11px 0;
+            background: none; border: none; cursor: pointer;
+            color: var(--ink-faint); font-family: 'Quicksand',sans-serif;
+            font-size: 13px; font-weight: 700;
+        }
+        #sa-ignore:active { color: var(--ink); }
         #sa-add:disabled { opacity: .5; }
         #popgame-sheet {
             position: fixed; inset: 0; z-index: 999600; isolation: isolate;
@@ -3003,6 +3011,7 @@
                 <button id="sa-add">View</button>
             </div>
             <button id="sa-signin">Sign in to see it</button>
+            <button id="sa-ignore">Not now</button>
             <button id="sa-addfriend"></button>
         </div>
     </div>
@@ -3930,6 +3939,13 @@
             if (urgentGhosts.length || pathGhosts.length || pathActive) return;
             if (document.body.classList.contains('answering')) return;
             const parent = openThoughtObj ? (openThoughtObj.thought || null) : null;
+            // THE PULSE. A thought removed from the tree is not gone from
+            // MEMORY while openThoughtObj still points at it, and its children
+            // array points at the deleted children. Refilling from that ghost
+            // puts bubbles back on screen that the reconciler then deletes,
+            // which puts them back again: they pop in and out forever. Never
+            // refill from a parent that is no longer in the tree.
+            if (parent && !findThoughtById(parent.id)) return;
             const pool = parent ? (parent.children || []) : thoughts;
             if (!pool || !pool.length) return;
             const live = objects.filter(o => o.role === 'thought' && !o.removed && !o.popState
@@ -4207,7 +4223,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25a';
+        const BUILD_TAG = '2026-07-25e';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -5026,6 +5042,10 @@
         // don't rewrite what the recipient received, which is what people
         // actually expect from "I sent you this".
         const SHARE_PARAM = 'b';
+        // Resolves once we actually know whether anyone is signed in. The share
+        // card opens on a timer, and painting before this settles is what made
+        // a signed-in visitor see "Sign in to see it" flash first.
+        let authReady = Promise.resolve();
         function shareToken() {
             const a = 'abcdefghijkmnpqrstuvwxyz23456789';   // no look-alike chars
             let s = '';
@@ -5237,12 +5257,17 @@
             }
             $('sa-actions').style.display = signedIn ? 'flex' : 'none';
             $('sa-signin').style.display = signedIn ? 'none' : 'block';
+            const ig = $('sa-ignore');
+            if (ig) ig.style.display = signedIn ? 'none' : 'block';
             startShareBubble();
         }
         async function openSharedBubble(token) {
             const sheet = $('share-arrival');
             if (!sheet) return;
             arrivedShareToken = token;
+            // Know the answer before painting. Waiting a moment beats showing
+            // the wrong state and correcting it a frame later.
+            try { await Promise.race([authReady, new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
             sheet.classList.add('open');
             // No fade on the container. This screen is what a shared LINK
             // opens onto, so it is the one thing that must never fail to
@@ -5672,7 +5697,10 @@
         // portion of the card and leaves the lower half for the text.
         // Tuned against rendered pixels: puts the bubble at ~30% down the card
         // at ~210px across, leaving the lower half clear for the text.
-        const SA_LIFT = 0.35, SA_RADIUS = 0.80;
+        // Measured against the rendered pixels: leaves a 37px margin above the
+        // rim, which clears the card's 30px corner radius. At 0.80 the bubble
+        // reached within 8px of the edge and the corners clipped it.
+        const SA_LIFT = 0.28, SA_RADIUS = 0.70;
         function initShareRenderer() {
             if (saGL) return true;
             const cv = $('sa-canvas');
@@ -6385,11 +6413,11 @@
                         }
                     }
                 });
-                sb.auth.getSession().then(({ data }) => {
+                authReady = sb.auth.getSession().then(({ data }) => {
                     currentUser = data.session ? data.session.user : null;
                     updateAccountRow();
                     if (currentUser) { pullAndMerge(); fetchUsername(); }
-                });
+                }).catch(() => {});
                 // A tab left open never re-syncs on its own otherwise — it
                 // only ever pulled once, at boot. Without this, a release
                 // made on another tab/device would never show up here until
@@ -6800,6 +6828,8 @@
             if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', confirmDeleteAccount);
             const shareBtn = document.getElementById('btn-share');
             if (shareBtn) shareBtn.addEventListener('click', shareCurrentThought);
+            const saIgnore = document.getElementById('sa-ignore');
+            if (saIgnore) saIgnore.addEventListener('click', closeSharedBubble);
             const saFriend = document.getElementById('sa-addfriend');
             if (saFriend) saFriend.addEventListener('click', async () => {
                 const who = saFriend.dataset.who;
@@ -7376,14 +7406,15 @@
 
         let pendingUndo = null; // always an array of {thought, parentThought, index}, or null
         let undoTimer = null;
-        function offerUndo(entries) {
+        function offerUndo(entries, totalCount) {
             // Back-compat: a single (thought, parentThought, index) call still works.
             if (arguments.length === 3) entries = [{ thought: arguments[0], parentThought: arguments[1], index: arguments[2] }];
             pendingUndo = entries;
             clearTimeout(undoTimer);
-            const n = entries.length;
-            // The thought already records WHICH outcome it got, so the toast
-            // can stop guessing: deleting something said "Let go" before.
+            // Count what the person actually chose, not how many top-level
+            // families that turned into. Selecting 24 and being told "6" is
+            // the app disagreeing with itself.
+            const n = (typeof totalCount === 'number' && totalCount > 0) ? totalCount : entries.length;
             const wasDone = entries.some(e => e && e.thought && e.thought.doneAt);
             const word = wasDone ? 'let go' : 'deleted';
             $('undo-text').textContent = n > 1
@@ -9323,7 +9354,22 @@
             };
             _statRaf = requestAnimationFrame(step);
         }
+        // An empty galaxy should always say what to do, even for someone who
+        // has used the app for months. Clearing everything at once used to
+        // leave a black screen with no guidance, which reads as a crash.
+        function syncEmptyHint() {
+            const h = $('hint');
+            if (!h) return;
+            const empty = countAll(thoughts) === 0;
+            if (empty && onboardStep === -1 && !document.body.classList.contains('launching')) {
+                h.classList.remove('hidden');
+                h.textContent = 'Speak to the bubble \u00b7 your thoughts file themselves';
+            } else if (!empty) {
+                try { if (localStorage.getItem('thoughts-v2-seen')) h.classList.add('hidden'); } catch (e) {}
+            }
+        }
         function updateDrawerUI() {
+            try { syncEmptyHint(); } catch (e) {}
             drawerRowIndex = 0; // fresh stagger sequence each render pass
             // The dock's index button carries a live badge of the CURRENT
             // total thought count. Placed first, before any early return
@@ -10613,6 +10659,13 @@
             }
             if (!entries.length) return;
             releasedCount += releasedFamilyCount;
+            // This button is "Let go", so stamp completion the same way the
+            // single-bubble path does. Without it the archive filed these as
+            // deletions and the undo toast said "deleted" after you pressed
+            // Let go.
+            const stamp = Date.now();
+            const markDone = (t) => { if (!t) return; t.doneAt = stamp; (t.children || []).forEach(markDone); };
+            for (const e of entries) markDone(e.thought);
             for (const e of entries) archiveThought(e.thought, e.parentThought ? e.parentThought.id : null);
             saveState();
             setBulkSelectMode(false);
@@ -10634,7 +10687,18 @@
                 const key = e.parentThought ? e.parentThought.id : '__root__';
                 if (!retiered.has(key)) { retiered.add(key); retier(e.parentThought || null); }
             }
-            offerUndo(entries);
+            offerUndo(entries, releasedFamilyCount);
+            syncEmptyHint();
+            // If you were inside one of the bubbles you just let go, leave.
+            try {
+                const insideGone = (openThoughtObj && openThoughtObj.thought &&
+                                    removedIds.has(openThoughtObj.thought.id)) ||
+                    navStack.some(h => {
+                        const t = h && (h.thought || (h.holder && h.holder.thought));
+                        return t && removedIds.has(t.id);
+                    });
+                if (insideGone) flyHome();
+            } catch (e) {}
         });
 
         // v2 capture: you speak to the MAIN bubble. The thought appears at the
@@ -12781,6 +12845,44 @@
                 } catch (e) {}
                 reconcileSceneWithTree();
                 syncFloaters();
+                // Keep the empty-galaxy guidance correct continuously rather
+                // than trying to call it at exactly the right moment: several
+                // paths hide the hint, and clearing everything ran through
+                // more than one of them.
+                try { syncEmptyHint(); } catch (e) {}
+                // STRANDED INSIDE A DELETED THOUGHT. If the bubble you are
+                // drilled into is gone from the tree, the drilled-in view keeps
+                // rebuilding its children while the reconciler keeps deleting
+                // them: the bubbles pulse in and out forever. Releasing
+                // everything while dived in did exactly that. Leaving the view
+                // is the only correct state, whatever removed the thought.
+                try {
+                    // NOT gated on navStack having entries: the stack can be
+                    // empty while openThoughtObj still points at something
+                    // deleted, and that dangling pointer is what strands the
+                    // view the next time anything reads it.
+                    if (!transitioning) {
+                        const danglingStack = navStack.some(h => {
+                            const t = h && (h.thought || (h.holder && h.holder.thought));
+                            return t && !findThoughtById(t.id);
+                        });
+                        const danglingOpen = !!(openThoughtObj && openThoughtObj.thought &&
+                                                !findThoughtById(openThoughtObj.thought.id));
+                        const stranded = danglingStack || danglingOpen;
+                        if (stranded) {
+                            // Cut straight back to the top rather than
+                            // unwinding level by level: every level below is
+                            // also gone, and animating through them just gives
+                            // the sweep more chances to re-fire.
+                            navStack.length = 0;
+                            openThoughtObj = null;
+                            try { closeThought(true); } catch (e) {}
+                            try { updateTrail(); } catch (e) {}
+                            document.body.classList.remove('dived');
+                            flyHome();
+                        }
+                    }
+                } catch (e) {}
                 // SAFETY NET: onboarding hides the dock, trail and drawer
                 // handle. If anything ever threw between showing a card and
                 // finishing the tour, they would stay hidden with no way back.
