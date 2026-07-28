@@ -363,6 +363,9 @@
         #due-nudge {
             position: fixed; left: 0; right: 0; margin-left: auto; margin-right: auto;
             width: fit-content; max-width: min(88vw, 420px);
+            /* The SAME slot as the breadcrumb. They take turns rather than
+               competing: when this appears the breadcrumb steps aside, and it
+               comes back when this leaves. */
             top: calc(env(safe-area-inset-top, 0px) + 16px);
             z-index: 12;
             display: flex; align-items: center; gap: 9px;
@@ -393,8 +396,20 @@
         .motion-reduced #due-nudge { transition: opacity 0.15s ease; }
         #due-nudge:active { transform: translateY(0) scale(0.97); }
         body.launching #due-nudge, body.onboarding #due-nudge,
-        body.dived #due-nudge, body.drawer-open #due-nudge,
-        body.typing-open #due-nudge { opacity: 0 !important; pointer-events: none !important; }
+        body.drawer-open #due-nudge, body.typing-open #due-nudge {
+            opacity: 0 !important; pointer-events: none !important;
+            visibility: hidden !important;
+        }
+        /* THE HANDOVER. While the nudge is up the breadcrumb yields its slot,
+           and takes it back afterwards. Both sides fade, so it reads as one
+           thing replacing another rather than two things fighting. */
+        body.nudging #trail {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(-6px) !important;
+        }
+        #trail { transition: opacity .32s ease, transform .32s cubic-bezier(.22,1,.36,1); }
+        #due-nudge { transition: opacity .32s ease, transform .32s cubic-bezier(.22,1,.36,1); }
         #trail {
             /* Centred with auto margins inside an explicit left/right box
                rather than left:50% + translateX(-50%). The transform approach
@@ -4673,7 +4688,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25v';
+        const BUILD_TAG = '2026-07-25x';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -10565,14 +10580,21 @@
             if (today) parts.push(today + ' due today');
             $('due-nudge-text').textContent = parts.join(' \u00b7 ');
             el.classList.add('show');
-            // Leaves on its own. Something you have to dismiss is a chore.
+            // The breadcrumb yields its slot while this is up.
+            document.body.classList.add('nudging');
+            // Leaves on its own. Something you have to dismiss is a chore, and
+            // the breadcrumb comes back when it goes.
             clearTimeout(dueNudgeTimer);
-            dueNudgeTimer = setTimeout(() => el.classList.remove('show'), 8000);
+            dueNudgeTimer = setTimeout(() => hideDueNudge(), 8000);
         }
-        function openDueList() {
+        function hideDueNudge() {
             const el = $('due-nudge');
             if (el) el.classList.remove('show');
+            document.body.classList.remove('nudging');
             clearTimeout(dueNudgeTimer);
+        }
+        function openDueList() {
+            hideDueNudge();
             // Straight into All Thoughts, which already orders by what matters
             // now, so the due items are sitting at the top.
             try {
@@ -12150,13 +12172,24 @@
             const out = [];
             (function walk(list) {
                 for (const t of (list || [])) {
-                    if (t && typeof t.dueAt === 'number' && isFinite(t.dueAt) && !t.doneAt
-                        && t.dueAt <= endOfDay.getTime()) out.push(t);
+                    if (t && !t.doneAt) {
+                        const dated = typeof t.dueAt === 'number' && isFinite(t.dueAt);
+                        // Same rule as the answer: a date that has arrived, or
+                        // something you said was urgent without giving a date.
+                        if ((dated && t.dueAt <= endOfDay.getTime()) ||
+                            (!dated && liveUrgency(t) >= 0.55)) out.push(t);
+                    }
                     walk(t && t.children);
                 }
             })(thoughts);
-            // Most overdue first: the order IS the help.
-            out.sort((a, b) => a.dueAt - b.dueAt);
+            // Most overdue first: the order IS the help. Undated but pressing
+            // items follow the dated ones.
+            out.sort((a, b) => {
+                const ad = typeof a.dueAt === 'number', bd = typeof b.dueAt === 'number';
+                if (ad && bd) return a.dueAt - b.dueAt;
+                if (ad !== bd) return ad ? -1 : 1;
+                return liveUrgency(b) - liveUrgency(a);
+            });
             return out;
         }
         function openFocus() {
@@ -12193,7 +12226,10 @@
             const when = $('focus-when');
             // How overdue, not just "overdue twice". whenLabel already returns
             // "Overdue" for a past date, so pairing them read "Overdue, Overdue".
-            if (overdue) {
+            if (typeof t.dueAt !== 'number') {
+                when.textContent = 'Needs attention';
+                when.classList.add('soon');
+            } else if (overdue) {
                 const days = Math.floor((now - t.dueAt) / 86400000);
                 when.textContent = days >= 1
                     ? ('Overdue by ' + days + (days === 1 ? ' day' : ' days'))
@@ -12248,34 +12284,51 @@
             const now = Date.now();
             const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
             const wantsToday = /\b(today|now|urgent|right now)\b/i.test(q);
-            const overdue = [], today = [], soon = [];
+            const overdue = [], today = [], soon = [], pressing = [];
             (function walk(list) {
                 for (const t of (list || [])) {
-                    if (t && typeof t.dueAt === 'number' && isFinite(t.dueAt) && !t.doneAt) {
-                        if (t.dueAt < now) overdue.push(t);
-                        else if (t.dueAt <= endOfDay.getTime()) today.push(t);
-                        else if (t.dueAt <= now + 7 * 86400000) soon.push(t);
+                    if (t && !t.doneAt) {
+                        if (typeof t.dueAt === 'number' && isFinite(t.dueAt)) {
+                            if (t.dueAt < now) overdue.push(t);
+                            else if (t.dueAt <= endOfDay.getTime()) today.push(t);
+                            else if (t.dueAt <= now + 7 * 86400000) soon.push(t);
+                        } else if (liveUrgency(t) >= 0.55) {
+                            // No date, but you SAID it was urgent. Answering
+                            // "nothing has a deadline" to someone who wrote
+                            // "pay the rent urgently" is technically true and
+                            // completely useless.
+                            pressing.push(t);
+                        }
                     }
                     walk(t && t.children);
                 }
             })(thoughts);
-            const picked = wantsToday ? overdue.concat(today) : overdue.concat(today, soon);
+            const picked = wantsToday
+                ? overdue.concat(today, pressing)
+                : overdue.concat(today, pressing, soon);
             if (!picked.length) {
-                showRecallCard(q,
-                    (overdue.length + today.length + soon.length) === 0
-                        ? 'Nothing has a deadline on it right now.'
-                        : 'Nothing due today.',
+                showRecallCard(q, soon.length
+                        ? 'Nothing urgent. ' + soon.length + ' coming up this week.'
+                        : 'Nothing urgent right now.',
                     null, { format: 'prose', items: [], sources: [], refs: [], conflicts: [], missing: '' });
                 return true;
             }
-            picked.sort((a, b) => a.dueAt - b.dueAt);
+            picked.sort((a, b) => {
+                const ad = typeof a.dueAt === 'number', bd = typeof b.dueAt === 'number';
+                if (ad && bd) return a.dueAt - b.dueAt;   // dated first, soonest first
+                if (ad !== bd) return ad ? -1 : 1;
+                return liveUrgency(b) - liveUrgency(a);   // then by how urgent it sounded
+            });
             const items = picked.slice(0, 25).map(t => {
-                const when = t.dueAt < now ? 'overdue' : whenLabel(t.dueAt).toLowerCase();
+                const when = typeof t.dueAt === 'number'
+                    ? (t.dueAt < now ? 'overdue' : whenLabel(t.dueAt).toLowerCase())
+                    : 'no date';
                 return t.summary + '  \u00b7  ' + when;
             });
             const parts = [];
             if (overdue.length) parts.push(overdue.length + ' overdue');
             if (today.length) parts.push(today.length + ' due today');
+            if (pressing.length) parts.push(pressing.length + ' pressing');
             if (!wantsToday && soon.length) parts.push(soon.length + ' this week');
             showRecallCard(q, parts.join(', ') + '.', null, {
                 format: 'checklist',
@@ -12284,7 +12337,7 @@
                 refs: [], conflicts: [], missing: '',
                 // Reading a wall of urgent things is the problem, not the
                 // answer. Offer to work through them instead.
-                focus: (overdue.length + today.length) > 0
+                focus: (overdue.length + today.length + pressing.length) > 0
             });
             return true;
         }
@@ -12726,6 +12779,28 @@
             const q = text.trim();
             // Questions about their own past. Voice input has no question
             // mark, so shape matters more than punctuation.
+            // URGENCY FIRST. "what do I have that's urgent" is matched by the
+            // general "what do I…" recall pattern below, which sends it to the
+            // AI — so the instant, exact local answer never ran. The more
+            // specific question has to be asked first.
+            const WORKLOAD_PATTERNS = [
+                /^\s*what'?s\s+(on my plate|due|left|next|coming up|urgent|important)\b/i,
+                /^\s*what\s+do\s+i\s+(have|need to do|still need)\b/i,
+                /^\s*(what|which)\s+(\w+\s+)?(is|are)\s+(urgent|due|overdue|important|pressing)\b/i,
+                /^\s*(show|tell)\s+me\s+(what'?s?|which)\b.*\b(urgent|due|overdue|left|pressing)\b/i,
+                /\b(what'?s?|anything)\s+(urgent|pressing|overdue)\b/i,
+                /^\s*what\s+am\s+i\s+(forgetting|missing|behind on)\b/i,
+                /^\s*(is there )?anything\s+(due|urgent|important|overdue|i'?m forgetting)\b/i,
+                /^\s*(am i|are there)\s+.*\b(behind|overdue|late)\b/i
+            ];
+            if (WORKLOAD_PATTERNS.some(re => re.test(q))) {
+                // The app holds every deadline, so answer this itself: instant,
+                // exact, and it works with no connection.
+                if (answerWhatsDueLocally(q)) return true;
+                askRecall(q);
+                return true;
+            }
+
             const RECALL_PATTERNS = [
                 /^(what|why|when|who|how|where)\s+(did|do|does|was|were|had|have|am|are|is)\s+i\b/i,
                 /^(what|why|when|who|how|where)\b[\s\S]*\?$/i,
@@ -12756,20 +12831,6 @@
             }
             // Direct questions about the current workload, which rarely start
             // with the interrogatives the older patterns expect.
-            const WORKLOAD_PATTERNS = [
-                /^\s*what'?s\s+(on my plate|due|left|next|coming up|urgent|important)\b/i,
-                /^\s*what\s+do\s+i\s+(have|need to do|still need)\b/i,
-                /^\s*what\s+am\s+i\s+(forgetting|missing|behind on)\b/i,
-                /^\s*(is there )?anything\s+(due|urgent|important|overdue|i'?m forgetting)\b/i,
-                /^\s*(am i|are there)\s+.*\b(behind|overdue|late)\b/i
-            ];
-            if (WORKLOAD_PATTERNS.some(re => re.test(q))) {
-                // The app holds every deadline, so answer this itself: instant,
-                // exact, and it works with no connection.
-                if (answerWhatsDueLocally(q)) return true;
-                askRecall(q);
-                return true;
-            }
             const summon = text.match(/(bring|show|give|find)\s+(me\s+)?(everything|all)\b[\s\S]*\b(urgent|important)/i);
             if (summon) {
                 showSummons(/important/i.test(summon[4]) ? 'important' : 'urgent');
