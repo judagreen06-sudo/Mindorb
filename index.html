@@ -1788,6 +1788,11 @@
         }
         .ra-save:active { transform: scale(.98); }
         .ra-save:disabled { opacity: .5; }
+        .ra-focus {
+            background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%);
+            border: none; color: #0e1219;
+            box-shadow: 0 8px 22px rgba(120,160,220,.22);
+        }
         /* TUTORIAL FOCUS. While the guided intro runs, everything the current
            step doesn't actually need disappears, so a first-time user is
            looking at exactly one thing. A step opts an element back in with
@@ -1845,6 +1850,76 @@
            scene is already rendering underneath, and the bubble you see here
            is the ACTUAL shader-drawn bubble, not a CSS imitation of one. The
            launch screen uses the same trick. */
+        /* FOCUS. One urgent thing at a time. A list of ten urgent items is the
+           thing that makes you close the app; a single item is something you
+           can actually do. Deliberately NOT shaped like the shopping list:
+           that is parallel and unordered, this is sequential and the order is
+           the whole point. */
+        #focus-sheet {
+            position: fixed; inset: 0; z-index: 999720;
+            background: radial-gradient(ellipse at 50% 34%, #131d33 0%, #090d18 58%, #04060c 100%);
+            display: flex; flex-direction: column;
+            padding: calc(env(safe-area-inset-top,0px) + 12px) 22px calc(env(safe-area-inset-bottom,0px) + 22px);
+            opacity: 0; pointer-events: none; visibility: hidden;
+        }
+        #focus-sheet.open { opacity: 1; pointer-events: auto; visibility: visible; }
+        #focus-head { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        #focus-progress {
+            flex: 1; text-align: center; color: var(--ink-faint);
+            font-size: 12.5px; font-weight: 800; letter-spacing: .06em;
+        }
+        #focus-body {
+            flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; gap: 12px;
+        }
+        #focus-when {
+            padding: 7px 15px; border-radius: 999px;
+            background: rgba(232,154,138,.14); border: 1px solid rgba(232,154,138,.3);
+            color: rgb(240,180,168); font-size: 12.5px; font-weight: 800;
+        }
+        #focus-when.soon { background: rgba(232,193,130,.13); border-color: rgba(232,193,130,.3); color: rgb(238,205,150); }
+        #focus-title {
+            margin: 0; color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
+            font-size: 30px; font-weight: 800; line-height: 1.2; max-width: 300px;
+        }
+        #focus-detail {
+            margin: 0; color: var(--ink-dim); font-size: 14px; font-weight: 600;
+            line-height: 1.5; max-width: 300px;
+        }
+        #focus-actions { flex-shrink: 0; }
+        #focus-done {
+            width: 100%; padding: 16px 0; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: linear-gradient(168deg,#fff 0%,#eef2fa 52%,#dfe7f5 100%); color: #0e1219;
+            box-shadow: 0 10px 26px rgba(120,160,220,.24);
+            font-family: 'Quicksand',sans-serif; font-size: 15px; font-weight: 700;
+        }
+        #focus-done:active { transform: scale(.98); }
+        #focus-secondary { display: flex; gap: 9px; margin-top: 10px; }
+        #focus-later, #focus-skip {
+            flex: 1; padding: 12px 0; border-radius: var(--r-pill); cursor: pointer;
+            background: rgba(255,255,255,.06); border: 1px solid var(--glass-border);
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 13.5px; font-weight: 700;
+        }
+        #focus-later:active, #focus-skip:active { transform: scale(.97); }
+        #focus-empty {
+            display: none; flex: 1; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; gap: 10px;
+        }
+        #focus-sheet.done #focus-body, #focus-sheet.done #focus-actions { display: none; }
+        #focus-sheet.done #focus-empty { display: flex; }
+        #focus-empty-mark {
+            width: 62px; height: 62px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(157,196,168,.16); border: 1px solid rgba(157,196,168,.34);
+            color: rgb(178,214,188); font-size: 27px; font-weight: 800;
+        }
+        #focus-empty h2 { margin: 6px 0 0; color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 22px; font-weight: 800; }
+        #focus-empty-sub { margin: 0; color: var(--ink-dim); font-size: 13.5px; font-weight: 600; }
+        #focus-finish {
+            margin-top: 20px; padding: 14px 30px; border-radius: var(--r-pill); border: none; cursor: pointer;
+            background: rgba(255,255,255,.08); border: 1px solid var(--glass-border);
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 14px; font-weight: 700;
+        }
         /* THE RESTORE CARD. Every major app offers exactly one action when you
            sign in during a deletion window: get your account back. None of
            them offer to finish the deletion faster, because someone signing in
@@ -2857,7 +2932,7 @@
             <div class="howto-section">
                 <h3>Your control</h3>
                 <p><b>Export Your Data</b> gives you the whole lot as a file. <b>Delete Account</b> permanently removes your account and its synced data. <b>Delete</b> on a bubble moves it to Old Bubbles; Delete Forever there removes it for good. Using the app signed out syncs nothing at all.</p>
-                <p>Deleting removes everything other people can see straight away: shared bubbles, friends, your leaderboard score. You are signed out and this device is wiped. Your own synced thoughts are held for <b>7 days</b> so a mistaken tap can be undone, then permanently deleted, and signing in during that window offers to restore the account. Copies other people already added to their own galaxies are theirs and stay with them.</p>
+                <p>Deleting removes everything other people can see straight away: shared bubbles, friends, your leaderboard score. You are signed out and this device is wiped. Your own synced thoughts <b>and your username</b> are held for <b>7 days</b> so a mistaken tap can be undone, then permanently deleted. Nobody else can take your username in that window, and signing in during it offers to restore the account. Copies other people already added to their own galaxies are theirs and stay with them.</p>
             </div>
             <div class="howto-section">
                 <h3>Children</h3>
@@ -3327,6 +3402,34 @@
                        autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
             </div>
             <button id="people-addbtn">Add</button>
+        </div>
+    </div>
+
+    <div id="focus-sheet" class="ui-block">
+        <div id="focus-head">
+            <button class="page-back-btn" id="focus-close" aria-label="Close">
+                <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <span id="focus-progress"></span>
+            <span class="page-head-spacer"></span>
+        </div>
+        <div id="focus-body">
+            <div id="focus-when"></div>
+            <h2 id="focus-title"></h2>
+            <p id="focus-detail"></p>
+        </div>
+        <div id="focus-actions">
+            <button id="focus-done">Done, let it go</button>
+            <div id="focus-secondary">
+                <button id="focus-later">Not today</button>
+                <button id="focus-skip">Skip</button>
+            </div>
+        </div>
+        <div id="focus-empty">
+            <div id="focus-empty-mark">✓</div>
+            <h2>That's everything urgent</h2>
+            <p id="focus-empty-sub"></p>
+            <button id="focus-finish">Back to your galaxy</button>
         </div>
     </div>
 
@@ -4570,7 +4673,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25r';
+        const BUILD_TAG = '2026-07-25v';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -5650,7 +5753,7 @@
                     (!currentUsername || from.toLowerCase() !== currentUsername.toLowerCase()));
                 af.style.display = canAdd ? 'inline-block' : 'none';
                 af.disabled = false;
-                if (from) af.textContent = 'Add @' + from + ' as a friend';
+                if (from) af.textContent = 'Add ' + from + ' as a friend';
                 af.dataset.who = from || '';
             }
             $('sa-actions').style.display = signedIn ? 'flex' : 'none';
@@ -6093,7 +6196,7 @@
                     .select('user_id').ilike('username', name).maybeSingle();
                 if (!data) { status.className = 'bad'; status.textContent = 'No one goes by @' + name + '.'; return; }
                 const { error } = await sb.from('friends')
-                    .upsert({ user_id: currentUser.id, friend_id: data.user_id }, { onConflict: 'user_id,friend_id' });
+                    .upsert({ user_id: currentUser.id, friend_id: data.user_id, status: 'pending' }, { onConflict: 'user_id,friend_id' });
                 if (error) throw new Error(error.message);
                 input.value = '';
                 status.className = 'ok'; status.textContent = 'Added @' + name;
@@ -6317,7 +6420,7 @@
                     .select('user_id').ilike('username', name).maybeSingle();
                 if (!data) { status.className = 'bad'; status.textContent = 'No one goes by @' + name + '.'; return; }
                 const { error } = await sb.from('friends')
-                    .upsert({ user_id: currentUser.id, friend_id: data.user_id },
+                    .upsert({ user_id: currentUser.id, friend_id: data.user_id, status: 'pending' },
                             { onConflict: 'user_id,friend_id' });
                 if (error) throw new Error(error.message);
                 input.value = '';
@@ -6765,8 +6868,17 @@
                 const stamp = Date.now();
                 (function mark(t) { if (!t) return; t.doneAt = stamp; (t.children || []).forEach(mark); })(found.thought);
                 archiveThought(found.thought, found.parentThought ? found.parentThought.id : null);
-                releasedCount++;
-                released++;
+                // Count the whole FAMILY, the way every other release path
+                // does. Counting one per family here is why "created" and
+                // "cleared" drifted apart: clearing a list quietly under-
+                // reported every child that went with its parent.
+                const familySize = (function cnt(x) {
+                    let n = 1;
+                    for (const k of ((x && x.children) || [])) n += cnt(k);
+                    return n;
+                })(found.thought);
+                releasedCount += familySize;
+                released += familySize;
             });
             l.doneAt = Date.now();
             checklists = checklists.filter(x => x.id !== l.id);
@@ -6924,9 +7036,9 @@
             const d = Math.max(0, Math.ceil(daysLeft || 0));
             $('restore-body').textContent = d > 0
                 ? (d === 1
-                    ? 'One day left. Your thoughts are still here, and restoring brings everything back.'
-                    : d + ' days left. Your thoughts are still here, and restoring brings everything back.')
-                : 'Your thoughts are still here for a little longer. Restoring brings everything back.';
+                    ? 'One day left. Your thoughts and your username are still held, and restoring brings everything back.'
+                    : d + ' days left. Your thoughts and your username are still held, and restoring brings everything back.')
+                : 'Your thoughts and username are held a little longer. Restoring brings everything back.';
             $('restore-go').disabled = false;
             $('restore-go').textContent = 'Restore my account';
             sheet.classList.add('open');
@@ -6949,7 +7061,17 @@
                     return;
                 }
                 closeRestoreSheet();
-                showVoiceStatus('Welcome back. Your account is restored.', { autoHideMs: 3000 });
+                // Pull the name back BEFORE anything can assign a placeholder:
+                // ensureUsername() would otherwise see an empty currentUsername
+                // and hand out a fresh User1234, losing the name we just held.
+                try {
+                    const { data: prof } = await sb.from('profiles')
+                        .select('username').eq('user_id', currentUser.id).maybeSingle();
+                    if (prof && prof.username) { currentUsername = prof.username; updateAccountRow(); }
+                } catch (e) {}
+                showVoiceStatus(currentUsername
+                    ? ('Welcome back, ' + currentUsername + '.')
+                    : 'Welcome back. Your account is restored.', { autoHideMs: 3000 });
                 try { pullAndMerge(); fetchUsername(); } catch (e) {}
             } catch (e) {
                 console.error('restore failed:', e);
@@ -7618,11 +7740,15 @@
                     const { data } = await sb.from('profiles')
                         .select('user_id').ilike('username', who).maybeSingle();
                     if (!data) throw new Error('no such user');
+                    // A REQUEST, like everywhere else. Without the explicit
+                    // status this fell through to the column default and made
+                    // someone a friend without them ever agreeing, quietly
+                    // bypassing the whole request system.
                     const { error } = await sb.from('friends')
-                        .upsert({ user_id: currentUser.id, friend_id: data.user_id },
+                        .upsert({ user_id: currentUser.id, friend_id: data.user_id, status: 'pending' },
                                 { onConflict: 'user_id,friend_id' });
                     if (error) throw new Error(error.message);
-                    saFriend.textContent = '@' + who + ' added';
+                    saFriend.textContent = 'Request sent to ' + who;
                     buzz([10, 24, 10]);
                 } catch (e) {
                     saFriend.textContent = "Couldn't add them";
@@ -10125,12 +10251,32 @@
                     'Permanently delete ' + n + (n === 1 ? ' thought' : ' thoughts') + '? This can\u2019t be undone.',
                     () => {
                         const ids = Array.from(archiveSelected);
-                        let deletedCount = 0;
+                        // Count what ACTUALLY goes, before anything is removed.
+                        // Deleting a parent takes its children with it, so by
+                        // the time the loop reached those children they were
+                        // already gone and the counter never saw them: you
+                        // selected 19, 19 vanished, and it reported 12.
+                        const doomed = new Set();
+                        const markGone = (t) => {
+                            if (!t) return;
+                            doomed.add(t.id);
+                            (t.children || []).forEach(markGone);
+                        };
+                        for (const id of ids) {
+                            const top = releasedArchive.find(e => e.thought && e.thought.id === id);
+                            if (top) { markGone(top.thought); continue; }
+                            const owner = releasedArchive.find(e => e.thought && findInArchivedTree(e.thought, id));
+                            if (owner) {
+                                const node = findInArchivedTree(owner.thought, id);
+                                markGone(node || null);
+                            }
+                        }
+                        const deletedCount = doomed.size;
                         for (const id of ids) {
                             const topEntry = releasedArchive.find(e => e.thought && e.thought.id === id);
-                            if (topEntry) { if (deleteForeverTopLevel(id)) deletedCount++; continue; }
+                            if (topEntry) { deleteForeverTopLevel(id); continue; }
                             const owner = releasedArchive.find(e => e.thought && findInArchivedTree(e.thought, id));
-                            if (owner && deleteForeverDescendant(owner.thought.id, id)) deletedCount++;
+                            if (owner) deleteForeverDescendant(owner.thought.id, id);
                         }
                         setArchiveSelectMode(false);
                         if (deletedCount) showVoiceStatus('Deleted ' + deletedCount + (deletedCount === 1 ? ' thought' : ' thoughts') + ' forever', { autoHideMs: 2200 });
@@ -10570,6 +10716,16 @@
             closeRestoreSheet();
             try { await signOutAndClear(); } catch (e) {}
         });
+        const focusClose = $('focus-close');
+        if (focusClose) focusClose.addEventListener('click', closeFocus);
+        const focusFinish = $('focus-finish');
+        if (focusFinish) focusFinish.addEventListener('click', closeFocus);
+        const focusDoneBtn = $('focus-done');
+        if (focusDoneBtn) focusDoneBtn.addEventListener('click', focusDone);
+        const focusLaterBtn = $('focus-later');
+        if (focusLaterBtn) focusLaterBtn.addEventListener('click', focusLater);
+        const focusSkipBtn = $('focus-skip');
+        if (focusSkipBtn) focusSkipBtn.addEventListener('click', focusAdvance);
         const peopleBtn = $('people-btn');
         if (peopleBtn) peopleBtn.addEventListener('click', openMenu);
         const menuSheetEl = $('menu-sheet');
@@ -10883,6 +11039,12 @@
             const includeCtx = document.getElementById('fb-include-input').checked;
             const payload = {
                 mode: 'feedback',
+                // The Worker uses these to build the subject line and to know
+                // where a reply should go.
+                kind: fbKind || 'feedback',
+                username: currentUsername || null,
+                email: ((document.getElementById('fb-email') || {}).value || '').trim() ||
+                       (currentUser ? (currentUser.email || null) : null),
                 text: body,
                 at: new Date().toISOString(),
                 context: includeCtx ? {
@@ -11979,6 +12141,109 @@
         // Builds the answer from real deadlines rather than asking the model.
         // The app HOLDS every date, so a round trip would be slower and less
         // accurate than simply reading them. Returns true if it handled it.
+        // ===== FOCUS =====
+        // Work through what is urgent one thing at a time, hardest first.
+        let focusQueue = [], focusIndex = 0, focusCleared = 0;
+        function collectUrgent() {
+            const now = Date.now();
+            const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
+            const out = [];
+            (function walk(list) {
+                for (const t of (list || [])) {
+                    if (t && typeof t.dueAt === 'number' && isFinite(t.dueAt) && !t.doneAt
+                        && t.dueAt <= endOfDay.getTime()) out.push(t);
+                    walk(t && t.children);
+                }
+            })(thoughts);
+            // Most overdue first: the order IS the help.
+            out.sort((a, b) => a.dueAt - b.dueAt);
+            return out;
+        }
+        function openFocus() {
+            focusQueue = collectUrgent();
+            focusIndex = 0; focusCleared = 0;
+            const sheet = $('focus-sheet');
+            if (!sheet) return;
+            sheet.classList.remove('done');
+            sheet.classList.add('open');
+            renderFocus();
+        }
+        function closeFocus() {
+            const s = $('focus-sheet');
+            if (s) s.classList.remove('open');
+        }
+        function renderFocus() {
+            const sheet = $('focus-sheet');
+            // Anything finished elsewhere, or since gone, drops out silently.
+            while (focusIndex < focusQueue.length) {
+                const t = focusQueue[focusIndex];
+                if (t && findThoughtById(t.id) && !t.doneAt) break;
+                focusIndex++;
+            }
+            if (focusIndex >= focusQueue.length) {
+                sheet.classList.add('done');
+                $('focus-empty-sub').textContent = focusCleared
+                    ? (focusCleared + (focusCleared === 1 ? ' thing' : ' things') + ' cleared.')
+                    : 'Nothing left that needs you today.';
+                return;
+            }
+            const t = focusQueue[focusIndex];
+            const now = Date.now();
+            const overdue = t.dueAt < now;
+            const when = $('focus-when');
+            // How overdue, not just "overdue twice". whenLabel already returns
+            // "Overdue" for a past date, so pairing them read "Overdue, Overdue".
+            if (overdue) {
+                const days = Math.floor((now - t.dueAt) / 86400000);
+                when.textContent = days >= 1
+                    ? ('Overdue by ' + days + (days === 1 ? ' day' : ' days'))
+                    : 'Overdue today';
+            } else {
+                when.textContent = 'Due ' + whenLabel(t.dueAt).toLowerCase();
+            }
+            when.classList.toggle('soon', !overdue);
+            $('focus-title').textContent = t.summary;
+            const detail = (t.full || '').trim();
+            $('focus-detail').textContent =
+                (detail && detail.toLowerCase() !== t.summary.toLowerCase()) ? detail : '';
+            $('focus-progress').textContent =
+                (focusIndex + 1) + ' OF ' + focusQueue.length;
+        }
+        function focusAdvance() { focusIndex++; renderFocus(); }
+        function focusDone() {
+            const t = focusQueue[focusIndex];
+            if (t) {
+                const found = removeFromTreeWithContext(t.id);
+                if (found) {
+                    const stamp = Date.now();
+                    (function mark(x) { if (!x) return; x.doneAt = stamp; (x.children || []).forEach(mark); })(found.thought);
+                    archiveThought(found.thought, found.parentThought ? found.parentThought.id : null);
+                    releasedCount += (function cnt(x) {
+                        let n = 1; for (const k of ((x && x.children) || [])) n += cnt(k); return n;
+                    })(found.thought);
+                    focusCleared++;
+                    saveState();
+                    try { reconcileSceneWithTree(); syncFloaters(); updateDrawerUI(); } catch (e) {}
+                }
+            }
+            buzz([10, 24, 10]);
+            try { playPop(70); } catch (e) {}
+            focusAdvance();
+        }
+        function focusLater() {
+            // Push it to tomorrow morning rather than pretending it is done.
+            const t = focusQueue[focusIndex];
+            if (t) {
+                const d = new Date();
+                d.setDate(d.getDate() + 1);
+                d.setHours(DEFAULT_HOUR, 0, 0, 0);
+                t.dueAt = d.getTime();
+                t.urgency = scoreUrgency(t.full || t.summary || '', t.dueAt);
+                saveState();
+                try { updateDrawerUI(); } catch (e) {}
+            }
+            focusAdvance();
+        }
         function answerWhatsDueLocally(q) {
             const now = Date.now();
             const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
@@ -12016,7 +12281,10 @@
                 format: 'checklist',
                 items,
                 sources: picked.slice(0, 25).map(t => ({ id: t.id })),
-                refs: [], conflicts: [], missing: ''
+                refs: [], conflicts: [], missing: '',
+                // Reading a wall of urgent things is the problem, not the
+                // answer. Offer to work through them instead.
+                focus: (overdue.length + today.length) > 0
             });
             return true;
         }
@@ -12387,6 +12655,17 @@
                     save.textContent = 'Saved to Lists';
                     showVoiceStatus('Saved to Lists', { autoHideMs: 2200 });
                 });
+                if ((extras || {}).focus) {
+                    const go = document.createElement('button');
+                    go.className = 'ra-save ra-focus';
+                    go.textContent = 'Take them one at a time';
+                    go.addEventListener('click', () => {
+                        card.classList.remove('show');
+                        document.body.classList.remove('answering');
+                        openFocus();
+                    });
+                    aEl.appendChild(go);
+                }
                 aEl.appendChild(save);
             }
             // Honesty line: the app says when it's guessing.
