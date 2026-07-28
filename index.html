@@ -325,55 +325,6 @@
         /* (home/back dock buttons removed — navigation is in the trail) */
 
         /* ============ BREADCRUMB TRAIL ============ */
-        /* Sending feedback shouldn't just grey out a button. The note lifts
-           off, folds into a bubble and floats away, which is the same thing
-           every thought in this app does. */
-        #fb-flight {
-            position: fixed; inset: 0; z-index: 999100;
-            pointer-events: none; display: none;
-        }
-        #fb-flight.on { display: block; }
-        #fb-note {
-            position: absolute; left: 50%; top: 55%;
-            width: 190px; height: 118px; margin-left: -95px; margin-top: -59px;
-            border-radius: 12px;
-            background: linear-gradient(160deg, rgba(255,255,255,.94), rgba(226,234,248,.88));
-            box-shadow: 0 14px 40px rgba(0,0,0,.5);
-            display: flex; flex-direction: column; gap: 7px; padding: 16px 15px;
-            animation: fbFold 2.1s cubic-bezier(.5,0,.3,1) forwards;
-        }
-        #fb-note i {
-            display: block; height: 5px; border-radius: 3px;
-            background: rgba(20,26,40,.20);
-        }
-        #fb-note i:nth-child(2) { width: 82%; }
-        #fb-note i:nth-child(3) { width: 64%; }
-        #fb-note i:nth-child(4) { width: 74%; }
-        @keyframes fbFold {
-            0%   { transform: scale(1) rotate(0deg); border-radius: 12px; opacity: 1; }
-            34%  { transform: scale(.42) rotate(-8deg); border-radius: 50%; opacity: 1; }
-            42%  { transform: scale(.36) rotate(-6deg); border-radius: 50%;
-                   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.5) 0%, rgba(18,24,38,.55) 55%, rgba(10,14,24,.7) 100%);
-                   box-shadow: 0 0 30px rgba(169,200,232,.5); }
-            100% { transform: scale(.30) rotate(4deg) translateY(-125vh); border-radius: 50%;
-                   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.5) 0%, rgba(18,24,38,.55) 55%, rgba(10,14,24,.7) 100%);
-                   box-shadow: 0 0 22px rgba(169,200,232,.35); opacity: 0; }
-        }
-        #fb-note i { animation: fbLinesOut .5s ease forwards; }
-        @keyframes fbLinesOut { to { opacity: 0; transform: scaleX(.2); } }
-        #fb-thanks {
-            position: absolute; left: 0; right: 0; top: 46%;
-            text-align: center; color: var(--ink);
-            font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 19px; font-weight: 800;
-            opacity: 0; animation: fbThanks 1.5s ease .95s forwards;
-        }
-        @keyframes fbThanks {
-            0% { opacity: 0; transform: translateY(8px); }
-            25% { opacity: 1; transform: none; }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        .motion-reduced #fb-note, .motion-reduced #fb-thanks { animation-duration: .3s !important; }
         /* Signing in is worth knowing about, but only once you have something
            worth losing. Held back until a few thoughts exist, shown once, and
            dismissible for good. */
@@ -990,7 +941,10 @@
            emerge language as every other panel tonight: fade + scale.
            ============================================================ */
         #auth-sheet {
-            position: fixed; inset: 0; z-index: 70;
+            position: fixed; inset: 0; z-index: 999900   /* Above EVERY sheet.
+               Sign-in can be triggered from anywhere, including the share
+               arrival screen at 999500, and at z-index 70 it opened silently
+               behind it: the button worked, you just could not see it. */;
             background: rgba(3, 5, 12, 0.55);
             display: flex; align-items: center; justify-content: center; padding: 20px;
             opacity: 0; pointer-events: none;
@@ -1869,24 +1823,48 @@
             background: linear-gradient(140deg, rgba(169,200,232,.9), rgba(157,196,168,.75));
             color: #0d1119; font-size: 12px; font-weight: 800;
         }
-        /* The bubble itself, built from the same recipe as the real ones. */
+        /* The real bubble's recipe, rebuilt in CSS: a near-black glass body
+           that darkens toward the edge, a thin iridescent rim that shifts hue
+           around the circumference, a bright specular high-left and a soft
+           bounce low-right. The flat grey circle it replaced looked nothing
+           like the thing the app is actually made of. */
         #sa-orb {
-            position: relative; width: 210px; height: 210px; border-radius: 50%;
+            position: relative; width: 232px; height: 232px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             background:
-                radial-gradient(circle at 32% 26%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 10%, transparent 24%),
-                radial-gradient(circle at 50% 50%, rgba(169,200,232,.20) 0%, rgba(157,196,168,.16) 42%, rgba(232,193,130,.14) 72%, rgba(232,154,138,.12) 100%);
-            border: 1px solid rgba(255,255,255,.20);
-            box-shadow: 0 0 60px rgba(169,200,232,.22), inset 0 0 50px rgba(255,255,255,.05);
+                radial-gradient(circle at 34% 30%, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 16%, transparent 34%),
+                radial-gradient(circle at 50% 50%, rgba(46,54,74,.60) 0%, rgba(20,26,40,.62) 42%, rgba(11,15,25,.76) 82%, rgba(8,11,19,.86) 100%);
+            box-shadow:
+                0 0 70px rgba(169,200,232,.20),
+                inset 0 0 60px rgba(255,255,255,.045);
             animation: saOrbFloat 6s ease-in-out infinite;
         }
-        @keyframes saOrbFloat {
-            0%,100% { transform: translateY(0) scale(1); box-shadow: 0 0 60px rgba(169,200,232,.22), inset 0 0 50px rgba(255,255,255,.05); }
-            50%     { transform: translateY(-9px) scale(1.015); box-shadow: 0 0 82px rgba(169,200,232,.34), inset 0 0 50px rgba(255,255,255,.07); }
+        /* Iridescent rim: a conic sweep of hues, the thing that makes a
+           bubble read as soap film rather than a circle. */
+        #sa-orb::before {
+            content: ''; position: absolute; inset: 0; border-radius: 50%;
+            padding: 2px;
+            background: conic-gradient(from 200deg,
+                hsl(190 80% 72%), hsl(140 70% 72%), hsl(48 85% 72%),
+                hsl(8 80% 74%), hsl(280 70% 76%), hsl(190 80% 72%));
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            opacity: .92;
+            animation: saRimTurn 14s linear infinite;
         }
-        .motion-reduced #sa-orb { animation: none; }
+        @keyframes saRimTurn { to { transform: rotate(360deg); } }
+        .motion-reduced #sa-orb::before { animation: none; }
+        /* Specular highlight, high-left, plus the soft bounce low-right. */
+        #sa-orb::after {
+            content: ''; position: absolute; inset: 0; border-radius: 50%;
+            background:
+                radial-gradient(circle at 33% 29%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.34) 22%, transparent 46%),
+                radial-gradient(circle at 68% 72%, rgba(255,255,255,.20) 0%, transparent 34%);
+            pointer-events: none;
+        }
         #sa-orb-label {
-            padding: 0 30px; color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
+            position: relative; z-index: 2;
+            padding: 0 32px; color: #fff; font-family: 'Baloo 2','Quicksand',sans-serif;
             font-weight: 800; font-size: 21px; line-height: 1.25;
             text-shadow: 0 2px 18px rgba(0,0,0,.5); word-break: break-word;
         }
@@ -2279,10 +2257,6 @@
     </div>
 
     <div id="hint">Speak to the bubble · your thoughts file themselves</div>
-    <div id="fb-flight">
-        <div id="fb-note"><i></i><i></i><i></i><i></i></div>
-        <div id="fb-thanks">Thank you, honestly</div>
-    </div>
     <button id="signin-nudge" class="glass ui-block">
         <span id="signin-nudge-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7a2 2 0 0 1 2-2h5"/><path d="M20 7v10a2 2 0 0 1-2 2h-5"/><path d="M9 12h11M16.5 8.5L20 12l-3.5 3.5"/></svg>
@@ -2756,14 +2730,14 @@
         <button id="undo-btn">Undo</button>
     </div>
 
-    <div id="move-picker">
+    <div id="move-picker" class="ui-block">
         <h3>Move this thought to…</h3>
         <div id="mp-hint" style="display:none;"></div>
         <div class="mp-scroll" id="mp-list"></div>
         <button id="mp-cancel">Cancel</button>
     </div>
 
-    <div id="share-arrival">
+    <div id="share-arrival" class="ui-block">
         <div id="sa-stars"></div>
         <div id="sa-inner">
             <div id="sa-from">
@@ -2783,7 +2757,7 @@
         </div>
     </div>
 
-    <div id="popgame-sheet">
+    <div id="popgame-sheet" class="ui-block">
         <div id="pg-head">
             <button id="pg-close" aria-label="Close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
@@ -2817,7 +2791,7 @@
         <div id="pg-best"></div>
     </div>
 
-    <div id="lb-sheet">
+    <div id="lb-sheet" class="ui-block">
         <div id="lb-head">
             <button id="lb-close" aria-label="Close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
@@ -2841,7 +2815,7 @@
         </div>
     </div>
 
-    <div id="username-sheet">
+    <div id="username-sheet" class="ui-block">
         <h3>Choose your username</h3>
         <div id="un-sub">Letters, numbers and underscores. 3–20 characters. Every username is unique.</div>
         <div id="un-field">
@@ -2856,7 +2830,7 @@
         </div>
     </div>
 
-    <div id="feedback-sheet">
+    <div id="feedback-sheet" class="ui-block">
         <h3>Send Feedback</h3>
         <div id="fb-sub">What’s working, what isn’t, what you wish it did.</div>
         <textarea id="fb-text" maxlength="2000" placeholder="Type anything…"></textarea>
@@ -3945,7 +3919,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-24c';
+        const BUILD_TAG = '2026-07-24f';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4220,13 +4194,76 @@
             }
             return { w, h, dpr };
         }
+        // A real bubble pop is two things at once: a fast downward pitch drop
+        // (the cavity collapsing) and a very short burst of filtered noise
+        // (the film tearing). A single tone reads as a beep; this reads as a
+        // pop. Pitch scales inversely with size, the way real bubbles do.
+        function playBubblePop(sizePx) {
+            try {
+                const ctx = sfx();
+                if (!ctx) return;
+                const t0 = ctx.currentTime;
+                const size = Math.max(18, Math.min(sizePx || 60, 200));
+                const base = 620 - (size - 18) * 1.6;         // bigger = deeper
+                const out = ctx.createGain();
+                out.gain.value = 0.9;
+                out.connect(ctx.destination);
+
+                // 1. the cavity collapse
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(base * 2.1, t0);
+                osc.frequency.exponentialRampToValueAtTime(Math.max(60, base * 0.42), t0 + 0.055);
+                const og = ctx.createGain();
+                og.gain.setValueAtTime(0.0001, t0);
+                og.gain.exponentialRampToValueAtTime(0.34, t0 + 0.004);
+                og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.085);
+                osc.connect(og); og.connect(out);
+                osc.start(t0); osc.stop(t0 + 0.1);
+
+                // 2. the film tearing
+                const len = Math.floor(ctx.sampleRate * 0.05);
+                const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+                const d = buf.getChannelData(0);
+                for (let i = 0; i < len; i++) {
+                    d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+                }
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                const bp = ctx.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.frequency.value = Math.max(700, base * 2.6);
+                bp.Q.value = 0.9;
+                const ng = ctx.createGain();
+                ng.gain.setValueAtTime(0.22, t0);
+                ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+                src.connect(bp); bp.connect(ng); ng.connect(out);
+                src.start(t0); src.stop(t0 + 0.06);
+            } catch (e) {}
+        }
+        // Earned, not constant. Praise on every pop is noise; praise at a
+        // real streak means something.
+        const PG_CHEERS = ['Nice', 'Good one', 'Sharp', 'On a roll', 'Beautiful',
+                           'Unreal', 'Untouchable', 'Ridiculous'];
+        function pgCheer(combo) {
+            if (combo < 4) return null;
+            const i = Math.min(combo - 4, PG_CHEERS.length - 1);
+            return PG_CHEERS[i];
+        }
         function pgSpawn(w, h, atBottom) {
             // Every wave the bubbles get smaller and faster, so a long run
             // stops being comfortable and starts demanding real accuracy.
             const wave = pgWave;
-            const shrink = Math.max(0.42, 1 - (wave - 1) * 0.07);
-            const rise = 1 + (wave - 1) * 0.16;
-            const r = (24 + Math.random() * 32) * shrink;
+            // Steeper on both axes. The old curve flattened out after a few
+            // waves, so a run stopped demanding anything new: bubbles stayed
+            // catchable and the only limit was patience.
+            const shrink = Math.max(0.30, 1 - (wave - 1) * 0.11);
+            const rise = 1 + (wave - 1) * 0.30;
+            // Floor the size at something a thumb can actually hit. Past this
+            // point the difficulty comes from SPEED, not from targets too
+            // small to aim at, which is frustrating rather than hard.
+            const MIN_TAP_R = 19;
+            const r = Math.max(MIN_TAP_R, (22 + Math.random() * 28) * shrink);
             const golden = Math.random() < Math.min(0.04 + wave * 0.006, 0.10);
             return {
                 x: r + Math.random() * Math.max(1, w - r * 2),
@@ -4280,7 +4317,10 @@
             const now = performance.now();
             // Chaining pops quickly builds a combo — that's the skill, and
             // the reason to keep going rather than tap idly.
-            if (now - pgLastPop < 900) pgCombo = Math.min(pgCombo + 1, 9);
+            // The window to chain narrows every wave, so keeping a combo
+            // alive stays a real skill instead of settling into a rhythm.
+            const comboWindow = Math.max(400, 900 - (pgWave - 1) * 50);
+            if (now - pgLastPop < comboWindow) pgCombo = Math.min(pgCombo + 1, 9);
             else pgCombo = 1;
             pgLastPop = now;
             const base = b.golden ? 50 : Math.round(28 - b.r * 0.28);   // smaller = worth more
@@ -4289,8 +4329,15 @@
             pgPopped++;
             pgFloaters.push({ x: b.x, y: b.y, life: 1,
                               text: '+' + gained, golden: b.golden, combo: pgCombo });
-            try { playPop(b.r * 2); } catch (e) {}
+            try { playBubblePop(b.r * 2, b.golden); } catch (e) {}
+            // A rising note per combo step, so getting better sounds like it.
+            if (pgCombo > 1) { try { playComboTone(pgCombo - 1); } catch (e) {} }
             buzz(b.golden ? [10, 20, 10, 20, 14] : [12, 18, 6]);
+            const cheer = pgCheer(pgCombo);
+            if (cheer) {
+                pgFloaters.push({ x: b.x, y: b.y - b.r - 18, life: 1.25,
+                                  text: cheer, golden: true, combo: 4 });
+            }
             const reduced = document.documentElement.classList.contains('motion-reduced');
             const n = reduced ? 6 : (b.golden ? 26 : 16);
             for (let i = 0; i < n; i++) {
@@ -4405,9 +4452,10 @@
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, w, h);
 
-            if (pgCombo > 0 && now - pgLastPop > 1400) { pgCombo = 0; pgSyncHud(); }
+            const comboDecay = Math.max(650, 1400 - (pgWave - 1) * 60);
+            if (pgCombo > 0 && now - pgLastPop > comboDecay) { pgCombo = 0; pgSyncHud(); }
             // A new wave every 25 pops: fewer, faster, smaller bubbles.
-            const wantWave = 1 + Math.floor(pgPopped / 25);
+            const wantWave = 1 + Math.floor(pgPopped / 12);
             if (wantWave !== pgWave && !pgOver) {
                 pgWave = wantWave;
                 pgFloaters.push({ x: w / 2, y: h * 0.42, life: 1.6,
@@ -4415,7 +4463,8 @@
                 try { playPop(120); } catch (e) {}
                 pgSyncHud();
             }
-            const target = Math.max(5, Math.min(14, Math.round((w * h) / 30000)));
+            const roomy = Math.round((w * h) / 30000);
+            const target = Math.max(4, Math.min(14, roomy - Math.floor((pgWave - 1) / 2)));
             while (pgBubbles.length < target) pgBubbles.push(pgSpawn(w, h, pgSeeded));
             pgSeeded = true;
 
@@ -4518,7 +4567,9 @@
                 const dx = x - b.x, dy = y - b.y;
                 // A touch is imprecise — allow a small forgiving margin so a
                 // near-miss still pops rather than feeling unresponsive.
-                if (dx * dx + dy * dy <= (b.r + 10) * (b.r + 10)) {
+                // A generous margin early on, tightening as the waves climb.
+                const margin = Math.max(2, 12 - pgWave);
+                if (dx * dx + dy * dy <= (b.r + margin) * (b.r + margin)) {
                     pgPop(b);
                     const { w, h } = pgCanvasSize();
                     Object.assign(b, pgSpawn(w, h, true));
@@ -4734,6 +4785,18 @@
                     $('sa-add').style.display = 'none';
                     return;
                 }
+                if (alreadyAdopted(token)) {
+                    const who2 = typeof data.owner_username === 'string'
+                        ? data.owner_username.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
+                    const already = sanitizeSharedPayload(data.payload);
+                    paintArrival(already, who2, true);
+                    $('sa-status').className = 'ok';
+                    $('sa-status').textContent = "You've already added this one.";
+                    $('sa-add').style.display = 'none';
+                    $('sa-dismiss').textContent = 'Close';
+                    pendingShare = { token, payload: already, from: who2 };
+                    return;
+                }
                 const clean = sanitizeSharedPayload(data.payload);
                 if (!clean) {
                     paintArrival(null, data.owner_username, true);
@@ -4748,6 +4811,7 @@
                     ? data.owner_username.slice(0, 20).replace(/[^a-zA-Z0-9_]/g, '') : null;
                 pendingShare = { token, payload: clean, from: who };
                 $('sa-add').style.display = '';
+                $('sa-dismiss').textContent = 'Just looking';
                 paintArrival(clean, who, true);
             } catch (e) {
                 $('sa-status').className = 'bad';
@@ -4821,11 +4885,45 @@
             for (const k of (node.children || [])) n += adoptShared(k, t.id, (depth || 0) + 1);
             return n;
         }
+        const SHARE_ADOPTED_KEY = 'mindorb-adopted-shares';
+        function adoptedShares() {
+            try { return JSON.parse(localStorage.getItem(SHARE_ADOPTED_KEY) || '{}'); }
+            catch (e) { return {}; }
+        }
+        // Records the token AND the root id it created, so "already added" can
+        // be withdrawn if you later delete the thing it made. Otherwise a link
+        // you deliberately cleared out could never be used again.
+        function rememberAdopted(token, rootId) {
+            try {
+                const all = adoptedShares();
+                all[token] = rootId;
+                const keys = Object.keys(all);
+                if (keys.length > 60) delete all[keys[0]];
+                localStorage.setItem(SHARE_ADOPTED_KEY, JSON.stringify(all));
+            } catch (e) {}
+        }
+        function alreadyAdopted(token) {
+            const rootId = adoptedShares()[token];
+            if (!rootId) return false;
+            // Still counts only while the bubble it made is actually there.
+            if (findThoughtById(rootId)) return true;
+            const inArchive = (releasedArchive || []).some(e => e && e.thought && e.thought.id === rootId);
+            if (inArchive) return true;
+            try {
+                const all = adoptedShares();
+                delete all[token];
+                localStorage.setItem(SHARE_ADOPTED_KEY, JSON.stringify(all));
+            } catch (e) {}
+            return false;
+        }
         function addSharedToGalaxy() {
             if (!pendingShare || !pendingShare.payload) return;
             const btn = $('sa-add');
             btn.disabled = true;
+            const beforeIds = new Set(thoughts.map(t => t.id));
             const n = adoptShared(pendingShare.payload, null, 0);
+            const root = thoughts.find(t => !beforeIds.has(t.id));
+            if (root && pendingShare.token) rememberAdopted(pendingShare.token, root.id);
             saveState();
             updateDrawerUI();
             $('sa-status').className = 'ok';
@@ -8667,22 +8765,6 @@
                 localStorage.setItem(FEEDBACK_LOCAL_KEY, JSON.stringify(prev.slice(-20)));
             } catch (e) {}
         }
-        // The note lifts off, folds into a bubble and floats away, which is
-        // what every thought in this app does. Sending something you took the
-        // trouble to write deserves more than a greyed-out button.
-        function playFeedbackFlight() {
-            const wrap = $('fb-flight');
-            if (!wrap) return;
-            const note = $('fb-note'), thanks = $('fb-thanks');
-            wrap.classList.remove('on');
-            void wrap.offsetWidth;
-            [note, thanks].forEach(el => { if (el) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; } });
-            if (note) [...note.children].forEach(i => { i.style.animation = 'none'; void i.offsetWidth; i.style.animation = ''; });
-            wrap.classList.add('on');
-            try { playPop(120); } catch (e) {}
-            buzz([10, 26, 10, 30, 14]);
-            setTimeout(() => wrap.classList.remove('on'), 2400);
-        }
         async function sendFeedback() {
             const textEl = document.getElementById('fb-text');
             const st = document.getElementById('fb-status');
@@ -8711,9 +8793,8 @@
                     body: JSON.stringify(payload)
                 }, 12000);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                st.className = 'ok'; st.textContent = '';
-                playFeedbackFlight();
-                setTimeout(closeFeedbackSheet, 500);
+                st.className = 'ok'; st.textContent = 'Thank you for your feedback.';
+                setTimeout(closeFeedbackSheet, 1400);
             } catch (e) {
                 // Honest about what happened, and clear that it wasn't lost.
                 st.className = 'error';
@@ -10969,6 +11050,77 @@
             if (!hapticsEnabled) return;
             try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
         }
+        // A wetter pop for the game. The galaxy's playPop is a soft film-tear,
+        // right for releasing a thought but too polite when you are popping
+        // dozens. This adds the hollow "thup" and the little rising tail a
+        // real bubble makes when it collapses into itself.
+        function playBubblePop(sizePx, golden) {
+            const ctx = sfx(); if (!ctx) return;
+            const t0 = ctx.currentTime;
+            const size = Math.min(Math.max((sizePx || 60) / 90, 0.45), 1.5);
+
+            // Resonant body: a fast downward pitch drop is what the ear reads
+            // as a cavity collapsing.
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            const f0 = (golden ? 1050 : 760) / size;
+            osc.frequency.setValueAtTime(f0, t0);
+            osc.frequency.exponentialRampToValueAtTime(f0 * 0.34, t0 + 0.055);
+            const og = ctx.createGain();
+            og.gain.setValueAtTime(0.0001, t0);
+            og.gain.exponentialRampToValueAtTime(0.30, t0 + 0.006);
+            og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.10);
+            osc.connect(og).connect(ctx.destination);
+            osc.start(t0); osc.stop(t0 + 0.12);
+
+            // The wet click of the film letting go.
+            const dur = 0.045;
+            const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) {
+                const k = i / d.length;
+                d[i] = (Math.random() * 2 - 1) * Math.pow(1 - k, 3);
+            }
+            const noise = ctx.createBufferSource(); noise.buffer = buf;
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.setValueAtTime(2600 / size, t0);
+            bp.frequency.exponentialRampToValueAtTime(900, t0 + dur);
+            bp.Q.value = 2.2;
+            const ng = ctx.createGain();
+            ng.gain.setValueAtTime(0.16, t0);
+            ng.gain.exponentialRampToValueAtTime(0.0005, t0 + dur);
+            noise.connect(bp).connect(ng).connect(ctx.destination);
+            noise.start(t0); noise.stop(t0 + dur);
+
+            // Golden bubbles get a bright rising chime on top.
+            if (golden) {
+                const ch = ctx.createOscillator(); ch.type = 'triangle';
+                ch.frequency.setValueAtTime(880, t0 + 0.02);
+                ch.frequency.exponentialRampToValueAtTime(1760, t0 + 0.16);
+                const cg = ctx.createGain();
+                cg.gain.setValueAtTime(0.0001, t0 + 0.02);
+                cg.gain.exponentialRampToValueAtTime(0.16, t0 + 0.05);
+                cg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+                ch.connect(cg).connect(ctx.destination);
+                ch.start(t0 + 0.02); ch.stop(t0 + 0.26);
+            }
+        }
+        // A short rising figure when a combo climbs, so getting better
+        // actually sounds like getting better.
+        function playComboTone(step) {
+            const ctx = sfx(); if (!ctx) return;
+            const t0 = ctx.currentTime;
+            const osc = ctx.createOscillator(); osc.type = 'triangle';
+            const base = 520 * Math.pow(1.122, Math.min(step, 10));   // ~1 semitone per step
+            osc.frequency.setValueAtTime(base, t0);
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, t0);
+            g.gain.exponentialRampToValueAtTime(0.10, t0 + 0.012);
+            g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+            osc.connect(g).connect(ctx.destination);
+            osc.start(t0); osc.stop(t0 + 0.2);
+        }
         function playPop(sizePx) {
             const ctx = sfx(); if (!ctx) return;
             const t0 = ctx.currentTime;
@@ -11734,7 +11886,13 @@
                     ? urgencyGlow(o.urgency, o.thought.importance) : 0;
                 const rBeat = o.r * (1 + 0.07 * urgencyBeat(now, urgV));
                 const drawX = (o.dispX !== undefined) ? o.dispX : o.x;
-                const drawY = (o.dispY !== undefined) ? o.dispY : o.y;
+                // The DOM labels are positioned with jsToPixelY(), which adds
+                // the scene shift. The shader was NOT getting it, so when the
+                // scene moved to make room for the card the LABEL slid up and
+                // the bubble stayed put. Convert the pixel shift back into
+                // scene units so both agree on where a bubble is.
+                const shiftJs = (2 * sceneShiftPx()) / (VH * posScale());
+                const drawY = ((o.dispY !== undefined) ? o.dispY : o.y) - shiftJs;
                 bubbleBuf[k] = drawX; bubbleBuf[k + 1] = drawY; bubbleBuf[k + 2] = rBeat;
                 fxBuf[k] = glow; fxBuf[k + 1] = o.collapse || 0;
                 let glowV = urgencyGlow(o.urgency, o.thought && o.thought.importance);
