@@ -325,6 +325,85 @@
         /* (home/back dock buttons removed — navigation is in the trail) */
 
         /* ============ BREADCRUMB TRAIL ============ */
+        /* Sending feedback shouldn't just grey out a button. The note lifts
+           off, folds into a bubble and floats away, which is the same thing
+           every thought in this app does. */
+        #fb-flight {
+            position: fixed; inset: 0; z-index: 999100;
+            pointer-events: none; display: none;
+        }
+        #fb-flight.on { display: block; }
+        #fb-note {
+            position: absolute; left: 50%; top: 55%;
+            width: 190px; height: 118px; margin-left: -95px; margin-top: -59px;
+            border-radius: 12px;
+            background: linear-gradient(160deg, rgba(255,255,255,.94), rgba(226,234,248,.88));
+            box-shadow: 0 14px 40px rgba(0,0,0,.5);
+            display: flex; flex-direction: column; gap: 7px; padding: 16px 15px;
+            animation: fbFold 2.1s cubic-bezier(.5,0,.3,1) forwards;
+        }
+        #fb-note i {
+            display: block; height: 5px; border-radius: 3px;
+            background: rgba(20,26,40,.20);
+        }
+        #fb-note i:nth-child(2) { width: 82%; }
+        #fb-note i:nth-child(3) { width: 64%; }
+        #fb-note i:nth-child(4) { width: 74%; }
+        @keyframes fbFold {
+            0%   { transform: scale(1) rotate(0deg); border-radius: 12px; opacity: 1; }
+            34%  { transform: scale(.42) rotate(-8deg); border-radius: 50%; opacity: 1; }
+            42%  { transform: scale(.36) rotate(-6deg); border-radius: 50%;
+                   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.5) 0%, rgba(18,24,38,.55) 55%, rgba(10,14,24,.7) 100%);
+                   box-shadow: 0 0 30px rgba(169,200,232,.5); }
+            100% { transform: scale(.30) rotate(4deg) translateY(-125vh); border-radius: 50%;
+                   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.5) 0%, rgba(18,24,38,.55) 55%, rgba(10,14,24,.7) 100%);
+                   box-shadow: 0 0 22px rgba(169,200,232,.35); opacity: 0; }
+        }
+        #fb-note i { animation: fbLinesOut .5s ease forwards; }
+        @keyframes fbLinesOut { to { opacity: 0; transform: scaleX(.2); } }
+        #fb-thanks {
+            position: absolute; left: 0; right: 0; top: 46%;
+            text-align: center; color: var(--ink);
+            font-family: 'Baloo 2','Quicksand',sans-serif; font-size: 19px; font-weight: 800;
+            opacity: 0; animation: fbThanks 1.5s ease .95s forwards;
+        }
+        @keyframes fbThanks {
+            0% { opacity: 0; transform: translateY(8px); }
+            25% { opacity: 1; transform: none; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .motion-reduced #fb-note, .motion-reduced #fb-thanks { animation-duration: .3s !important; }
+        /* Signing in is worth knowing about, but only once you have something
+           worth losing. Held back until a few thoughts exist, shown once, and
+           dismissible for good. */
+        #signin-nudge {
+            position: fixed; left: 0; right: 0; margin-left: auto; margin-right: auto;
+            width: fit-content; max-width: min(90vw, 400px);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 118px);
+            z-index: 13;
+            display: flex; align-items: center; gap: 11px;
+            padding: 12px 12px 12px 15px; border-radius: 18px;
+            cursor: pointer; text-align: left;
+            border: 1px solid rgba(169, 200, 232, 0.26);
+            background: rgba(18, 26, 42, 0.72);
+            color: var(--ink);
+            font-family: 'Quicksand', sans-serif; font-size: 12.5px; font-weight: 600; line-height: 1.4;
+            opacity: 0; pointer-events: none; transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #signin-nudge.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        #signin-nudge-icon { flex-shrink: 0; display: inline-flex; color: var(--accent); }
+        #signin-nudge-icon svg { width: 20px; height: 20px; }
+        #signin-nudge-text { flex: 1; }
+        #signin-nudge-x { flex-shrink: 0; display: inline-flex; padding: 4px; color: var(--ink-faint); }
+        #signin-nudge-x svg { width: 15px; height: 15px; }
+        body.launching #signin-nudge, body.onboarding #signin-nudge,
+        body.dived #signin-nudge, body.drawer-open #signin-nudge,
+        body.typing-open #signin-nudge, body.answering #signin-nudge {
+            opacity: 0 !important; pointer-events: none !important;
+        }
+        .motion-reduced #signin-nudge { transition: opacity 0.15s ease; }
         /* A quiet count of what is actually due. The galaxy already floats
            these to the front, but nothing ever SAID anything, so a deadline
            could pass while you were looking at the screen. Appears only when
@@ -680,22 +759,22 @@
            language + a few plain sentences. No screenshots (they bloat
            the single-file build and go stale); vectors always match.
            ============================================================ */
-        #howto-page {
-            position: fixed; inset: 0; z-index: 62;
+        #privacy-page, #howto-page {
+            position: fixed; inset: 0; z-index: 64;
             background: rgba(6, 9, 18, 0.72); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
             display: flex; flex-direction: column;
             padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 0;
             opacity: 0; pointer-events: none; transform: scale(0.97);
             transition: opacity 0.26s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
         }
-        #howto-page.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+        #privacy-page.open, #howto-page.open { opacity: 1; pointer-events: auto; transform: scale(1); }
         .motion-reduced #howto-page { transition-duration: 0.12s !important; }
         #howto-head {
             display: flex; align-items: center; justify-content: space-between;
             padding: 4px 20px 12px;
         }
         #howto-head h2 { color: var(--ink); font-family: 'Baloo 2', 'Quicksand', sans-serif; font-weight: 800; font-size: 22px; margin: 0; }
-        #howto-scroll { overflow-y: auto; flex: 1; padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 30px); -webkit-overflow-scrolling: touch; }
+        #privacy-scroll, #howto-scroll { overflow-y: auto; flex: 1; padding: 4px 20px calc(env(safe-area-inset-bottom, 0px) + 30px); -webkit-overflow-scrolling: touch; }
         .howto-section {
             border-radius: var(--r-l); padding: 16px;
             background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.09);
@@ -711,7 +790,7 @@
            drawer's own item styling for consistency.
            ============================================================ */
         #archive-page {
-            position: fixed; inset: 0; z-index: 62;
+            position: fixed; inset: 0; z-index: 64;
             background: rgba(6, 9, 18, 0.72); backdrop-filter: blur(30px) saturate(1.55); -webkit-backdrop-filter: blur(30px) saturate(1.55);
             display: flex; flex-direction: column;
             padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 0;
@@ -1908,6 +1987,15 @@
         #pg-over-board { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: var(--ink); }
         #pg-over-again { background: linear-gradient(168deg,#fff,#e6ecf7); border: none; color: #0e1219; }
         #pg-over-board:active, #pg-over-again:active { transform: scale(.97); }
+        #pg-over-home {
+            margin-top: 14px; padding: 11px 0; width: 100%;
+            background: none; border: none; cursor: pointer;
+            color: var(--ink-faint); font-family: 'Quicksand',sans-serif;
+            font-size: 13px; font-weight: 700;
+            transition: color .18s ease;
+        }
+        #pg-over-home:active { color: var(--ink); }
+        #pg-over.show #pg-over-home { animation-delay: .3s; }
         #pg-canvas { flex: 1 1 0; min-height: 0; width: 100%; display: block; touch-action: none; }
         #pg-hint {
             flex-shrink: 0; text-align: center; padding: 8px 24px 2px;
@@ -2188,6 +2276,19 @@
     </div>
 
     <div id="hint">Speak to the bubble · your thoughts file themselves</div>
+    <div id="fb-flight">
+        <div id="fb-note"><i></i><i></i><i></i><i></i></div>
+        <div id="fb-thanks">Thank you, honestly</div>
+    </div>
+    <button id="signin-nudge" class="glass ui-block">
+        <span id="signin-nudge-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7a2 2 0 0 1 2-2h5"/><path d="M20 7v10a2 2 0 0 1-2 2h-5"/><path d="M9 12h11M16.5 8.5L20 12l-3.5 3.5"/></svg>
+        </span>
+        <span id="signin-nudge-text">Keep your bubbles safe. Sign in to reach them from any device.</span>
+        <span id="signin-nudge-x" aria-label="Dismiss">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </span>
+    </button>
     <button id="due-nudge" class="glass ui-block">
         <span id="due-nudge-dot"></span>
         <span id="due-nudge-text"></span>
@@ -2283,6 +2384,59 @@
         </div>
         <div id="drawer-settings">
             <button id="settings-open-btn">Settings</button>
+        </div>
+    </div>
+
+    <div id="privacy-page" class="ui-block">
+        <div id="howto-head">
+            <button class="page-back-btn" id="privacy-close" aria-label="Back">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <h2>Privacy</h2>
+            <span class="page-head-spacer"></span>
+        </div>
+        <div id="privacy-scroll">
+            <div class="howto-section">
+                <h3>The short version</h3>
+                <p>If you never sign in, everything stays on this device. Signing in syncs your thoughts so you can use more than one device. Your thoughts are never sold, never used for advertising, and never used to train anyone's AI models.</p>
+            </div>
+            <div class="howto-section">
+                <h3>What is stored</h3>
+                <p><b>On your device:</b> your thoughts, deadlines and Old Bubbles.</p>
+                <p><b>In our database, only if you sign in:</b> a copy of those, so your devices stay in step. Your email address, to sign you in. Your username, so a shared bubble can say who sent it. Any bubble you deliberately share.</p>
+                <p><b>Never stored:</b> anything you type while signed out.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Where your words go</h3>
+                <p>Organising, unpacking, recall, photo reading and voice transcription are done by Google's Gemini API. Text you capture, voice recordings, photos of notes you deliberately take, and a summary index of your thoughts are sent there to be processed.</p>
+                <p>Google's paid API terms state this data is not used to train their models. We keep no copies beyond what is needed to hand you back the result.</p>
+                <p>If you would rather nothing left this device: don't sign in, and type instead of speaking. Capture still needs the AI, so be mindful of what you put in.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Sharing a bubble</h3>
+                <p>A share is a snapshot saved with a random link. Anyone holding that link can open it once they are signed in. The link is unguessable, but it is not a password, so treat it like any link you send. Editing the original afterwards does not change what you already sent.</p>
+            </div>
+            <div class="howto-section">
+                <h3>What we never do</h3>
+                <p>We do not sell or rent your data. There is no advertising and nothing is shared with advertisers. There are no analytics or trackers, and we build no profile of you. We do not read your thoughts except where you have asked the AI to act on them.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Your control</h3>
+                <p><b>Export Your Data</b> gives you the whole lot as a file. <b>Delete Account</b> permanently removes your account and its synced data. <b>Delete</b> on a bubble moves it to Old Bubbles; Delete Forever there removes it for good. Using the app signed out syncs nothing at all.</p>
+                <p>Deleting your account removes your synced thoughts, profile and username, and stops any links you shared. Copies other people already added to their own galaxies are theirs and stay with them.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Children</h3>
+                <p>Mindorb is not directed at children under 13 and we do not knowingly collect information from them.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Security</h3>
+                <p>Data in transit is encrypted. Synced data is protected by row-level security so your thoughts are readable only by your own account. Passwords are handled by our authentication provider and are never visible to us. No system is perfect and we do not claim otherwise.</p>
+            </div>
+            <div class="howto-section">
+                <h3>Questions</h3>
+                <p>Use Settings, Send Feedback. It reaches us directly.</p>
+            </div>
         </div>
     </div>
 
@@ -2653,6 +2807,7 @@
                     <button id="pg-over-board">Leaderboard</button>
                     <button id="pg-over-again">Play again</button>
                 </div>
+                <button id="pg-over-home">Back to your thoughts</button>
             </div>
         </div>
         <div id="pg-hint">Pop them before they float away. Chain pops for a combo.</div>
@@ -3730,7 +3885,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-23y';
+        const BUILD_TAG = '2026-07-23z';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -5442,6 +5597,12 @@
             if (lbInput) lbInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); lbInput.blur(); addFriendByUsername(); }
             });
+            const pgHome = document.getElementById('pg-over-home');
+            if (pgHome) pgHome.addEventListener('click', () => {
+                closePopGame();
+                try { document.getElementById('settings-page').classList.remove('open'); } catch (e) {}
+                try { flyHome(); } catch (e) {}
+            });
             const pgAgain = document.getElementById('pg-over-again');
             if (pgAgain) pgAgain.addEventListener('click', pgRestart);
             const pgBoard = document.getElementById('pg-over-board');
@@ -5450,12 +5611,15 @@
             if (lbOpenBtn) lbOpenBtn.addEventListener('click', openLeaderboard);
             const privacyRow = document.getElementById('privacy-row');
             if (privacyRow) privacyRow.addEventListener('click', () => {
-                // window.open, not a relative <a href>. Inside an installed PWA
-                // a relative link navigates the single page away, which looks
-                // exactly like the app resetting itself.
-                const url = new URL('privacy.html', location.href).href;
-                const w = window.open(url, '_blank', 'noopener');
-                if (!w) showVoiceStatus('Privacy policy: ' + url, { autoHideMs: 6000 });
+                // Rendered INSIDE the app. Both a relative link and
+                // window.open navigate an installed PWA's single page away,
+                // which reads as the app resetting itself. The hosted copy at
+                // privacy.html still exists for the App Store listing.
+                document.getElementById('privacy-page').classList.add('open');
+            });
+            const privacyClose = document.getElementById('privacy-close');
+            if (privacyClose) privacyClose.addEventListener('click', () => {
+                document.getElementById('privacy-page').classList.remove('open');
             });
             const pgRow = document.getElementById('popgame-row');
             if (pgRow) pgRow.addEventListener('click', openPopGame);
@@ -8058,6 +8222,31 @@
             })(thoughts);
             return { overdue, today };
         }
+        // ===== SIGN IN =====
+        // Held back on purpose. Asking someone to make an account before they
+        // have put anything in is asking for a favour; asking once they have a
+        // handful of thoughts is offering to protect something. Shown once,
+        // and "no" means never again.
+        const SIGNIN_NUDGE_KEY = 'mindorb-signin-nudge';
+        const SIGNIN_NUDGE_MIN_THOUGHTS = 4;
+        let signinNudgeTimer = null;
+        function maybeShowSigninNudge() {
+            const el = $('signin-nudge');
+            if (!el || currentUser) return;
+            if (onboardStep !== -1 || document.body.classList.contains('launching')) return;
+            if (countAll(thoughts) < SIGNIN_NUDGE_MIN_THOUGHTS) return;
+            try { if (localStorage.getItem(SIGNIN_NUDGE_KEY)) return; } catch (e) {}
+            el.classList.add('show');
+            clearTimeout(signinNudgeTimer);
+            // Leaves on its own, but stays long enough to be read properly.
+            signinNudgeTimer = setTimeout(() => el.classList.remove('show'), 12000);
+        }
+        function dismissSigninNudge(forGood) {
+            const el = $('signin-nudge');
+            if (el) el.classList.remove('show');
+            clearTimeout(signinNudgeTimer);
+            if (forGood) { try { localStorage.setItem(SIGNIN_NUDGE_KEY, '1'); } catch (e) {} }
+        }
         function maybeShowDueNudge() {
             const el = $('due-nudge');
             if (!el) return;
@@ -8161,10 +8350,23 @@
             });
             trail.classList.add('visible');
         }
+        const signinNudgeEl = $('signin-nudge');
+        if (signinNudgeEl) signinNudgeEl.addEventListener('click', (e) => {
+            // The X means "stop asking". The rest of it opens sign-in.
+            if (e.target.closest && e.target.closest('#signin-nudge-x')) {
+                dismissSigninNudge(true);
+                return;
+            }
+            dismissSigninNudge(true);
+            try { openAuthSheet(); } catch (err) {}
+        });
         const dueNudgeEl = $('due-nudge');
         if (dueNudgeEl) dueNudgeEl.addEventListener('click', openDueList);
         // Only once the app has actually settled, never during launch.
         setTimeout(() => { try { maybeShowDueNudge(); } catch (e) {} }, 2600);
+        // Checked after each capture rather than at launch, so it appears the
+        // moment there is genuinely something to protect.
+        setInterval(() => { try { maybeShowSigninNudge(); } catch (e) {} }, 9000);
         // Typing used to be reachable ONLY by double-tapping the mic, which
         // nobody discovers on their own. The gesture still works; this simply
         // makes the option visible.
@@ -8358,6 +8560,22 @@
                 localStorage.setItem(FEEDBACK_LOCAL_KEY, JSON.stringify(prev.slice(-20)));
             } catch (e) {}
         }
+        // The note lifts off, folds into a bubble and floats away, which is
+        // what every thought in this app does. Sending something you took the
+        // trouble to write deserves more than a greyed-out button.
+        function playFeedbackFlight() {
+            const wrap = $('fb-flight');
+            if (!wrap) return;
+            const note = $('fb-note'), thanks = $('fb-thanks');
+            wrap.classList.remove('on');
+            void wrap.offsetWidth;
+            [note, thanks].forEach(el => { if (el) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; } });
+            if (note) [...note.children].forEach(i => { i.style.animation = 'none'; void i.offsetWidth; i.style.animation = ''; });
+            wrap.classList.add('on');
+            try { playPop(120); } catch (e) {}
+            buzz([10, 26, 10, 30, 14]);
+            setTimeout(() => wrap.classList.remove('on'), 2400);
+        }
         async function sendFeedback() {
             const textEl = document.getElementById('fb-text');
             const st = document.getElementById('fb-status');
@@ -8386,8 +8604,9 @@
                     body: JSON.stringify(payload)
                 }, 12000);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                st.className = 'ok'; st.textContent = 'Thank you, sent.';
-                setTimeout(closeFeedbackSheet, 900);
+                st.className = 'ok'; st.textContent = '';
+                playFeedbackFlight();
+                setTimeout(closeFeedbackSheet, 500);
             } catch (e) {
                 // Honest about what happened, and clear that it wasn't lost.
                 st.className = 'error';
@@ -9679,11 +9898,23 @@
                 card.className = 'glass ui-block';
                 card.innerHTML = '<div id="recall-q"></div><div id="recall-a"></div><button id="recall-close">Close</button>';
                 document.body.appendChild(card);
-                card.querySelector('#recall-close').addEventListener('click', () => {
+                const dismissRecall = () => {
                     card.classList.remove('show');
                     document.body.classList.remove('answering');
                     clearThoughtPath();
-                });
+                };
+                card.querySelector('#recall-close').addEventListener('click', dismissRecall);
+                // Tapping the sky behind the answer closes it, the same way
+                // tapping outside anything else in the app does. Having to
+                // find the Close button was the odd one out.
+                card.addEventListener('click', (e) => { e.stopPropagation(); });
+                document.addEventListener('pointerdown', (e) => {
+                    if (!card.classList.contains('show')) return;
+                    if (card.contains(e.target)) return;
+                    // Don't fight a panel that is genuinely on top of it.
+                    if (e.target.closest && e.target.closest('#drawer, #settings-page, #detail-card, #move-picker')) return;
+                    dismissRecall();
+                }, true);
             }
             card.querySelector('#recall-q').textContent = question;
             const aEl = card.querySelector('#recall-a');
@@ -9766,7 +9997,8 @@
                 }
             }
             if (ex.missing) bits.push({ cls: 'missing', label: 'You never recorded', text: ex.missing });
-            if (!v.verified) bits.push({ cls: 'unverified', label: 'Unverified', text: "this answer isn't tied to a specific thought of yours" });
+            if (!v.verified) bits.push({ cls: 'unverified', label: 'Worth checking',
+                                         text: "this isn't tied to anything specific you wrote down" });
             if (bits.length) {
                 extra = document.createElement('div');
                 extra.id = 'recall-extra';
@@ -9782,14 +10014,10 @@
                 }
                 card.querySelector('#recall-a').insertAdjacentElement('afterend', extra);
             }
-            const lvl = v.level;
-            if (lvl === 'high' || lvl === 'medium' || lvl === 'low') {
-                conf = document.createElement('div');
-                conf.id = 'recall-conf';
-                conf.innerHTML = 'Confidence: <span class="lvl-' + lvl + '">' + lvl + '</span>';
-                if (v.why) conf.appendChild(document.createTextNode(', ' + v.why));
-                card.appendChild(conf);
-            }
+            // The old "Confidence: high" badge is gone. Reading a score before
+            // the answer makes the app sound like a machine reporting on
+            // itself. When it genuinely IS unsure, the lines above already say
+            // so in plain words, which is the honest version of the same thing.
             let saveRow = card.querySelector('#recall-save');
             if (saveRow) saveRow.remove();
             if (ex.offerSave) {
