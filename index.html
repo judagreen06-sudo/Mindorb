@@ -1807,7 +1807,10 @@
             position: relative; width: 100%; max-width: 328px;
             display: flex; flex-direction: column; align-items: center;
             padding: 26px 22px 22px; border-radius: 30px; text-align: center;
-            background: linear-gradient(168deg, rgba(26,32,48,0.96), rgba(14,18,28,0.97));
+            /* The same sky the shader draws, so the bubble's canvas has no
+               visible edge against it. A differently-tinted card made the
+               canvas read as a dark circle stuck on top. */
+            background: radial-gradient(ellipse at 50% 30%, #101a2e 0%, #0a0f1c 52%, #06090f 100%);
             border: 1px solid rgba(255,255,255,0.12);
             /* Lifted off the screen: a long soft drop shadow, a faint cool
                bloom, and a bright inner top edge, the same language the detail
@@ -1825,8 +1828,13 @@
         }
         .motion-reduced #sa-card { animation: none; }
         /* The bubble. Its own canvas, running the app's own shader. */
-        #sa-bubble { position: relative; width: 186px; height: 186px; margin-bottom: 18px; }
-        #sa-canvas { width: 186px; height: 186px; display: block; border-radius: 50%; }
+        /* Full card width and no border radius: the canvas edge is invisible
+           because it is painting the same sky the card is. */
+        #sa-bubble {
+            position: relative; width: calc(100% + 44px); margin: -8px -22px 10px;
+            height: 214px;
+        }
+        #sa-canvas { width: 100%; height: 100%; display: block; }
         /* The label sits over the bubble exactly as it does in the galaxy. */
         #sa-label {
             position: absolute; inset: 0;
@@ -3894,7 +3902,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-24i';
+        const BUILD_TAG = '2026-07-24j';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -4685,6 +4693,10 @@
         }
         // ---- receiving ----
         let pendingShare = null;      // { token, payload, from }
+        // Kept separately so signing in can bring you back to the bubble you
+        // came for. pendingShare is wiped whenever the card closes, and the
+        // auth sheet closing counts as closing it.
+        let arrivedShareToken = null;
         function seedArrivalStars() {
             const wrap = $('sa-stars');
             if (!wrap || wrap.children.length) return;
@@ -4729,6 +4741,7 @@
         async function openSharedBubble(token) {
             const sheet = $('share-arrival');
             if (!sheet) return;
+            arrivedShareToken = token;
             sheet.classList.add('open');
             // No fade on the container. This screen is what a shared LINK
             // opens onto, so it is the one thing that must never fail to
@@ -4738,7 +4751,13 @@
             sheet.style.transition = 'none';
             sheet.style.opacity = '1';
             $('sa-status').textContent = ''; $('sa-status').className = '';
-            paintArrival(null, null, false);
+            // Paint with the sign-in status we ALREADY know. Painting the
+            // signed-out state first meant a signed-in visitor saw "Sign in to
+            // see it" flash for a frame before it corrected itself.
+            paintArrival(null, null, !!currentUser);
+            // Nothing to act on until the payload lands.
+            $('sa-actions').style.display = 'none';
+            $('sa-signin').style.display = currentUser ? 'none' : 'block';
             if (!sb) { $('sa-status').className = 'bad'; $('sa-status').textContent = 'Cloud is unavailable right now.'; return; }
             // Signed out: the row is unreadable to us anyway (the database
             // itself only serves shares to signed-in users), so ask first.
@@ -4803,6 +4822,7 @@
             }
         }
         function closeSharedBubble() {
+            arrivedShareToken = null;   // dismissed on purpose
             stopShareBubble();
             const sheet = $('share-arrival');
             if (sheet) {
@@ -5129,6 +5149,9 @@
             const h = Math.max(1, Math.round(cv.clientHeight * dpr));
             if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
             const gl2 = saGL;
+            // The canvas is wider than it is tall now, so size the bubble off
+            // the SHORT edge or it would be cut off top and bottom.
+            const fit = Math.min(w, h) / Math.max(w, h);
             gl2.viewport(0, 0, w, h);
             gl2.clearColor(0, 0, 0, 0);
             gl2.clear(gl2.COLOR_BUFFER_BIT);
@@ -5143,7 +5166,8 @@
             // At 0.78 the rim reached past the edge and clipped.
             // Measured: the rim lands at roughly 84px of scene radius per unit,
             // so this fills about 80% of the canvas, leaving a clean margin.
-            buf[0] = 0; buf[1] = Math.sin(t * 0.7) * 0.010; buf[2] = 0.88 * wob; buf[3] = 0;
+            buf[0] = 0; buf[1] = Math.sin(t * 0.7) * 0.010;
+            buf[2] = 0.88 * wob * (h < w ? 1 : fit); buf[3] = 0;
             fx[0] = 0; fx[1] = 0; fx[2] = 0; fx[3] = 0;
 
             gl2.uniform2f(saU.res, w, h);
@@ -5437,9 +5461,12 @@
                         pullAndMerge(); fetchUsername();
                         // Someone who signed in specifically to open a shared
                         // bubble should land on it, not on an empty galaxy.
-                        if (pendingShare && pendingShare.token && !pendingShare.payload) {
-                            const tok = pendingShare.token;
-                            setTimeout(() => openSharedBubble(tok), 400);
+                        if (arrivedShareToken) {
+                            const tok = arrivedShareToken;
+                            setTimeout(() => {
+                                try { closeAuthSheet(); } catch (e) {}
+                                openSharedBubble(tok);
+                            }, 350);
                         }
                     }
                 });
