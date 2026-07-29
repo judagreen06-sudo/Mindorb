@@ -993,6 +993,12 @@
             transition: transform 0.1s ease, opacity 0.15s ease;
         }
         #bulk-actions button:active { transform: scale(0.94); }
+        #bulk-delete {
+            padding: 7px 15px; border-radius: var(--r-pill); cursor: pointer;
+            background: rgba(255,255,255,.06); border: 1px solid var(--glass-border);
+            color: var(--ink); font-family: 'Quicksand',sans-serif; font-size: 13px; font-weight: 700;
+        }
+        #bulk-delete:disabled { opacity: .45; }
         #bulk-release { background: rgba(235, 240, 248, 0.94); color: #10141f; }
         #bulk-release:disabled { opacity: 0.4; }
         #drawer-settings {
@@ -2741,7 +2747,10 @@
         #undo-toast {
             position: absolute; left: 0; right: 0; margin-left: auto; margin-right: auto;
             width: fit-content;
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 122px);
+            /* Clear of the dock. At 122px it sat on top of the dock's own
+               buttons, so the one control you need right after an accidental
+               tap was the one competing for space. */
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 178px);
             transform: translateY(10px);
             z-index: 16;
             display: flex; align-items: center; gap: 14px;
@@ -2908,6 +2917,7 @@
             <div id="bulk-actions">
                 <button id="bulk-select-all">Select All</button>
                 <button id="bulk-cancel">Cancel</button>
+                <button id="bulk-delete" disabled>Delete</button>
                 <button id="bulk-release" disabled>Let go</button>
             </div>
         </div>
@@ -4345,6 +4355,9 @@
             return null;
         }
 
+        // Words that name nothing on their own. A bubble label built out of
+        // these tells you nothing about what is inside it.
+        const LABEL_FILLER = /^(the|a|an|it|is|was|are|were|this|that|these|those|and|or|but|of|to|in|on|at|by|for|with|from|as|i|my|me|we|our|he|she|they|their|there|here|then|so|do|did|does|just|really|very|about|around|some|any|remember)$/i;
         function shortLabel(summary, aiShort) {
             if (!isMobile()) return summary;
             // Show the FULL label whenever it reasonably fits on a bubble —
@@ -4354,14 +4367,26 @@
             // Long summaries: prefer the AI's intelligently-chosen micro label.
             if (aiShort && aiShort.trim()) return aiShort.trim();
             // Fallback: whole words up to a length budget, never a fragment.
-            const words = s.split(' ').filter(Boolean);
-            if (words.length <= 2 && s.length <= 13) return s;
+            // START FROM A WORD THAT CARRIES MEANING. Taking words[0] blindly
+            // meant "The Appointment Cost Around" displayed as just "The" —
+            // the budget ran out before any real word was reached. A label
+            // made of nothing but "The" or "It" names nothing at all.
+            const allWords = s.split(' ').filter(Boolean);
+            const isFiller = (w) => LABEL_FILLER.test(w.replace(/[^a-z0-9]/gi, ''));
+            // Drop leading filler, but keep at least something to work with.
+            let start = 0;
+            while (start < allWords.length - 1 && isFiller(allWords[start])) start++;
+            const words = allWords.slice(start);
+            if (words.length <= 2 && words.join(' ').length <= 13) return words.join(' ');
             let label = words[0];
             for (let i = 1; i < words.length; i++) {
                 const next = label + ' ' + words[i];
                 if (next.length > 13) break;
                 label = next;
             }
+            // If a single long word blew the budget, keep it whole rather than
+            // showing a stub: a readable long word beats a meaningless short one.
+            if (isFiller(label) && words.length > 1) label = words[1];
             return label;
         }
         function labelForThought(t) {
@@ -4667,7 +4692,12 @@
             if (typeof t.dueAt === 'number' && isFinite(t.dueAt)) {
                 return scoreUrgency(t.full || t.summary || '', t.dueAt);
             }
-            return typeof t.urgency === 'number' ? t.urgency : 0.12;
+            // Recompute from the words rather than trusting a number stored at
+            // capture: anything captured before the urgency wording was fixed
+            // still carries the old low score and would never be flagged.
+            const fromText = scoreUrgency(t.full || t.summary || '', null);
+            const stored = typeof t.urgency === 'number' ? t.urgency : 0.12;
+            return Math.max(fromText, stored);
         }
         function urgencyLabel(u) {
             return u >= 0.6 ? 'Needs attention' : 'Calm';
@@ -4737,7 +4767,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-26e';
+        const BUILD_TAG = '2026-07-26g';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -5612,6 +5642,10 @@
         // card opens on a timer, and painting before this settles is what made
         // a signed-in visitor see "Sign in to see it" flash first.
         let authReady = Promise.resolve();
+        // True between discovering the account is scheduled for deletion and
+        // finishing (or declining) the restore. Nothing may claim a username
+        // while this is set.
+        let accountPendingRestore = false;
         function shareToken() {
             const a = 'abcdefghijkmnpqrstuvwxyz23456789';   // no look-alike chars
             let s = '';
@@ -6514,9 +6548,20 @@
             if (!vv || !el || !search) return;
             let watching = false;
             const apply = () => {
-                if (!el.classList.contains('open')) { el.style.bottom = ''; return; }
+                if (!el.classList.contains('open')) {
+                    el.style.bottom = ''; el.style.maxHeight = ''; return;
+                }
                 const covered = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
-                el.style.bottom = covered > 80 ? (Math.round(covered) + 'px') : '';
+                if (covered <= 80) { el.style.bottom = ''; el.style.maxHeight = ''; return; }
+                // SHRINK, do not just lift. Lifting a full-height drawer by the
+                // keyboard's height pushed its top — and the search bar with it —
+                // clean off the screen once there were enough thoughts to make
+                // the drawer tall. Cap the height to the space that is actually
+                // left so the whole drawer stays visible.
+                const lift = Math.round(covered);
+                const room = Math.max(180, window.innerHeight - lift - 12);
+                el.style.bottom = lift + 'px';
+                el.style.maxHeight = room + 'px';
             };
             search.addEventListener('focus', () => {
                 watching = true;
@@ -6528,6 +6573,7 @@
             search.addEventListener('blur', () => {
                 watching = false;
                 el.style.bottom = '';
+                el.style.maxHeight = '';
             });
             vv.addEventListener('resize', () => { if (watching) apply(); });
             vv.addEventListener('scroll', () => { if (watching) apply(); });
@@ -7046,7 +7092,13 @@
                 currentUsername = data ? data.username : null;
                 updateAccountRow();
             } catch (e) {}
+            // Only hand out a placeholder when there is genuinely no name AND
+            // the account is not mid-restore. Calling this unconditionally
+            // meant a momentary empty read wrote a fresh User#### over the
+            // name being held for the restore window, losing it for good.
+            if (!currentUsername && !accountPendingRestore) {
                 try { await ensureUsername(); } catch (e) {}
+            }
         }
         // Downloads everything — every thought, every archived one, and the
         // lifetime counters — as a single JSON file. This is the actual
@@ -7124,6 +7176,7 @@
                     btn.disabled = true;
                     return;
                 }
+                accountPendingRestore = false;
                 closeRestoreSheet();
                 // Pull the name back BEFORE anything can assign a placeholder:
                 // ensureUsername() would otherwise see an empty currentUsername
@@ -7374,6 +7427,7 @@
                             const { data: st } = await sb.rpc('my_account_state');
                             const row = Array.isArray(st) ? st[0] : st;
                             if (row && row.deleted_at) {
+                                accountPendingRestore = true;
                                 const days = Math.max(0, Math.ceil(row.days_left || 0));
                                 offerAccountRestore(days);
                                 return;
@@ -8109,16 +8163,26 @@
         // Crash reporter: if anything ever throws uncaught, show WHAT and
         // WHERE on screen instead of a blank stare.
         window.addEventListener('error', (e) => {
+            // ALWAYS record it. A red bar across the top of a shipped app is a
+            // developer's tool, not something to put in front of someone who
+            // just wanted to share a bubble — most uncaught errors here are
+            // harmless and the app carries on regardless.
+            try { console.error('MINDORB_UNCAUGHT', e.message, e.lineno + ':' + e.colno, e.error); } catch (x) {}
+            let debugging = false;
+            try { debugging = localStorage.getItem('mindorb-debug') === '1'; } catch (x) {}
+            if (!debugging) return;
             try {
                 let b = document.getElementById('err-banner');
                 if (!b) {
                     b = document.createElement('div');
                     b.id = 'err-banner';
-                b.className = 'ui-block';
+                    b.className = 'ui-block';
                     b.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0);left:0;right:0;z-index:999;background:rgba(120,20,30,0.92);color:#fff;font:600 11px/1.4 monospace;padding:8px 12px;word-break:break-all;';
+                    // Dismissible, even in debug mode.
+                    b.addEventListener('click', () => b.remove());
                     document.body.appendChild(b);
                 }
-                b.textContent = 'Error: ' + (e.message || 'unknown') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?');
+                b.textContent = 'Error: ' + (e.message || 'unknown') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?') + '  (tap to dismiss)';
             } catch (x) {}
         });
         loadState();
@@ -10831,6 +10895,7 @@
         if (restoreLater) restoreLater.addEventListener('click', async () => {
             // "Not now" signs you back out rather than dropping you into an
             // account that is still on its way to being deleted.
+            accountPendingRestore = false;
             closeRestoreSheet();
             try { await signOutAndClear(); } catch (e) {}
         });
@@ -10969,6 +11034,7 @@
             try { flyHome(); } catch (e) {}
         }
         function closeDrawer() {
+            try { drawerEl.style.bottom = ''; drawerEl.style.maxHeight = ''; } catch (e) {}
             setTimeout(syncFloaters, 260);
             drawerEl.style.transform = '';
             drawerEl.classList.remove('open'); drawerScrim.classList.remove('open');
@@ -11915,6 +11981,7 @@
             const n = bulkSelected.size;
             $('bulk-count').textContent = n + (n === 1 ? ' selected' : ' selected');
             $('bulk-release').disabled = n === 0;
+            $('bulk-delete').disabled = !bulkSelected.size;
         }
         function setBulkSelectMode(on) {
             bulkSelectMode = on;
@@ -11932,6 +11999,54 @@
             document.querySelectorAll('#drawer-list .drawer-item[data-tid]').forEach(el => bulkSelected.add(el.dataset.tid));
             document.querySelectorAll('#drawer-list .item-check').forEach(el => el.classList.add('checked'));
             updateBulkBar();
+        });
+        $('bulk-delete').addEventListener('click', () => {
+            if (!bulkSelected.size) return;
+            const ids = Array.from(bulkSelected);
+            const entries = [];
+            const removedIds = new Set();
+            let familyCount = 0;
+            for (const id of ids) {
+                const found = removeFromTreeWithContext(id);
+                if (!found) continue;
+                entries.push(found);
+                familyCount += (function cnt(x) {
+                    let n = 1;
+                    removedIds.add(x.id);
+                    for (const k of ((x && x.children) || [])) n += cnt(k);
+                    return n;
+                })(found.thought);
+            }
+            if (!entries.length) return;
+            // Deliberately NOT stamping doneAt: deleting is "this should not
+            // have been here", which is a different thing from finishing it.
+            for (const e of entries) archiveThought(e.thought, e.parentThought ? e.parentThought.id : null);
+            saveState();
+            setBulkSelectMode(false);
+            updateDrawerUI();
+            for (const o of objects) {
+                if (o.thought && removedIds.has(o.thought.id) && !o.removed) {
+                    o.removed = true;
+                    if (o.el) o.el.remove();
+                }
+            }
+            syncFloaters();
+            const retiered = new Set();
+            for (const e of entries) {
+                const key = e.parentThought ? e.parentThought.id : '__root__';
+                if (!retiered.has(key)) { retiered.add(key); retier(e.parentThought || null); }
+            }
+            offerUndo(entries, familyCount);
+            syncEmptyHint();
+            try {
+                const insideGone = (openThoughtObj && openThoughtObj.thought &&
+                                    removedIds.has(openThoughtObj.thought.id)) ||
+                    navStack.some(h => {
+                        const t = h && (h.thought || (h.holder && h.holder.thought));
+                        return t && removedIds.has(t.id);
+                    });
+                if (insideGone) flyHome();
+            } catch (e) {}
         });
         $('bulk-release').addEventListener('click', () => {
             if (!bulkSelected.size) return;
@@ -12320,9 +12435,13 @@
                 for (const t of (list || [])) {
                     if (t && !t.doneAt) {
                         const dated = typeof t.dueAt === 'number' && isFinite(t.dueAt);
-                        // Same rule as the answer: a date that has arrived, or
-                        // something you said was urgent without giving a date.
-                        if ((dated && t.dueAt <= endOfDay.getTime()) ||
+                        // MATCH WHAT THE BUBBLE SAYS. A thought due in two days
+                        // scores 0.7 and is labelled "Needs attention", but the
+                        // old rule only gathered things due by tonight — so the
+                        // app flagged bubbles for attention and then refused to
+                        // show them when you asked to work through them.
+                        const flagged = liveUrgency(t) >= 0.6;   // same bar as the label
+                        if ((dated && t.dueAt <= endOfDay.getTime()) || flagged ||
                             (!dated && liveUrgency(t) >= 0.55)) out.push(t);
                     }
                     walk(t && t.children);
