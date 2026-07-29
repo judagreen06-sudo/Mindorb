@@ -4737,7 +4737,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-26d';
+        const BUILD_TAG = '2026-07-26e';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -11380,7 +11380,7 @@
                 // an edit, so the summary never got the same upgrade a
                 // freshly-created thought gets from the router.
                 if (data.label) th.summary = data.label.trim();
-                if (data.short) th.short = data.short.trim();
+                if (usableShort(data.short)) th.short = data.short.trim();
                 saveState();
                 updateDrawerUI();
                 const selfObj = objects.find(o => o.thought && o.thought.id === th.id && !o.removed);
@@ -11396,7 +11396,7 @@
                         data.splits.forEach((s, i) => {
                             const ownText = (s.full && s.full.trim()) ? s.full.trim() : (s.label || th.full);
                             const nt = makeThought(s.label || ownText, ownText);
-                            nt.short = s.short || nt.short;
+                            if (usableShort(s.short)) nt.short = s.short.trim();
                             nt.routed = true;
                             setTimeout(() => { fileThought(nt, s.parentId || null); saveState(); updateDrawerUI(); }, i * 180);
                         });
@@ -11540,7 +11540,7 @@
 
                 // Apply the AI's cleaner label.
                 if (data.label) thought.summary = data.label.trim();
-                if (data.short) thought.short = data.short.trim();
+                if (usableShort(data.short)) thought.short = data.short.trim();
                 thought.routed = true;
 
                 // MERGE: the new thought is the SAME as an existing bubble but
@@ -11551,7 +11551,7 @@
                     const target = findThoughtById(data.mergeId);
                     if (target) {
                         if (data.label) target.summary = data.label.trim();
-                        if (data.short) target.short = data.short.trim();
+                        if (usableShort(data.short)) target.short = data.short.trim();
                         target.full = thought.full; // keep the fuller spoken text
                         removeThoughtEverywhere(thought.id); // remove placeholder
                         saveState();
@@ -11572,7 +11572,7 @@
                     data.splits.forEach((s, i) => {
                         const ownText = (s.full && s.full.trim()) ? s.full.trim() : (s.label || thought.full);
                         const nt = makeThought(s.label || ownText, ownText);
-                        nt.short = s.short || nt.short;
+                        if (usableShort(s.short)) nt.short = s.short.trim();
                         nt.routed = true; // this bubble was JUST classified via the split — never re-offer it to retryUnrouted()
                         const p = s.parentId ? findThoughtById(s.parentId) : null;
                         homes.push(p ? p.summary : (s.label || 'a new bubble'));
@@ -11730,6 +11730,22 @@
             // One filler noise.
             if (FILLER_ONLY.test(t)) return true;
             return false;
+        }
+        // The AI is asked for a 1-2 word "short" label that STANDS ALONE, and
+        // the app used to apply whatever came back. It does not always comply:
+        // "the appointment cost around 1600 dollars" came back as "the", and
+        // that became the bubble's whole name. A label made only of stop words,
+        // or too short to mean anything, is worse than no label at all.
+        const SHORT_JUNK = /^(the|a|an|it|is|was|are|were|this|that|these|those|and|or|but|of|to|in|on|at|by|for|with|from|as|i|my|me|we|he|she|they|there|here|then|so|do|did|does)$/i;
+        function usableShort(s) {
+            const t = String(s || '').trim();
+            if (!t) return false;
+            if (t.length < 3) return false;              // "to", "it"
+            const words = t.split(/\s+/).filter(Boolean);
+            // Every word being a stop word means it carries no subject.
+            if (words.every(w => SHORT_JUNK.test(w.replace(/[^a-z0-9]/gi, '')))) return false;
+            if (!/[a-z0-9]/i.test(t)) return false;
+            return true;
         }
         function makeThought(label, full) {
             bumpCreated();
