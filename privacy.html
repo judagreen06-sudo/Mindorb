@@ -678,7 +678,11 @@
         /* A soft pulse ring drawing the eye to the center bubble during
            the "speak" step — transform/opacity only, GPU-cheap. */
         #onboard-pulse {
-            position: fixed; left: 50%; top: 50%; z-index: 8;
+            /* Positioned in JS to sit ON the bubble. It used to be pinned to
+               the middle of the screen, which only ever looked right by luck:
+               the moment the bubble was anywhere else, the ring pointed at
+               empty space. */
+            position: fixed; left: 0; top: 0; z-index: 8;
             width: 120px; height: 120px; border-radius: 50%;
             border: 2px solid rgba(169, 200, 232, 0.55);
             transform: translate(-50%, -50%) scale(1);
@@ -4219,6 +4223,10 @@
         function sceneShiftPx() { return _sceneShift; }
         let _sceneShiftLast = 0;
         function stepSceneShift(now) {
+            // The ring is pinned to the bubble, and the bubble moves here, so
+            // it has to move here too. On the sweep it lagged a whole second
+            // behind a 0.45s transition.
+            try { syncOnboardPulse(); } catch (e) {}
             const target = sceneShiftTarget();
             const reduced = document.documentElement.classList.contains('motion-reduced');
             if (reduced) { _sceneShift = target; return; }
@@ -4729,7 +4737,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-26c';
+        const BUILD_TAG = '2026-07-26d';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -7420,6 +7428,24 @@
             } catch (e) { return false; }
             return true;
         }
+        // The ring points AT something, so it has to track that thing. The
+        // scene eases into position over ~0.45s and the bubble breathes, so
+        // this runs with the render loop rather than once per step.
+        function syncOnboardPulse() {
+            const pulse = document.getElementById('onboard-pulse');
+            if (!pulse || !pulse.classList.contains('on')) return;
+            const core = objects.find(o => !o.removed && (o.role === 'center' || o.role === 'open'));
+            if (!core) return;
+            const px = jsToPixelX(core.x), py = jsToPixelY(core.y);
+            const rad = core.r * VH * posScale() / 2;
+            pulse.style.left = Math.round(px) + 'px';
+            pulse.style.top = Math.round(py) + 'px';
+            // Start the ring at the bubble's edge, so it reads as radiating
+            // from it instead of expanding out of its middle.
+            const size = Math.max(96, Math.round(rad * 2));
+            pulse.style.width = size + 'px';
+            pulse.style.height = size + 'px';
+        }
         function onboardShowStep(i) {
             onboardStep = i;
             const s = ONBOARD_STEPS[i];
@@ -7488,6 +7514,8 @@
             }
             const pulse = document.getElementById('onboard-pulse');
             if (pulse) pulse.classList.toggle('on', !!s.pulse);
+            // Follow the bubble rather than the middle of the screen.
+            syncOnboardPulse();
             // The very first card carries the one sentence that actually
             // explains what this app is — it shouldn't be skippable before
             // it's even been read. Skip becomes available from step 1 on.
