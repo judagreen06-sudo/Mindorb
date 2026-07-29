@@ -678,7 +678,11 @@
         /* A soft pulse ring drawing the eye to the center bubble during
            the "speak" step — transform/opacity only, GPU-cheap. */
         #onboard-pulse {
-            position: fixed; left: 50%; top: 50%; z-index: 8;
+            /* Positioned in JS to sit ON the bubble. It used to be pinned to
+               the middle of the screen, which only ever looked right by luck:
+               the moment the bubble was anywhere else, the ring pointed at
+               empty space. */
+            position: fixed; left: 0; top: 0; z-index: 8;
             width: 120px; height: 120px; border-radius: 50%;
             border: 2px solid rgba(169, 200, 232, 0.55);
             transform: translate(-50%, -50%) scale(1);
@@ -4095,8 +4099,23 @@
         function measureViewport() {
             const c = document.getElementById('glcanvas');
             const r = c ? c.getBoundingClientRect() : null;
-            VW = (r && r.width) ? r.width : window.innerWidth;
-            VH = (r && r.height) ? r.height : window.innerHeight;
+            // TRUST THE WINDOW, NOT THE CANVAS. Reading the height back off the
+            // canvas is circular: if the canvas is ever short, VH becomes short
+            // too and agrees with it forever, so nothing can ever repair it.
+            // That is how a black band across the bottom survived every resize
+            // after coming back from the Google sign-in redirect — 100svh had
+            // stopped matching what was actually on screen.
+            const winW = Math.round((window.visualViewport && window.visualViewport.width) || window.innerWidth);
+            const winH = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+            VW = winW || (r && r.width) || window.innerWidth;
+            VH = winH || (r && r.height) || window.innerHeight;
+            // If the canvas is not actually covering that, make it. Only when
+            // it is genuinely short, so a keyboard shrinking the visual
+            // viewport does not start a fight over the canvas size.
+            if (c && r && !document.body.classList.contains('typing-open')) {
+                if (Math.abs(r.height - VH) > 2) c.style.height = VH + 'px';
+                if (Math.abs(r.width - VW) > 2) c.style.width = VW + 'px';
+            }
         }
         function isMobile() { return IS_MOBILE; }
         let cameraZ, coreRadius;
@@ -4175,7 +4194,25 @@
                 top = 74 + (navStack.length > 0 ? 44 : 0);
             }
             if (!top && !bottom) return 0;
-            // Recentre on whatever vertical space is actually left.
+            // MOVE AS LITTLE AS NECESSARY. Centring in the free space is
+            // arithmetically tidy but awful to watch: through the tour the
+            // bubble leapt ~290px down, sat there, then leapt back, so the one
+            // thing the cards are pointing at never stopped moving.
+            // Shift only far enough to clear, and only if it does not already.
+            const core = objects.find(o => !o.removed && (o.role === 'center' || o.role === 'open'));
+            if (core) {
+                const rad = core.r * VH * posScale() / 2;
+                const restY = ((-core.y * posScale()) * 0.5 + 0.5) * VH;   // unshifted
+                const needDown = top ? (top - (restY - rad)) : 0;          // pushed off the top
+                const needUp = bottom ? ((restY + rad) - (VH - bottom)) : 0;
+                if (needDown > 0 && needUp > 0) {
+                    // Squeezed from both ends: fall back to centring the gap.
+                    return ((top + (VH - bottom)) / 2) - VH / 2;
+                }
+                if (needDown > 0) return needDown;
+                if (needUp > 0) return -needUp;
+                return 0;   // already fits: do not move at all
+            }
             const wanted = (top + (VH - bottom)) / 2;
             return wanted - VH / 2;
         }
@@ -4186,6 +4223,10 @@
         function sceneShiftPx() { return _sceneShift; }
         let _sceneShiftLast = 0;
         function stepSceneShift(now) {
+            // The ring is pinned to the bubble, and the bubble moves here, so
+            // it has to move here too. On the sweep it lagged a whole second
+            // behind a 0.45s transition.
+            try { syncOnboardPulse(); } catch (e) {}
             const target = sceneShiftTarget();
             const reduced = document.documentElement.classList.contains('motion-reduced');
             if (reduced) { _sceneShift = target; return; }
@@ -4590,7 +4631,12 @@
            word "stressed". Language is only a weak fallback for
            thoughts with no date at all.
            ========================================================= */
-        const URGENT_STRONG = /\b(urgent|asap|emergency|immediately|right now|deadline|overdue|crisis)\b/i;
+        // Word FORMS, not exact words. \b(urgent)\b cannot match "urgently",
+        // so "book flights urgently" scored as calm as "buy milk" — which
+        // matters more now that Focus gathers undated-but-pressing things.
+        const URGENT_STRONG = /\b(urgent\w*|asap|a\.s\.a\.p|emergenc\w*|immediat\w*|right\s+(now|away)|deadline\w*|overdue|crisis|critical\w*|last\s+chance|final\s+(notice|warning)|can'?t\s+wait|cannot\s+wait|running\s+out\s+of\s+time)\b/i;
+        // A softer tier: real pressure, but not an emergency.
+        const URGENT_SOFT = /\b(important\w*|priorit\w*|soon|quickly|hurry|chas\w+\s+me|nag\w*|(been|keep|keeps)\s+putting\s+(this|it|them)\s+off|keeps?\s+slipping|still\s+(need|have)\s+to|need\s+to\s+finally)\b/i;
         function scoreUrgency(text, dueAt, now) {
             now = now || Date.now();
             if (dueAt) {
@@ -4601,7 +4647,10 @@
                 if (hoursOut <= 24 * 7) return 0.45;      // this week
                 return 0.25;                              // on the horizon
             }
-            return URGENT_STRONG.test(text || '') ? 0.7 : 0.12;
+            const s = text || '';
+            if (URGENT_STRONG.test(s)) return 0.7;
+            if (URGENT_SOFT.test(s)) return 0.55;   // enough to reach Focus
+            return 0.12;
         }
         function urgencyColorCss(u) {
             // Binary flag model: calm thoughts are neutral, flagged ones warm.
@@ -4688,7 +4737,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-25x';
+        const BUILD_TAG = '2026-07-26d';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -7379,6 +7428,24 @@
             } catch (e) { return false; }
             return true;
         }
+        // The ring points AT something, so it has to track that thing. The
+        // scene eases into position over ~0.45s and the bubble breathes, so
+        // this runs with the render loop rather than once per step.
+        function syncOnboardPulse() {
+            const pulse = document.getElementById('onboard-pulse');
+            if (!pulse || !pulse.classList.contains('on')) return;
+            const core = objects.find(o => !o.removed && (o.role === 'center' || o.role === 'open'));
+            if (!core) return;
+            const px = jsToPixelX(core.x), py = jsToPixelY(core.y);
+            const rad = core.r * VH * posScale() / 2;
+            pulse.style.left = Math.round(px) + 'px';
+            pulse.style.top = Math.round(py) + 'px';
+            // Start the ring at the bubble's edge, so it reads as radiating
+            // from it instead of expanding out of its middle.
+            const size = Math.max(96, Math.round(rad * 2));
+            pulse.style.width = size + 'px';
+            pulse.style.height = size + 'px';
+        }
         function onboardShowStep(i) {
             onboardStep = i;
             const s = ONBOARD_STEPS[i];
@@ -7447,6 +7514,8 @@
             }
             const pulse = document.getElementById('onboard-pulse');
             if (pulse) pulse.classList.toggle('on', !!s.pulse);
+            // Follow the bubble rather than the middle of the screen.
+            syncOnboardPulse();
             // The very first card carries the one sentence that actually
             // explains what this app is — it shouldn't be skippable before
             // it's even been read. Skip becomes available from step 1 on.
@@ -7479,9 +7548,15 @@
                 // A generous margin: touching the card is still too close for
                 // something the card is pointing at.
                 const gap = 34;
+                // When the card sits at the TOP, the space below it is not all
+                // usable: the dock lives down there. Ignoring it recentred the
+                // bubble into the dock's lap — on the two steps that ask you
+                // to TAP the bubble, which is exactly when it needs to be
+                // comfortably reachable and clearly the subject of the card.
+                const dockRoom = 132;
                 onboardCardClearance = card.classList.contains('bottom')
                     ? { top: 0, bottom: Math.max(0, VH - r.top) + gap }
-                    : { top: Math.max(0, r.bottom) + gap, bottom: 0 };
+                    : { top: Math.max(0, r.bottom) + gap, bottom: dockRoom };
                 const stable = sig === lastSig;
                 lastSig = sig;
                 return stable;
@@ -9134,8 +9209,25 @@
         // most relevant thoughts in FULL plus title-only lines for the rest,
         // so the model still knows everything exists. The switch is invisible.
         const FULL_LIMIT = 150;    // below this, send everything in detail
-        const TOP_DETAIL = 55;     // above it, this many in full…
-        const TITLE_LIMIT = 400;   // …plus this many as titles
+        const TOP_DETAIL = 45;     // above it, this many in full…
+        const TITLE_LIMIT = 400;   // …plus this many as titles (budget-capped below)
+        // A HARD CEILING on what any one question costs. Counting entries does
+        // not bound cost — a galaxy of 600 thoughts was sending ~10,000 tokens
+        // per question, and almost all of it was titles ranked as irrelevant.
+        // Budgeting by size instead means a question costs about the same
+        // whether someone has fifty thoughts or five thousand.
+        const INDEX_TOKEN_BUDGET = 2600;
+        function fitToBudget(entries, budget) {
+            const out = [];
+            let used = 0;
+            for (const e of entries) {
+                const cost = Math.ceil(JSON.stringify(e).length / 4);
+                if (used + cost > budget) break;
+                out.push(e);
+                used += cost;
+            }
+            return out;
+        }
         function galaxyIndex(limit, query) {
             const all = flattenAll();
             const detail = (t) => {
@@ -9148,7 +9240,9 @@
                 return o;
             };
             if (all.length <= FULL_LIMIT || !query) {
-                return all.sort((a, b) => a.days - b.days).slice(0, limit || 220).map(detail);
+                return fitToBudget(
+                    all.sort((a, b) => a.days - b.days).slice(0, limit || 220).map(detail),
+                    INDEX_TOKEN_BUDGET);
             }
             const ranked = rankThoughts(query, all);
             const top = ranked.slice(0, TOP_DETAIL);
@@ -9160,7 +9254,9 @@
                     if (typeof t.du === 'number') o.du = t.du;
                     return o;
                 });
-            return top.map(detail).concat(rest);
+            // Relevance order is preserved, so what falls off the end is what
+            // the ranking already judged least likely to matter.
+            return fitToBudget(top.map(detail).concat(rest), INDEX_TOKEN_BUDGET);
         }
         // Renders AI text where [[id]] marks a referenced bubble: those become
         // tappable links that fly you there.
@@ -10974,7 +11070,41 @@
             if (s.length > MAX_LABEL_CHARS) s = s.slice(0, MAX_LABEL_CHARS - 1) + '…';
             return s;
         }
+        // Strip the WHEN out before naming the thing. The deadline is already
+        // captured separately and shown on the card, so leaving it in the title
+        // both duplicates it and crowds out the actual subject: "call the
+        // dentist tomorrow at 3" was named "Call The Dentist Tomorrow At 3",
+        // and "take the bins out every tuesday" became "Take Bins Out Every".
+        const WHEN_PHRASES = new RegExp(
+            '\\b(' +
+            'by\\s+(the\\s+)?(end\\s+of\\s+)?\\w+day|' +
+            '(on|by|before|after|around|at)\\s+\\d{1,2}(:\\d{2})?\\s*(am|pm)?|' +
+            '(this|next|last)\\s+(week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|afternoon|evening|weekend)|' +
+            'every\\s+(other\\s+)?(day|week|month|year|weekday|weekend|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|' +
+            'every\\s+\\d+\\s+(days?|weeks?|months?|years?)|' +
+            'in\\s+(a|an|\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(minutes?|hours?|days?|weeks?|months?|years?)|' +
+            '\\d{1,2}\\s*(am|pm)|' +
+            '(tomorrow|today|tonight|yesterday|asap)|' +
+            '(monday|tuesday|wednesday|thursday|friday|saturday|sunday)|' +
+            '(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\s+\\d{1,2}' +
+            ')\\b', 'gi');
+        function stripWhenPhrases(text) {
+            const cleaned = String(text || '')
+                .replace(WHEN_PHRASES, ' ')
+                .replace(/\b(at|on|by|before|after|around|in)\s*$/i, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+            // Only use the stripped version if something is LEFT of substance.
+            // "tomorrow" on its own is the whole thought, not a date to remove.
+            // One real word is enough though: "standup every weekday at 9"
+            // should be called "Standup".
+            const words = cleaned.split(/\s+/).filter(Boolean);
+            const hasSubstance = words.length >= 2 ||
+                                 (words.length === 1 && words[0].length >= 3);
+            return hasSubstance ? cleaned : String(text || '');
+        }
         function summarizeSpeech(rawText) {
+            rawText = stripWhenPhrases(rawText);
             let text = (rawText || '').trim().replace(/\s+/g, ' ');
             if (!text) return '';
             text = text.replace(DISFLUENCY_PHRASES, ' ').replace(/\s+/g, ' ').trim();
@@ -12774,105 +12904,217 @@
             document.body.classList.add('answering');
             card.classList.add('show');
         }
+        /* ============================================================
+           INTENT
+
+           What someone says to the bubble is one of a small number of
+           things, and getting it wrong is the worst failure the app has:
+           ask "where's my bubble about the trip" and have it saved as a
+           NEW bubble called "Where's My Bubble About The Trip" and you
+           have lost both the answer and your trust in the thing.
+
+           This replaced a chain of regexes checked in order, which had two
+           problems. Ordering bugs: a general pattern earlier in the chain
+           silently swallowed a specific one later (that is exactly how
+           "what do I have that's urgent" ended up going to the AI instead
+           of the instant local answer). And blind spots: any phrasing
+           nobody had thought of fell through to capture.
+
+           So: score every intent, take the strongest. Adding a phrasing
+           can no longer break an existing one, and a near-miss degrades to
+           the next best guess rather than to silence.
+
+           It is deliberately all local. Classification costs no tokens and
+           returns in under a millisecond, which matters because it runs on
+           every single thing you say.
+           ============================================================ */
+
+        // Things people call the app's own objects.
+        const OBJ = '(?:bubble|bubbles|thought|thoughts|note|notes|list|lists|galaxy)';
+
+        const INTENT_RULES = [
+            // ---- AGENDA: what is on me now ----
+            { i: 'agenda', w: 10, re: /\b(what'?s?|whats)\s+(urgent|due|overdue|next|left|pressing)\b/i },
+            { i: 'agenda', w: 10, re: /\b(agenda|on my plate|my workload|my priorities)\b/i },
+            { i: 'agenda', w: 10, re: /\bwhat\s+(do|should)\s+i\s+(need\s+to\s+)?(do|tackle|start|work on)\b/i },
+            { i: 'agenda', w: 10, re: /\b(am\s+i|anything\s+i'?m)\s+(forgetting|missing|behind|late)\b/i },
+            { i: 'agenda', w: 9,  re: /\bwhat\s+am\s+i\s+(forgetting|missing)\b/i },
+            { i: 'agenda', w: 9,  re: /\b(my|the)\s+day\s+(look|looking)\b/i },
+            { i: 'agenda', w: 9,  re: /\bwhat\s+(does|do)\s+(my|the)\s+(day|week)\b/i },
+            { i: 'agenda', w: 9,  re: /\b(anything|something|what)\s+.{0,14}\b(due|urgent|overdue)\b/i },
+            { i: 'agenda', w: 8,  re: /\b(catch me up|run me through|give me|walk me through|talk me through)\b.{0,20}\b(day|today|week|everything)\b/i },
+            { i: 'agenda', w: 8,  re: /\b(what|anything)\s+(have\s+i\s+got|do\s+i\s+have)\b.{0,20}\b(today|tomorrow|this week|on)\b/i },
+            { i: 'agenda', w: 8,  re: /\b(help me|can you)\s+(plan|organi[sz]e|prioriti[sz]e|sort)\b.{0,24}\b(day|week|tasks?|schedule|tomorrow|today)\b/i },
+            { i: 'agenda', w: 8,  re: /\bprioriti[sz]e\s+(my|these|the)\b/i },
+            { i: 'agenda', w: 7,  re: /\bwhat\s+needs\s+(doing|to\s+be\s+done|my\s+attention)\b/i },
+            { i: 'agenda', w: 7,  re: /\b(what'?s?|how much)\s+(left|remaining|still)\b/i },
+            { i: 'agenda', w: 7,  re: /\b(where am i at|how am i doing|what'?s? the damage)\b/i },
+            { i: 'agenda', w: 7,  re: /\bplanned\s+for\s+(today|tomorrow|this week)\b/i },
+            { i: 'agenda', w: 6,  re: /\banything\s+(i\s+should\s+know|important|going on)\b/i },
+            { i: 'agenda', w: 6,  re: /\bwhat'?s?\s+(coming up|happening)\b/i },
+            { i: 'agenda', w: 5,  re: /\b(today|tomorrow|this week|right now)\b/i },
+            // Found by measuring real phrasings against the corpus rather than
+            // by imagining them: each of these fell through to capture.
+            { i: 'agenda', w: 11, re: /\bwhat\s+do\s+i\s+have\b.{0,16}\b(urgent|due|overdue|pressing|left|on)\b/i },
+            { i: 'agenda', w: 11, re: /\bwhat\s+should\s+i\s+(be\s+)?(doing|do\s+first|start\s+with|tackle)\b/i },
+            { i: 'agenda', w: 10, re: /\bhow\s+(much|many)\b.{0,20}\b(left|remaining|to\s+do|outstanding)\b/i },
+            { i: 'agenda', w: 9,  re: /^\s*(catch me up|fill me in|brief me|update me)\b/i },
+            { i: 'agenda', w: 8,  re: /^\s*(run|walk|talk)\s+me\s+through\b/i },
+            // Asking the app to WORK with what it already holds. Both halves
+            // must be present: a request verb and something the app knows
+            // about, so "plan a trip to Spain" still captures normally.
+            { i: 'agenda', w: 10, re: /^\s*(plan|organi[sz]e|summari[sz]e|sort out|lay out|map out|break down|review)\s+(my|the|this)\s+(day|week|month|schedule|plate|tasks?|to ?dos?|list|thoughts?|bubbles?|galaxy|priorities|workload|morning|afternoon|evening)\b/i },
+            { i: 'agenda', w: 10, re: /^\s*(help me|can you|could you)\s+(plan|organi[sz]e|summari[sz]e|sort|prioriti[sz]e|review|break down)\b/i },
+
+            // ---- SUMMON: gather a whole class onto the screen ----
+            { i: 'summon', w: 12, re: /\b(show|bring|gather|pull up|give me)\b.{0,24}\b(all|every|everything|my)\b.{0,16}\b(urgent|overdue|old|forgotten|neglected|dusty)\b/i },
+            { i: 'summon', w: 12, re: /\b(show|bring)\s+me\s+(my\s+)?(urgent|overdue|old|forgotten|neglected)\s+/i },
+            { i: 'summon', w: 11, re: /\b(been|have i been)\s+(ignoring|avoiding|neglecting|putting off)\b/i },
+            { i: 'summon', w: 11, re: /\b(haven'?t|not)\s+(touched|looked at|opened)\b/i },
+            { i: 'summon', w: 10, re: /\bbring me\s+(the\s+)?(old|forgotten|neglected|dusty)\b/i },
+
+            // ---- NAV: take me to one specific bubble ----
+            { i: 'nav', w: 14, re: /^\s*(?:please\s+)?(?:take|bring|fly|get)\s+me\s+(?:to|into|back to)\b/i },
+            { i: 'nav', w: 14, re: /^\s*(?:go|jump|head|navigate|switch|move)\s+(?:to|into|over to|back to)\b/i },
+            { i: 'nav', w: 12, re: /^\s*(?:open|enter)\s+(?:my\s+|the\s+)?\S/i },
+            { i: 'nav', w: 11, re: new RegExp('^\\s*(?:pull up|let me see|show me)\\s+(?:my\\s+|the\\s+)?.*\\b' + OBJ + '\\b', 'i') },
+            // "pull up trip planning" names a bubble without saying "bubble".
+            { i: 'nav', w: 10, re: /^\s*(?:pull up|let me see)\s+(?:my\s+|the\s+)?[a-z][a-z' ]{2,30}$/i },
+            { i: 'nav', w: 10, re: new RegExp('^\\s*(?:where is|where\'?s)\\s+(?:my\\s+|the\\s+)?' + OBJ + '\\b.*\\b(for|about|on)\\b', 'i') },
+
+            // ---- RECALL: what did I already record ----
+            { i: 'recall', w: 13, re: /\bwhat\s+did\s+i\s+(say|write|decide|think|want|choose|pick|record|note)\b/i },
+            { i: 'recall', w: 13, re: /\b(remind me|tell me)\b.{0,30}\b(said|say|about|decided|wrote|noted)\b/i },
+            { i: 'recall', w: 12, re: new RegExp('\\b(find|search|look up|dig up|pull up)\\b.{0,24}(' + OBJ + '|about|for|on)\\b', 'i') },
+            { i: 'recall', w: 12, re: new RegExp('\\b(where\'?s?|where is)\\s+(my|the)\\s+' + OBJ + '\\b', 'i') },
+            { i: 'recall', w: 12, re: new RegExp('\\bwhat\'?s?\\s+(in|inside)\\s+(my|the)\\b.{0,24}(' + OBJ + ')?', 'i') },
+            { i: 'recall', w: 11, re: /\b(do|did)\s+i\s+(have|write|say|note|record|mention)\b.{0,24}\babout\b/i },
+            { i: 'recall', w: 11, re: /\b(didn'?t|don'?t)\s+i\s+(say|write|mention|note)\b/i },
+            { i: 'recall', w: 11, re: /\bi\s+know\s+i\s+(said|wrote|noted|mentioned)\b/i },
+            { i: 'recall', w: 10, re: /\bwhat\s+was\s+(that|the)\s+thing\b/i },
+            { i: 'recall', w: 10, re: /\bwhat\s+(was|were)\s+(i|my)\b/i },
+            { i: 'recall', w: 10, re: /\b(what|when|who|where|how much|how many)\s+(is|was|were|did)\s+(the|my)\b/i },
+            { i: 'recall', w: 10, re: /^\s*(did|have|has)\s+i\b/i },
+            { i: 'recall', w: 9,  re: /\bwhy\s+(did|do|didn'?t|don'?t)\s+i\b/i },
+            { i: 'recall', w: 9,  re: /\b(should|shall)\s+i\b/i },
+            { i: 'recall', w: 9,  re: new RegExp('\\btell me about\\b|\\bwhat do i know about\\b', 'i') },
+            { i: 'recall', w: 8,  re: new RegExp('\\b(my|the)\\s+' + OBJ + '\\b.{0,16}\\b(about|for|on|with)\\b', 'i') },
+            { i: 'recall', w: 7,  re: /\b(my|our)\s+(options|choices|plan|plans|notes)\b/i },
+            // Bare bubble names, without "my" or "the" in front of them.
+            { i: 'recall', w: 11, re: /\bwhat'?s?\s+(in|inside|under)\b/i },
+            { i: 'recall', w: 11, re: /\b(when|who|where|how)\s+(did|was)\s+i\b/i },
+            { i: 'recall', w: 10, re: /\bwho\s+(was|am)\s+i\s+(supposed|meant|going)\s+to\b/i },
+
+            // ---- CAPTURE: strong signals this is a thought, not a question ----
+            { i: 'capture', w: 13, re: /^\s*(remember|remind me) to\b/i },
+            { i: 'capture', w: 13, re: /^\s*(don'?t forget|make sure|note|idea|todo|to do)\b[: ]/i },
+            { i: 'capture', w: 12, re: /^\s*i\s+(need|have|want|should|must|might|gotta|gotta)\s+to\b/i },
+            { i: 'capture', w: 11, re: /^\s*(buy|call|book|pick up|drop off|email|text|pay|fix|clean|order|send|schedule|renew|cancel|check)\b/i },
+            { i: 'capture', w: 10, re: /^\s*i'?m?\s+(thinking|wondering|considering|debating)\b/i },
+            { i: 'capture', w: 10, re: /^\s*what\s+(a|an)\b/i },              // "what a day" is not a question
+            { i: 'capture', w: 9,  re: /^\s*(the|my|our|his|her|their)\b.{0,40}\b(is|are|was|were|has|have)\b/i },
+            { i: 'capture', w: 9,  re: /^\s*i\s+wonder\b/i },
+            { i: 'capture', w: 8,  re: /\b(every|each)\s+(day|week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i },
+            { i: 'capture', w: 8,  re: /^\s*(groceries|shopping|list)\s*[:\-]/i }
+        ];
+
+        // Returns { intent, score, runnerUp }. 'capture' when nothing is
+        // confident enough, because storing a thought is the safe default:
+        // a wrongly-stored question is recoverable, an unanswered one is not.
+        function classifyIntent(text) {
+            const t = String(text || '').trim();
+            if (!t) return { intent: 'capture', score: 0 };
+            const scores = { agenda: 0, summon: 0, nav: 0, recall: 0, capture: 0 };
+            for (const rule of INTENT_RULES) {
+                if (rule.re.test(t)) scores[rule.i] = Math.max(scores[rule.i], rule.w);
+            }
+            // A question mark is the clearest signal there is that this is
+            // not something to file away.
+            if (/\?\s*$/.test(t)) {
+                scores.recall += 4; scores.agenda += 3; scores.nav += 2; scores.capture -= 6;
+            }
+            // Opening with a question word, without a capture verb, leans away
+            // from storing. Voice input rarely carries punctuation, so this
+            // does much of the work a question mark would.
+            if (/^\s*(what|where|when|who|why|how|which|is|are|do|does|did|can|could|should|have|has)\b/i.test(t)
+                && scores.capture < 10) {
+                scores.recall += 3; scores.agenda += 2;
+            }
+            // Long utterances are usually someone thinking out loud.
+            if (t.split(/\s+/).length > 22) scores.capture += 4;
+
+            let best = 'capture', bestScore = -Infinity, runnerUp = null, runnerScore = -Infinity;
+            for (const k of Object.keys(scores)) {
+                if (scores[k] > bestScore) {
+                    runnerUp = best; runnerScore = bestScore;
+                    best = k; bestScore = scores[k];
+                } else if (scores[k] > runnerScore) {
+                    runnerUp = k; runnerScore = scores[k];
+                }
+            }
+            // Nothing scored meaningfully: treat it as a thought.
+            if (bestScore < 5) return { intent: 'capture', score: bestScore, runnerUp };
+            return { intent: best, score: bestScore, runnerUp, runnerScore };
+        }
+
         function handleLocalCommand(text) {
-            // Questions about the past go to recall, not capture.
-            const q = text.trim();
-            // Questions about their own past. Voice input has no question
-            // mark, so shape matters more than punctuation.
-            // URGENCY FIRST. "what do I have that's urgent" is matched by the
-            // general "what do I…" recall pattern below, which sends it to the
-            // AI — so the instant, exact local answer never ran. The more
-            // specific question has to be asked first.
-            const WORKLOAD_PATTERNS = [
-                /^\s*what'?s\s+(on my plate|due|left|next|coming up|urgent|important)\b/i,
-                /^\s*what\s+do\s+i\s+(have|need to do|still need)\b/i,
-                /^\s*(what|which)\s+(\w+\s+)?(is|are)\s+(urgent|due|overdue|important|pressing)\b/i,
-                /^\s*(show|tell)\s+me\s+(what'?s?|which)\b.*\b(urgent|due|overdue|left|pressing)\b/i,
-                /\b(what'?s?|anything)\s+(urgent|pressing|overdue)\b/i,
-                /^\s*what\s+am\s+i\s+(forgetting|missing|behind on)\b/i,
-                /^\s*(is there )?anything\s+(due|urgent|important|overdue|i'?m forgetting)\b/i,
-                /^\s*(am i|are there)\s+.*\b(behind|overdue|late)\b/i
-            ];
-            if (WORKLOAD_PATTERNS.some(re => re.test(q))) {
-                // The app holds every deadline, so answer this itself: instant,
-                // exact, and it works with no connection.
+            const q = String(text || '').trim();
+            if (!q) return false;
+
+            // ONE decision, made by scoring every possibility, rather than a
+            // chain of regexes where whichever matched first won. The old
+            // order-dependence is what sent "what do I have that's urgent" to
+            // the AI instead of answering it instantly.
+            const { intent } = classifyIntent(q);
+
+            if (intent === 'agenda') {
+                // The app holds every deadline, so answer from them: instant,
+                // exact, works offline, and costs no tokens.
                 if (answerWhatsDueLocally(q)) return true;
                 askRecall(q);
                 return true;
             }
 
-            const RECALL_PATTERNS = [
-                /^(what|why|when|who|how|where)\s+(did|do|does|was|were|had|have|am|are|is)\s+i\b/i,
-                /^(what|why|when|who|how|where)\b[\s\S]*\?$/i,
-                /^(should|what should) i\b/i,        // "should I switch" / "what should I do about X"
-                /^(remind me|tell me)\b[\s\S]*\b(said|say|decided|decide|thought|wanted|recorded|about)\b/i,
-                /^(do|did|have|had) i\b/i,            // "did I ever decide…"
-                /^(which|what)\s+(?:\w+\s+){1,3}(should|did|do|does)\s+i\b/i,   // "what car insurance should I go with"
-                /^why\s+(did|do|didn't|don't)\s+i\b/i,
-                /\bwhat did i (say|decide|think|want|choose|pick)\b/i
-            ];
-            if (RECALL_PATTERNS.some(re => re.test(q))) {
-                askRecall(q);
+            if (intent === 'summon') {
+                const neglected = /\b(ignor|avoid|neglect|haven'?t|not touched|old|forgotten|dusty|putting off)\b/i.test(q);
+                showSummons(neglected ? 'neglected' : 'urgent');
                 return true;
             }
-            // ASKING THE APP TO WORK WITH WHAT YOU ALREADY HAVE.
-            // The patterns above only understood "what did I…" shapes, so
-            // "help me organize tomorrow's schedule" fell through and became
-            // a bubble. These catch requests for the app to reason over the
-            // galaxy instead. Both halves must match — a request verb AND
-            // something the app actually knows about — so real-world tasks
-            // ("organize my closet", "help me remember to call mom", "plan a
-            // trip to Japan") still capture normally.
-            const ASK_VERB = /^\s*(help me|can you help|could you help|plan|organi[sz]e|summari[sz]e|walk me through|give me|make me|build me|put together|sort out|prioriti[sz]e|lay out|map out)\b/i;
-            const ASK_SCOPE = /\b(my (day|week|month|schedule|plate|tasks?|to ?dos?|list|thoughts?|bubbles?|galaxy|priorities|workload)|tomorrow|today|tonight|this (week|month|morning|afternoon|evening)|next week|coming up|what i have|what'?s due|what i need to do)\b/i;
-            if (ASK_VERB.test(q) && ASK_SCOPE.test(q)) {
-                askRecall(q);
-                return true;
-            }
-            // Direct questions about the current workload, which rarely start
-            // with the interrogatives the older patterns expect.
-            const summon = text.match(/(bring|show|give|find)\s+(me\s+)?(everything|all)\b[\s\S]*\b(urgent|important)/i);
-            if (summon) {
-                showSummons(/important/i.test(summon[4]) ? 'important' : 'urgent');
-                return true;
-            }
-            if (/(what|show me what).*(ignoring|neglect|forgot|haven't touched|been avoiding)|(bring|show)\s+(me\s+)?(old|forgotten|neglected)/i.test(text)) {
-                showSummons('neglected');
-                return true;
-            }
-            // NAVIGATION handled locally — instant, no AI round-trip needed.
-            // Strong phrasings ('take/bring/fly me to X', 'go to X') always
-            // mean navigation; jump straight to the best-matching bubble.
-            const nav = text.match(/^(?:please\s+)?(?:(?:take|bring|fly)\s+me\s+(?:to|into|back\s+to)|go\s+(?:to|into)|navigate\s+to)\s+(?:my\s+|the\s+)?(.+)$/i);
-            if (nav) {
-                const q = nav[1].replace(/\s*bubbles?\s*$/i, '').replace(/[.!?,]+$/, '').trim();
-                if (q && q.split(/\s+/).length <= 8) {
-                    const hit = findBestThoughtMatch(q);
+
+            if (intent === 'nav') {
+                // Pull the destination out of whatever phrasing was used.
+                const target = q
+                    .replace(/^\s*(?:please\s+)?(?:take|bring|fly|get)\s+me\s+(?:to|into|back to)\s+/i, '')
+                    .replace(/^\s*(?:go|jump|head|navigate|switch|move)\s+(?:to|into|over to|back to)\s+/i, '')
+                    .replace(/^\s*(?:open|enter|pull up|let me see|show me)\s+/i, '')
+                    .replace(/^\s*(?:where is|where'?s)\s+/i, '')
+                    .replace(/^\s*(?:my|the)\s+/i, '')
+                    .replace(/\s*\b(bubble|bubbles|thought|thoughts|note|notes)\b\s*/gi, ' ')
+                    .replace(/[.!?,]+$/, '')
+                    .trim();
+                if (target && target.split(/\s+/).length <= 8) {
+                    const hit = findBestThoughtMatch(target);
                     if (hit) {
                         showVoiceStatus('Taking you to ' + hit.summary, { autoHideMs: 1600 });
                         jumpToThought(hit.id);
                         return true;
                     }
-                    // No local match: fall through — the AI may know it
-                    // semantically ('my money bubble' -> Finances).
+                    // Nothing matched. Say so rather than silently storing it
+                    // as a new thought, which is the outcome that makes people
+                    // stop trusting the app.
+                    showVoiceStatus("No bubble called \u201c" + target + "\u201d", { autoHideMs: 2600 });
+                    return true;
                 }
+                askRecall(q);
+                return true;
             }
-            // Weak phrasings ('open X', 'show me X') can be real thoughts —
-            // only navigate on a confident, short match.
-            const weak = text.match(/^(?:open|show\s+me)\s+(?:my\s+|the\s+)?(.+)$/i);
-            if (weak) {
-                const q = weak[1].replace(/\s*bubbles?\s*$/i, '').replace(/[.!?,]+$/, '').trim();
-                const qw = q.split(/\s+/).filter(Boolean);
-                if (q && qw.length <= 4) {
-                    const hit = findBestThoughtMatch(q, true);
-                    if (hit) {
-                        showVoiceStatus('Taking you to ' + hit.summary, { autoHideMs: 1600 });
-                        jumpToThought(hit.id);
-                        return true;
-                    }
-                }
+
+            if (intent === 'recall') {
+                askRecall(q);
+                return true;
             }
-            return false;
+
+            return false;   // capture
         }
         // Fuzzy bubble lookup: word-overlap scoring across the whole tree,
         // full-phrase bonus, strict mode for weak command phrasings.
@@ -14134,6 +14376,40 @@
             }
         }
         window.addEventListener('resize', resize);
+        // RETURNING FROM A REDIRECT. Signing in with Google leaves the app and
+        // comes back, and iOS Safari's chrome is often a different height on
+        // the way back. A plain 'resize' event is not reliably fired on that
+        // path, so the canvas kept its old size and left a black band across
+        // the bottom of the screen where it no longer reached.
+        let settleTimer = null;
+        function resizeUntilSettled(reason) {
+            clearInterval(settleTimer);
+            let last = 0, same = 0, n = 0;
+            settleTimer = setInterval(() => {
+                const h = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+                resize();
+                // iOS reports an interim height for a few frames after coming
+                // back, so wait for the same answer twice before trusting it.
+                if (h === last) { if (++same >= 2) { clearInterval(settleTimer); settleTimer = null; } }
+                else same = 0;
+                last = h;
+                if (++n > 20) { clearInterval(settleTimer); settleTimer = null; }
+            }, 90);
+        }
+        // Fires when the page is shown again, including from the back/forward
+        // cache, which is exactly how an OAuth return often arrives.
+        window.addEventListener('pageshow', () => resizeUntilSettled('pageshow'));
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') resizeUntilSettled('visible');
+        });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                // Not while a keyboard is up: that has its own handling, and
+                // resizing the canvas under it causes a different mess.
+                if (!document.body.classList.contains('typing-open')) resize();
+            });
+        }
+        window.addEventListener('orientationchange', () => resizeUntilSettled('orientation'));
         measureViewport();
         resize();
         let resolveLaunchScreenDone;
