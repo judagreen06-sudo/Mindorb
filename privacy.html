@@ -4095,8 +4095,23 @@
         function measureViewport() {
             const c = document.getElementById('glcanvas');
             const r = c ? c.getBoundingClientRect() : null;
-            VW = (r && r.width) ? r.width : window.innerWidth;
-            VH = (r && r.height) ? r.height : window.innerHeight;
+            // TRUST THE WINDOW, NOT THE CANVAS. Reading the height back off the
+            // canvas is circular: if the canvas is ever short, VH becomes short
+            // too and agrees with it forever, so nothing can ever repair it.
+            // That is how a black band across the bottom survived every resize
+            // after coming back from the Google sign-in redirect — 100svh had
+            // stopped matching what was actually on screen.
+            const winW = Math.round((window.visualViewport && window.visualViewport.width) || window.innerWidth);
+            const winH = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+            VW = winW || (r && r.width) || window.innerWidth;
+            VH = winH || (r && r.height) || window.innerHeight;
+            // If the canvas is not actually covering that, make it. Only when
+            // it is genuinely short, so a keyboard shrinking the visual
+            // viewport does not start a fight over the canvas size.
+            if (c && r && !document.body.classList.contains('typing-open')) {
+                if (Math.abs(r.height - VH) > 2) c.style.height = VH + 'px';
+                if (Math.abs(r.width - VW) > 2) c.style.width = VW + 'px';
+            }
         }
         function isMobile() { return IS_MOBILE; }
         let cameraZ, coreRadius;
@@ -4175,7 +4190,25 @@
                 top = 74 + (navStack.length > 0 ? 44 : 0);
             }
             if (!top && !bottom) return 0;
-            // Recentre on whatever vertical space is actually left.
+            // MOVE AS LITTLE AS NECESSARY. Centring in the free space is
+            // arithmetically tidy but awful to watch: through the tour the
+            // bubble leapt ~290px down, sat there, then leapt back, so the one
+            // thing the cards are pointing at never stopped moving.
+            // Shift only far enough to clear, and only if it does not already.
+            const core = objects.find(o => !o.removed && (o.role === 'center' || o.role === 'open'));
+            if (core) {
+                const rad = core.r * VH * posScale() / 2;
+                const restY = ((-core.y * posScale()) * 0.5 + 0.5) * VH;   // unshifted
+                const needDown = top ? (top - (restY - rad)) : 0;          // pushed off the top
+                const needUp = bottom ? ((restY + rad) - (VH - bottom)) : 0;
+                if (needDown > 0 && needUp > 0) {
+                    // Squeezed from both ends: fall back to centring the gap.
+                    return ((top + (VH - bottom)) / 2) - VH / 2;
+                }
+                if (needDown > 0) return needDown;
+                if (needUp > 0) return -needUp;
+                return 0;   // already fits: do not move at all
+            }
             const wanted = (top + (VH - bottom)) / 2;
             return wanted - VH / 2;
         }
@@ -4696,7 +4729,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-26b';
+        const BUILD_TAG = '2026-07-26c';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -7487,9 +7520,15 @@
                 // A generous margin: touching the card is still too close for
                 // something the card is pointing at.
                 const gap = 34;
+                // When the card sits at the TOP, the space below it is not all
+                // usable: the dock lives down there. Ignoring it recentred the
+                // bubble into the dock's lap — on the two steps that ask you
+                // to TAP the bubble, which is exactly when it needs to be
+                // comfortably reachable and clearly the subject of the card.
+                const dockRoom = 132;
                 onboardCardClearance = card.classList.contains('bottom')
                     ? { top: 0, bottom: Math.max(0, VH - r.top) + gap }
-                    : { top: Math.max(0, r.bottom) + gap, bottom: 0 };
+                    : { top: Math.max(0, r.bottom) + gap, bottom: dockRoom };
                 const stable = sig === lastSig;
                 lastSig = sig;
                 return stable;
@@ -14309,6 +14348,40 @@
             }
         }
         window.addEventListener('resize', resize);
+        // RETURNING FROM A REDIRECT. Signing in with Google leaves the app and
+        // comes back, and iOS Safari's chrome is often a different height on
+        // the way back. A plain 'resize' event is not reliably fired on that
+        // path, so the canvas kept its old size and left a black band across
+        // the bottom of the screen where it no longer reached.
+        let settleTimer = null;
+        function resizeUntilSettled(reason) {
+            clearInterval(settleTimer);
+            let last = 0, same = 0, n = 0;
+            settleTimer = setInterval(() => {
+                const h = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+                resize();
+                // iOS reports an interim height for a few frames after coming
+                // back, so wait for the same answer twice before trusting it.
+                if (h === last) { if (++same >= 2) { clearInterval(settleTimer); settleTimer = null; } }
+                else same = 0;
+                last = h;
+                if (++n > 20) { clearInterval(settleTimer); settleTimer = null; }
+            }, 90);
+        }
+        // Fires when the page is shown again, including from the back/forward
+        // cache, which is exactly how an OAuth return often arrives.
+        window.addEventListener('pageshow', () => resizeUntilSettled('pageshow'));
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') resizeUntilSettled('visible');
+        });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                // Not while a keyboard is up: that has its own handling, and
+                // resizing the canvas under it causes a different mess.
+                if (!document.body.classList.contains('typing-open')) resize();
+            });
+        }
+        window.addEventListener('orientationchange', () => resizeUntilSettled('orientation'));
         measureViewport();
         resize();
         let resolveLaunchScreenDone;
