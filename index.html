@@ -4387,6 +4387,14 @@
             // If a single long word blew the budget, keep it whole rather than
             // showing a stub: a readable long word beats a meaningless short one.
             if (isFiller(label) && words.length > 1) label = words[1];
+            // DON'T END ON A FILLER WORD EITHER. Skipping leading filler fixed
+            // "The Appointment Cost Around" -> "The", but left the mirror image:
+            // "Plan The Lisbon Trip" stopped at the budget and became "Plan
+            // The", which names no more than "The" did. Trim trailing filler,
+            // as long as something meaningful survives.
+            let lw = label.split(' ').filter(Boolean);
+            while (lw.length > 1 && isFiller(lw[lw.length - 1])) lw.pop();
+            label = lw.join(' ');
             return label;
         }
         function labelForThought(t) {
@@ -4767,7 +4775,7 @@
         // Bump this on every meaningful fix so it's visible in the drawer
         // footer — lets deployment freshness be confirmed at a glance
         // instead of guessing whether a redeploy/cache-clear actually took.
-        const BUILD_TAG = '2026-07-26g';
+        const BUILD_TAG = '2026-07-26k';
 
         // ============================================================
         // ACCOUNTS & CLOUD SYNC — Supabase auth + a single JSON-blob
@@ -5904,8 +5912,28 @@
                 return;
             }
             try {
-                const { data, error } = await sb.from('shared_bubbles')
-                    .select('payload, owner_username').eq('id', token).maybeSingle();
+                // Opened by TOKEN through a function, not by reading the table:
+                // direct reads are withdrawn so nobody can list everyone's
+                // shares. Falls back to the old path if the database has not
+                // been updated yet, so an out-of-date backend still works.
+                let data = null, error = null;
+                try {
+                    const r = await sb.rpc('open_shared_bubble', { tok: token });
+                    if (r.error) throw new Error(r.error.message);
+                    const row = Array.isArray(r.data) ? r.data[0] : r.data;
+                    // Only trust a result that actually carries a bubble. A
+                    // half-shaped answer must fall through to the old path
+                    // rather than be dressed up as a valid empty share.
+                    if (row && typeof row === 'object' && row.payload) {
+                        data = { payload: row.payload, owner_username: row.owner_username };
+                    } else {
+                        throw new Error('no payload');
+                    }
+                } catch (e) {
+                    const r2 = await sb.from('shared_bubbles')
+                        .select('payload, owner_username').eq('id', token).maybeSingle();
+                    data = r2.data; error = r2.error;
+                }
                 if (error) throw new Error(error.message);
                 if (!data) {
                     paintArrival(null, null, true);
@@ -12256,6 +12284,17 @@
            recording rides the same stream; the server transcript
            wins, dictation text is the fallback.
            --------------------------------------------------------- */
+        // Set when server transcription fails on this device. Persisted, so a
+        // returning user doesn't hit the same wall on their next visit.
+        let transcribeBroken = false;
+        function transcribeBrokenSticky() {
+            try { return localStorage.getItem('mindorb-transcribe-broken') === '1'; }
+            catch (e) { return false; }
+        }
+        function markTranscribeBroken() {
+            transcribeBroken = true;
+            try { localStorage.setItem('mindorb-transcribe-broken', '1'); } catch (e) {}
+        }
         let mediaRecorder = null, recChunks = [], recMime = '';
         let silenceMonitor = 0;
         // Adaptive silence auto-stop: calibrate the room's ambient level for a
@@ -13523,7 +13562,29 @@
             const result = await transcribeBlob(blob);
             if (result.text) { hideVoiceStatus(); if (!handleLocalCommand(result.text)) addThought(result.text, voiceTarget); }
             else if (result.silent) showVoiceStatus("Didn't catch that", { error: true, autoHideMs: 1400 });
-            else showVoiceStatus("Couldn't transcribe, " + (result.error || 'unknown error'), { error: true, autoHideMs: 3200 });
+            else {
+                // A wall of raw JSON from Gemini is the last thing someone
+                // wants on their first recording. Log the detail, say
+                // something a person can act on.
+                console.error('MINDORB_TRANSCRIBE_FAILED', result.error);
+                const raw = String(result.error || '');
+                const formatProblem = /invalid argument|400|format|unsupported/i.test(raw);
+                let msg;
+                if (/quota|RESOURCE_EXHAUSTED|429/i.test(raw)) {
+                    // Temporary — don't give up on the recorder for this.
+                    msg = 'Voice is busy right now, try again in a minute';
+                } else if (formatProblem && speechSupported) {
+                    // This device's audio format isn't accepted. Switch to
+                    // dictation permanently rather than failing again.
+                    markTranscribeBroken();
+                    msg = 'Switching to on-device voice — tap and try again';
+                } else if (formatProblem) {
+                    msg = "Couldn't read that recording, try typing it instead";
+                } else {
+                    msg = "Couldn't transcribe that, try again";
+                }
+                showVoiceStatus(msg, { error: true, autoHideMs: 3400 });
+            }
         }
         // Web-Speech finish (non-Safari): prefer the server transcript, fall
         // back to the dictation text so it can never be worse than before.
@@ -13600,7 +13661,14 @@
             if (isListening || transitioning) return;
             // Safari/iOS: recorder-based capture (accurate server transcription).
             const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-            if ((IS_SAFARI || IS_IOS) && window.MediaRecorder && navigator.mediaDevices && ROUTER_URL) {
+            // Recorder path is preferred on iOS because server transcription is
+            // more accurate. But if it has FAILED here before, stop trying: iOS
+            // Safari records audio/mp4, which Gemini does not accept, and no
+            // amount of retrying changes that. On-device dictation is less
+            // accurate than the server but infinitely better than an error, and
+            // a first-time user hitting a red wall is the worst outcome there is.
+            if ((IS_SAFARI || IS_IOS) && window.MediaRecorder && navigator.mediaDevices && ROUTER_URL
+                && !transcribeBroken && !(speechSupported && transcribeBrokenSticky())) {
                 startListeningRecorded();
                 return;
             }
